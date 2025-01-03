@@ -27,7 +27,7 @@ def get_firebird_connection():
     )
 
 
-def create_connection_pool(pool_size=100):
+def create_connection_pool(pool_size):
     # Criar um pool para conexões Firebird
     pool = Queue(maxsize=pool_size)
     for _ in range(pool_size):
@@ -343,7 +343,7 @@ def processar_pedido(pool, pedido, itens_por_pedido, clientes_dict, fones_dict, 
     return linhas
 
 
-def rodar_teste_passada(pool, pedidos, max_workers):
+def rodar_teste_passada(pool, pedidos, max_workers, itens_por_pedido, clientes_dict, fones_dict, funcs_dict, cnpj):
     """
     Executa 1 "passada" de processamento usando 'max_workers' threads.
     Retorna (linhas_consolidadas, tempo_total, inicio, fim).
@@ -353,7 +353,7 @@ def rodar_teste_passada(pool, pedidos, max_workers):
     linhas_consolidadas = []
     with ThreadPoolExecutor(max_workers=max_workers) as executor:
         futures = [
-            executor.submit(processar_pedido, pool, pedido)
+            executor.submit(processar_pedido, pool, pedido, itens_por_pedido, clientes_dict, fones_dict, funcs_dict, cnpj)
             for pedido in pedidos
         ]
         for fut in as_completed(futures):
@@ -366,7 +366,7 @@ def rodar_teste_passada(pool, pedidos, max_workers):
     return linhas_consolidadas, tempo_total, inicio, fim
 
 
-def rodar_ida_e_volta(pool, pedidos, writer, pool_size_label):
+def rodar_ida_e_volta(pool, pedidos, writer, pool_size_label, itens_por_pedido, clientes_dict, fones_dict, funcs_dict, cnpj):
     """
     Faz as 4 passadas (ida 5->20, volta 20->5, ida 5->20, volta 20->5)
     usando a função rodar_teste_passada.
@@ -386,7 +386,7 @@ def rodar_ida_e_volta(pool, pedidos, writer, pool_size_label):
         writer.writerow([f"*** Passada #{idx_passada} (pool_size={pool_size_label}) ***"])
 
         for mw in pass_range:
-            linhas, tempo_total, inicio, fim = rodar_teste_passada(pool, pedidos, mw)
+            linhas, tempo_total, inicio, fim = rodar_teste_passada(pool, pedidos, mw, itens_por_pedido, clientes_dict, fones_dict, funcs_dict, cnpj)
 
             # Registrar info no CSV
             writer.writerow([
@@ -618,7 +618,7 @@ def main():
             pool = create_connection_pool(pool_size=ps)
 
             # 4.2) Executar as passadas (ida e volta)
-            rodar_ida_e_volta(pool, pedidos, writer, pool_size_label=ps)
+            rodar_ida_e_volta(pool, pedidos, writer, ps, itens_por_pedido, clientes_dict, fones_dict, funcs_dict, cnpj)
 
             # 4.3) Fechar as conexões do pool
             while not pool.empty():

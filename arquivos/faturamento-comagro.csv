@@ -1,512 +1,176 @@
-pool_size=5;passada=1;max_workers=5;inicio=2025-01-14 18:54:48;fim=2025-01-14 19:00:11;tempo_total=0:05:22.441723
-
-pool_size=5;passada=1;max_workers=6;inicio=2025-01-14 19:00:12;fim=2025-01-14 19:05:25;tempo_total=0:05:12.828255
-
-pool_size=5;passada=1;max_workers=7;inicio=2025-01-14 19:05:27;fim=2025-01-14 19:10:39;tempo_total=0:05:12.449384
-
-pool_size=5;passada=1;max_workers=8;inicio=2025-01-14 19:10:41;fim=2025-01-14 19:15:52;tempo_total=0:05:11.320215
-
-pool_size=5;passada=1;max_workers=9;inicio=2025-01-14 19:15:54;fim=2025-01-14 19:21:06;tempo_total=0:05:11.775451
-
-pool_size=5;passada=1;max_workers=10;inicio=2025-01-14 19:21:08;fim=2025-01-14 19:26:19;tempo_total=0:05:10.984006
-
-pool_size=5;passada=1;max_workers=11;inicio=2025-01-14 19:26:20;fim=2025-01-14 19:31:31;tempo_total=0:05:10.798412
-
-pool_size=5;passada=1;max_workers=12;inicio=2025-01-14 19:31:32;fim=2025-01-14 19:36:45;tempo_total=0:05:12.388542
-
-pool_size=5;passada=1;max_workers=13;inicio=2025-01-14 19:36:46;fim=2025-01-14 19:41:59;tempo_total=0:05:12.093906
-
-pool_size=5;passada=1;max_workers=14;inicio=2025-01-14 19:42:00;fim=2025-01-14 19:47:13;tempo_total=0:05:12.684771
-
-pool_size=5;passada=1;max_workers=15;inicio=2025-01-14 19:47:14;fim=2025-01-14 19:52:26;tempo_total=0:05:11.509438
-
-pool_size=5;passada=1;max_workers=16;inicio=2025-01-14 19:52:27;fim=2025-01-14 19:57:38;tempo_total=0:05:11.022550
-
-pool_size=5;passada=1;max_workers=17;inicio=2025-01-14 19:57:40;fim=2025-01-14 20:02:51;tempo_total=0:05:11.287298
-
-pool_size=5;passada=1;max_workers=18;inicio=2025-01-14 20:02:53;fim=2025-01-14 20:08:03;tempo_total=0:05:10.341688
-
-pool_size=5;passada=1;max_workers=19;inicio=2025-01-14 20:08:05;fim=2025-01-14 20:13:16;tempo_total=0:05:11.370986
-
-pool_size=5;passada=1;max_workers=20;inicio=2025-01-14 20:13:18;fim=2025-01-14 20:18:29;tempo_total=0:05:11.716467
-
-pool_size=5;passada=2;max_workers=20;inicio=2025-01-14 20:18:31;fim=2025-01-14 20:23:42;tempo_total=0:05:10.625843
-
-pool_size=5;passada=2;max_workers=19;inicio=2025-01-14 20:23:43;fim=2025-01-14 20:28:56;tempo_total=0:05:12.350536
-
-pool_size=5;passada=2;max_workers=18;inicio=2025-01-14 20:28:57;fim=2025-01-14 20:34:09;tempo_total=0:05:11.470824
-
-pool_size=5;passada=2;max_workers=17;inicio=2025-01-14 20:34:10;fim=2025-01-14 20:39:21;tempo_total=0:05:11.235877
-
-pool_size=5;passada=2;max_workers=16;inicio=2025-01-14 20:39:23;fim=2025-01-14 20:44:34;tempo_total=0:05:10.799796
-
-pool_size=5;passada=2;max_workers=15;inicio=2025-01-14 20:44:35;fim=2025-01-14 20:49:47;tempo_total=0:05:11.878086
-
-pool_size=5;passada=2;max_workers=14;inicio=2025-01-14 20:49:49;fim=2025-01-14 20:55:00;tempo_total=0:05:11.191746
-
-pool_size=5;passada=2;max_workers=13;inicio=2025-01-14 20:55:02;fim=2025-01-14 21:00:13;tempo_total=0:05:11.507696
-
-pool_size=5;passada=2;max_workers=12;inicio=2025-01-14 21:00:15;fim=2025-01-14 21:05:26;tempo_total=0:05:11.146197
-
-pool_size=5;passada=2;max_workers=11;inicio=2025-01-14 21:05:27;fim=2025-01-14 21:10:38;tempo_total=0:05:10.726379
-
-pool_size=5;passada=2;max_workers=10;inicio=2025-01-14 21:10:40;fim=2025-01-14 21:15:52;tempo_total=0:05:11.898944
-
-pool_size=5;passada=2;max_workers=9;inicio=2025-01-14 21:15:53;fim=2025-01-14 21:21:04;tempo_total=0:05:10.942914
-
-pool_size=5;passada=2;max_workers=8;inicio=2025-01-14 21:21:06;fim=2025-01-14 21:26:18;tempo_total=0:05:11.537011
-
-pool_size=5;passada=2;max_workers=7;inicio=2025-01-14 21:26:19;fim=2025-01-14 21:31:31;tempo_total=0:05:12.005033
-
-pool_size=5;passada=2;max_workers=6;inicio=2025-01-14 21:31:33;fim=2025-01-14 21:36:45;tempo_total=0:05:12.009505
-
-pool_size=5;passada=2;max_workers=5;inicio=2025-01-14 21:36:47;fim=2025-01-14 21:41:58;tempo_total=0:05:11.846100
-
-pool_size=5;passada=3;max_workers=5;inicio=2025-01-14 21:42:00;fim=2025-01-14 21:47:10;tempo_total=0:05:10.557741
-
-pool_size=5;passada=3;max_workers=6;inicio=2025-01-14 21:47:12;fim=2025-01-14 21:52:23;tempo_total=0:05:10.906772
-
-pool_size=5;passada=3;max_workers=7;inicio=2025-01-14 21:52:24;fim=2025-01-14 21:57:36;tempo_total=0:05:12.058325
-
-pool_size=5;passada=3;max_workers=8;inicio=2025-01-14 21:57:38;fim=2025-01-14 22:02:56;tempo_total=0:05:18.389293
-
-pool_size=5;passada=3;max_workers=9;inicio=2025-01-14 22:02:58;fim=2025-01-14 22:08:10;tempo_total=0:05:12.274140
-
-pool_size=5;passada=3;max_workers=10;inicio=2025-01-14 22:08:12;fim=2025-01-14 22:13:23;tempo_total=0:05:11.227336
-
-pool_size=5;passada=3;max_workers=11;inicio=2025-01-14 22:13:25;fim=2025-01-14 22:18:36;tempo_total=0:05:11.280083
-
-pool_size=5;passada=3;max_workers=12;inicio=2025-01-14 22:18:37;fim=2025-01-14 22:23:46;tempo_total=0:05:08.968118
-
-pool_size=5;passada=3;max_workers=13;inicio=2025-01-14 22:23:48;fim=2025-01-14 22:28:58;tempo_total=0:05:10.390076
-
-pool_size=5;passada=3;max_workers=14;inicio=2025-01-14 22:29:00;fim=2025-01-14 22:34:11;tempo_total=0:05:11.157789
-
-pool_size=5;passada=3;max_workers=15;inicio=2025-01-14 22:34:13;fim=2025-01-14 22:39:23;tempo_total=0:05:10.179564
-
-pool_size=5;passada=3;max_workers=16;inicio=2025-01-14 22:39:25;fim=2025-01-14 22:44:36;tempo_total=0:05:11.246817
-
-pool_size=5;passada=3;max_workers=17;inicio=2025-01-14 22:44:38;fim=2025-01-14 22:49:48;tempo_total=0:05:10.722000
-
-pool_size=5;passada=3;max_workers=18;inicio=2025-01-14 22:49:50;fim=2025-01-14 22:55:01;tempo_total=0:05:10.723228
-
-pool_size=5;passada=3;max_workers=19;inicio=2025-01-14 22:55:02;fim=2025-01-14 23:00:12;tempo_total=0:05:09.271061
-
-pool_size=5;passada=3;max_workers=20;inicio=2025-01-14 23:00:13;fim=2025-01-14 23:05:23;tempo_total=0:05:09.757101
-
-pool_size=5;passada=4;max_workers=20;inicio=2025-01-14 23:05:25;fim=2025-01-14 23:10:34;tempo_total=0:05:09.166888
-
-pool_size=5;passada=4;max_workers=19;inicio=2025-01-14 23:10:36;fim=2025-01-14 23:15:45;tempo_total=0:05:08.929082
-
-pool_size=5;passada=4;max_workers=18;inicio=2025-01-14 23:15:46;fim=2025-01-14 23:20:57;tempo_total=0:05:11.309008
-
-pool_size=5;passada=4;max_workers=17;inicio=2025-01-14 23:20:59;fim=2025-01-14 23:26:09;tempo_total=0:05:09.839784
-
-pool_size=5;passada=4;max_workers=16;inicio=2025-01-14 23:26:11;fim=2025-01-14 23:31:19;tempo_total=0:05:08.198175
-
-pool_size=5;passada=4;max_workers=15;inicio=2025-01-14 23:31:20;fim=2025-01-14 23:36:29;tempo_total=0:05:08.609272
-
-pool_size=5;passada=4;max_workers=14;inicio=2025-01-14 23:36:31;fim=2025-01-14 23:41:38;tempo_total=0:05:07.785660
-
-pool_size=5;passada=4;max_workers=13;inicio=2025-01-14 23:41:40;fim=2025-01-14 23:46:47;tempo_total=0:05:07.175883
-
-pool_size=5;passada=4;max_workers=12;inicio=2025-01-14 23:46:49;fim=2025-01-14 23:51:56;tempo_total=0:05:06.874301
-
-pool_size=5;passada=4;max_workers=11;inicio=2025-01-14 23:51:58;fim=2025-01-14 23:57:06;tempo_total=0:05:08.611405
-
-pool_size=5;passada=4;max_workers=10;inicio=2025-01-14 23:57:08;fim=2025-01-15 00:02:15;tempo_total=0:05:07.754219
-
-pool_size=5;passada=4;max_workers=9;inicio=2025-01-15 00:02:17;fim=2025-01-15 00:07:08;tempo_total=0:04:50.498381
-
-pool_size=5;passada=4;max_workers=8;inicio=2025-01-15 00:07:09;fim=2025-01-15 00:12:00;tempo_total=0:04:50.957527
-
-pool_size=5;passada=4;max_workers=7;inicio=2025-01-15 00:12:02;fim=2025-01-15 00:16:52;tempo_total=0:04:50.882807
-
-pool_size=5;passada=4;max_workers=6;inicio=2025-01-15 00:16:54;fim=2025-01-15 00:21:43;tempo_total=0:04:48.627453
-
-pool_size=5;passada=4;max_workers=5;inicio=2025-01-15 00:21:45;fim=2025-01-15 00:26:35;tempo_total=0:04:50.848972
-
-pool_size=10;passada=1;max_workers=5;inicio=2025-01-15 12:14:05;fim=2025-01-15 12:19:09;tempo_total=0:05:04.343498
-
-pool_size=10;passada=1;max_workers=6;inicio=2025-01-15 12:19:11;fim=2025-01-15 12:24:19;tempo_total=0:05:07.802519
-
-pool_size=10;passada=1;max_workers=7;inicio=2025-01-15 12:24:20;fim=2025-01-15 12:29:42;tempo_total=0:05:22.235419
-
-pool_size=10;passada=1;max_workers=8;inicio=2025-01-15 12:29:44;fim=2025-01-15 12:35:27;tempo_total=0:05:43.362461
-
-pool_size=10;passada=1;max_workers=9;inicio=2025-01-15 12:35:29;fim=2025-01-15 12:41:52;tempo_total=0:06:23.497673
-
-pool_size=10;passada=1;max_workers=10;inicio=2025-01-15 12:41:54;fim=2025-01-15 12:48:56;tempo_total=0:07:02.224064
-
-pool_size=10;passada=1;max_workers=11;inicio=2025-01-15 12:48:57;fim=2025-01-15 12:56:01;tempo_total=0:07:03.928789
-
-pool_size=10;passada=1;max_workers=12;inicio=2025-01-15 12:56:03;fim=2025-01-15 13:03:15;tempo_total=0:07:12.398249
-
-pool_size=10;passada=1;max_workers=13;inicio=2025-01-15 13:03:17;fim=2025-01-15 13:10:21;tempo_total=0:07:04.289332
-
-pool_size=10;passada=1;max_workers=14;inicio=2025-01-15 13:10:23;fim=2025-01-15 13:17:41;tempo_total=0:07:17.856062
-
-pool_size=10;passada=1;max_workers=15;inicio=2025-01-15 13:17:42;fim=2025-01-15 13:24:50;tempo_total=0:07:07.538050
-
-pool_size=10;passada=1;max_workers=16;inicio=2025-01-15 13:24:51;fim=2025-01-15 13:31:55;tempo_total=0:07:03.653121
-
-pool_size=10;passada=1;max_workers=17;inicio=2025-01-15 13:31:57;fim=2025-01-15 13:39:11;tempo_total=0:07:14.009286
-
-pool_size=10;passada=1;max_workers=18;inicio=2025-01-15 13:39:12;fim=2025-01-15 13:46:19;tempo_total=0:07:06.883910
-
-pool_size=10;passada=1;max_workers=19;inicio=2025-01-15 13:46:21;fim=2025-01-15 13:53:20;tempo_total=0:06:59.591751
-
-pool_size=10;passada=1;max_workers=20;inicio=2025-01-15 13:53:22;fim=2025-01-15 14:00:22;tempo_total=0:07:00.478622
-
-pool_size=10;passada=2;max_workers=20;inicio=2025-01-15 14:00:24;fim=2025-01-15 14:07:20;tempo_total=0:06:55.832817
-
-pool_size=10;passada=2;max_workers=19;inicio=2025-01-15 14:07:21;fim=2025-01-15 14:14:32;tempo_total=0:07:10.624087
-
-pool_size=10;passada=2;max_workers=18;inicio=2025-01-15 14:14:34;fim=2025-01-15 14:21:41;tempo_total=0:07:07.057327
-
-pool_size=10;passada=2;max_workers=17;inicio=2025-01-15 14:21:42;fim=2025-01-15 14:28:38;tempo_total=0:06:55.602679
-
-pool_size=10;passada=2;max_workers=16;inicio=2025-01-15 14:28:40;fim=2025-01-15 14:35:50;tempo_total=0:07:10.499010
-
-pool_size=10;passada=2;max_workers=15;inicio=2025-01-15 14:35:52;fim=2025-01-15 14:43:02;tempo_total=0:07:09.695290
-
-pool_size=10;passada=2;max_workers=14;inicio=2025-01-15 14:43:03;fim=2025-01-15 14:49:56;tempo_total=0:06:52.148781
-
-pool_size=10;passada=2;max_workers=13;inicio=2025-01-15 14:49:57;fim=2025-01-15 14:56:55;tempo_total=0:06:57.414815
-
-pool_size=10;passada=2;max_workers=12;inicio=2025-01-15 14:56:56;fim=2025-01-15 15:03:41;tempo_total=0:06:44.384439
-
-pool_size=10;passada=2;max_workers=11;inicio=2025-01-15 15:03:43;fim=2025-01-15 15:10:17;tempo_total=0:06:34.399286
-
-pool_size=10;passada=2;max_workers=10;inicio=2025-01-15 15:10:18;fim=2025-01-15 15:17:01;tempo_total=0:06:42.622438
-
-pool_size=10;passada=2;max_workers=9;inicio=2025-01-15 15:17:03;fim=2025-01-15 15:23:03;tempo_total=0:06:00.141380
-
-pool_size=10;passada=2;max_workers=8;inicio=2025-01-15 15:23:04;fim=2025-01-15 15:28:37;tempo_total=0:05:32.450702
-
-pool_size=10;passada=2;max_workers=7;inicio=2025-01-15 15:28:38;fim=2025-01-15 15:33:54;tempo_total=0:05:15.647851
-
-pool_size=10;passada=2;max_workers=6;inicio=2025-01-15 15:33:56;fim=2025-01-15 15:38:57;tempo_total=0:05:01.260822
-
-pool_size=10;passada=2;max_workers=5;inicio=2025-01-15 15:38:58;fim=2025-01-15 15:43:53;tempo_total=0:04:54.833631
-
-pool_size=10;passada=3;max_workers=5;inicio=2025-01-15 15:43:55;fim=2025-01-15 15:48:47;tempo_total=0:04:52.495839
-
-pool_size=10;passada=3;max_workers=6;inicio=2025-01-15 15:48:49;fim=2025-01-15 15:53:51;tempo_total=0:05:02.426487
-
-pool_size=10;passada=3;max_workers=7;inicio=2025-01-15 15:53:53;fim=2025-01-15 15:59:02;tempo_total=0:05:08.877121
-
-pool_size=10;passada=3;max_workers=8;inicio=2025-01-15 15:59:03;fim=2025-01-15 16:04:34;tempo_total=0:05:30.371211
-
-pool_size=10;passada=3;max_workers=9;inicio=2025-01-15 16:04:35;fim=2025-01-15 16:10:37;tempo_total=0:06:01.697024
-
-pool_size=10;passada=3;max_workers=10;inicio=2025-01-15 16:10:38;fim=2025-01-15 16:17:41;tempo_total=0:07:02.737718
-
-pool_size=10;passada=3;max_workers=11;inicio=2025-01-15 16:17:43;fim=2025-01-15 16:24:52;tempo_total=0:07:09.692052
-
-pool_size=10;passada=3;max_workers=12;inicio=2025-01-15 16:24:54;fim=2025-01-15 16:31:52;tempo_total=0:06:58.038248
-
-pool_size=10;passada=3;max_workers=13;inicio=2025-01-15 16:31:54;fim=2025-01-15 16:38:58;tempo_total=0:07:04.821292
-
-pool_size=10;passada=3;max_workers=14;inicio=2025-01-15 16:39:00;fim=2025-01-15 16:45:52;tempo_total=0:06:51.915159
-
-pool_size=10;passada=3;max_workers=15;inicio=2025-01-15 16:45:53;fim=2025-01-15 16:52:36;tempo_total=0:06:42.346293
-
-pool_size=10;passada=3;max_workers=16;inicio=2025-01-15 16:52:37;fim=2025-01-15 16:59:28;tempo_total=0:06:50.195653
-
-pool_size=10;passada=3;max_workers=17;inicio=2025-01-15 16:59:29;fim=2025-01-15 17:06:25;tempo_total=0:06:56.118176
-
-pool_size=10;passada=3;max_workers=18;inicio=2025-01-15 17:06:27;fim=2025-01-15 17:13:31;tempo_total=0:07:03.685257
-
-pool_size=10;passada=3;max_workers=19;inicio=2025-01-15 17:13:32;fim=2025-01-15 17:20:43;tempo_total=0:07:10.457885
-
-pool_size=10;passada=3;max_workers=20;inicio=2025-01-15 17:20:45;fim=2025-01-15 17:27:57;tempo_total=0:07:12.784072
-
-pool_size=10;passada=4;max_workers=20;inicio=2025-01-15 17:27:59;fim=2025-01-15 17:35:07;tempo_total=0:07:07.661073
-
-pool_size=10;passada=4;max_workers=19;inicio=2025-01-15 17:35:13;fim=2025-01-15 17:42:14;tempo_total=0:07:00.530739
-
-pool_size=10;passada=4;max_workers=18;inicio=2025-01-15 17:42:15;fim=2025-01-15 17:49:09;tempo_total=0:06:53.421121
-
-pool_size=10;passada=4;max_workers=17;inicio=2025-01-15 17:49:11;fim=2025-01-15 17:56:06;tempo_total=0:06:55.322619
-
-pool_size=10;passada=4;max_workers=16;inicio=2025-01-15 17:56:08;fim=2025-01-15 18:03:05;tempo_total=0:06:57.738031
-
-pool_size=10;passada=4;max_workers=15;inicio=2025-01-15 18:03:07;fim=2025-01-15 18:09:58;tempo_total=0:06:51.059555
-
-pool_size=10;passada=4;max_workers=14;inicio=2025-01-15 18:10:00;fim=2025-01-15 18:16:56;tempo_total=0:06:56.654856
-
-pool_size=10;passada=4;max_workers=13;inicio=2025-01-15 18:16:58;fim=2025-01-15 18:23:49;tempo_total=0:06:50.980654
-
-pool_size=10;passada=4;max_workers=12;inicio=2025-01-15 18:23:50;fim=2025-01-15 18:30:41;tempo_total=0:06:51.003387
-
-pool_size=10;passada=4;max_workers=11;inicio=2025-01-15 18:30:43;fim=2025-01-15 18:37:43;tempo_total=0:07:00.455382
-
-pool_size=10;passada=4;max_workers=10;inicio=2025-01-15 18:37:45;fim=2025-01-15 18:44:29;tempo_total=0:06:43.823674
-
-pool_size=10;passada=4;max_workers=9;inicio=2025-01-15 18:44:30;fim=2025-01-15 18:50:39;tempo_total=0:06:09.166567
-
-pool_size=10;passada=4;max_workers=8;inicio=2025-01-15 18:50:41;fim=2025-01-15 18:56:19;tempo_total=0:05:38.195119
-
-pool_size=10;passada=4;max_workers=7;inicio=2025-01-15 18:56:21;fim=2025-01-15 19:01:39;tempo_total=0:05:18.022998
-
-pool_size=10;passada=4;max_workers=6;inicio=2025-01-15 19:01:41;fim=2025-01-15 19:06:50;tempo_total=0:05:09.189793
-
-pool_size=10;passada=4;max_workers=5;inicio=2025-01-15 19:06:51;fim=2025-01-15 19:11:54;tempo_total=0:05:02.753636
-
-pool_size=15;passada=1;max_workers=5;inicio=2025-01-16 09:28:44;fim=2025-01-16 09:34:15;tempo_total=0:05:30.869619
-
-pool_size=15;passada=1;max_workers=6;inicio=2025-01-16 09:34:17;fim=2025-01-16 09:39:52;tempo_total=0:05:34.826668
-
-pool_size=15;passada=1;max_workers=7;inicio=2025-01-16 09:39:53;fim=2025-01-16 09:45:42;tempo_total=0:05:48.491624
-
-pool_size=15;passada=1;max_workers=8;inicio=2025-01-16 09:45:43;fim=2025-01-16 09:51:59;tempo_total=0:06:15.390374
-
-pool_size=15;passada=1;max_workers=9;inicio=2025-01-16 09:52:00;fim=2025-01-16 09:59:00;tempo_total=0:06:59.993794
-
-pool_size=15;passada=1;max_workers=10;inicio=2025-01-16 09:59:02;fim=2025-01-16 10:06:47;tempo_total=0:07:44.703043
-
-pool_size=15;passada=1;max_workers=11;inicio=2025-01-16 10:06:48;fim=2025-01-16 10:15:45;tempo_total=0:08:56.077426
-
-pool_size=15;passada=1;max_workers=12;inicio=2025-01-16 10:15:46;fim=2025-01-16 10:25:24;tempo_total=0:09:37.647962
-
-pool_size=15;passada=1;max_workers=13;inicio=2025-01-16 10:25:25;fim=2025-01-16 10:34:58;tempo_total=0:09:32.573425
-
-pool_size=15;passada=1;max_workers=14;inicio=2025-01-16 10:35:00;fim=2025-01-16 10:46:07;tempo_total=0:11:07.593240
-
-pool_size=15;passada=1;max_workers=15;inicio=2025-01-16 10:46:10;fim=2025-01-16 10:58:39;tempo_total=0:12:28.971866
-
-pool_size=15;passada=1;max_workers=16;inicio=2025-01-16 10:58:41;fim=2025-01-16 11:10:51;tempo_total=0:12:10.209755
-
-pool_size=15;passada=1;max_workers=17;inicio=2025-01-16 11:10:53;fim=2025-01-16 11:23:13;tempo_total=0:12:20.155291
-
-pool_size=15;passada=1;max_workers=18;inicio=2025-01-16 11:23:15;fim=2025-01-16 11:35:29;tempo_total=0:12:14.385590
-
-pool_size=15;passada=1;max_workers=19;inicio=2025-01-16 11:35:31;fim=2025-01-16 11:46:33;tempo_total=0:11:02.276692
-
-pool_size=15;passada=1;max_workers=20;inicio=2025-01-16 11:46:35;fim=2025-01-16 11:57:36;tempo_total=0:11:01.370163
-
-pool_size=15;passada=2;max_workers=20;inicio=2025-01-16 11:57:38;fim=2025-01-16 12:10:08;tempo_total=0:12:30.139909
-
-pool_size=15;passada=2;max_workers=19;inicio=2025-01-16 12:10:10;fim=2025-01-16 12:20:21;tempo_total=0:10:11.862450
-
-pool_size=15;passada=2;max_workers=18;inicio=2025-01-16 12:20:23;fim=2025-01-16 12:30:36;tempo_total=0:10:13.063532
-
-pool_size=15;passada=2;max_workers=17;inicio=2025-01-16 12:30:38;fim=2025-01-16 12:40:44;tempo_total=0:10:06.096709
-
-pool_size=15;passada=2;max_workers=16;inicio=2025-01-16 12:40:45;fim=2025-01-16 12:51:00;tempo_total=0:10:14.895526
-
-pool_size=15;passada=2;max_workers=15;inicio=2025-01-16 12:51:02;fim=2025-01-16 13:01:58;tempo_total=0:10:55.788403
-
-pool_size=15;passada=2;max_workers=14;inicio=2025-01-16 13:01:59;fim=2025-01-16 13:11:36;tempo_total=0:09:36.657872
-
-pool_size=15;passada=2;max_workers=13;inicio=2025-01-16 13:11:37;fim=2025-01-16 13:20:58;tempo_total=0:09:20.350125
-
-pool_size=15;passada=2;max_workers=12;inicio=2025-01-16 13:20:59;fim=2025-01-16 13:28:47;tempo_total=0:07:48.224481
-
-pool_size=15;passada=2;max_workers=11;inicio=2025-01-16 13:28:49;fim=2025-01-16 13:36:09;tempo_total=0:07:20.068022
-
-pool_size=15;passada=2;max_workers=10;inicio=2025-01-16 13:36:11;fim=2025-01-16 13:42:48;tempo_total=0:06:36.985082
-
-pool_size=15;passada=2;max_workers=9;inicio=2025-01-16 13:42:49;fim=2025-01-16 13:48:51;tempo_total=0:06:02.006662
-
-pool_size=15;passada=2;max_workers=8;inicio=2025-01-16 13:48:53;fim=2025-01-16 13:54:39;tempo_total=0:05:46.015055
-
-pool_size=15;passada=2;max_workers=7;inicio=2025-01-16 13:54:40;fim=2025-01-16 13:59:59;tempo_total=0:05:18.333517
-
-pool_size=15;passada=2;max_workers=6;inicio=2025-01-16 14:00:00;fim=2025-01-16 14:05:13;tempo_total=0:05:13.065683
-
-pool_size=15;passada=2;max_workers=5;inicio=2025-01-16 14:05:15;fim=2025-01-16 14:10:21;tempo_total=0:05:05.999592
-
-pool_size=15;passada=3;max_workers=5;inicio=2025-01-16 14:10:22;fim=2025-01-16 14:15:29;tempo_total=0:05:06.338670
-
-pool_size=15;passada=3;max_workers=6;inicio=2025-01-16 14:15:30;fim=2025-01-16 14:20:41;tempo_total=0:05:10.573856
-
-pool_size=15;passada=3;max_workers=7;inicio=2025-01-16 14:20:42;fim=2025-01-16 14:26:04;tempo_total=0:05:21.467633
-
-pool_size=15;passada=3;max_workers=8;inicio=2025-01-16 14:26:05;fim=2025-01-16 14:31:50;tempo_total=0:05:44.069972
-
-pool_size=15;passada=3;max_workers=9;inicio=2025-01-16 14:31:51;fim=2025-01-16 14:37:49;tempo_total=0:05:58.245050
-
-pool_size=15;passada=3;max_workers=10;inicio=2025-01-16 14:37:51;fim=2025-01-16 14:44:19;tempo_total=0:06:28.085546
-
-pool_size=15;passada=3;max_workers=11;inicio=2025-01-16 14:44:20;fim=2025-01-16 14:51:18;tempo_total=0:06:57.755721
-
-pool_size=15;passada=3;max_workers=12;inicio=2025-01-16 14:51:20;fim=2025-01-16 14:58:53;tempo_total=0:07:32.857420
-
-pool_size=15;passada=3;max_workers=13;inicio=2025-01-16 14:58:54;fim=2025-01-16 15:07:46;tempo_total=0:08:52.131913
-
-pool_size=15;passada=3;max_workers=14;inicio=2025-01-16 15:07:48;fim=2025-01-16 15:16:57;tempo_total=0:09:08.871798
-
-pool_size=15;passada=3;max_workers=15;inicio=2025-01-16 15:16:58;fim=2025-01-16 15:27:20;tempo_total=0:10:21.415523
-
-pool_size=15;passada=3;max_workers=16;inicio=2025-01-16 15:27:21;fim=2025-01-16 15:37:26;tempo_total=0:10:04.347033
-
-pool_size=15;passada=3;max_workers=17;inicio=2025-01-16 15:37:28;fim=2025-01-16 15:47:50;tempo_total=0:10:22.744577
-
-pool_size=15;passada=3;max_workers=18;inicio=2025-01-16 15:47:52;fim=2025-01-16 15:58:21;tempo_total=0:10:28.975103
-
-pool_size=15;passada=3;max_workers=19;inicio=2025-01-16 15:58:23;fim=2025-01-16 16:09:25;tempo_total=0:11:01.675873
-
-pool_size=15;passada=3;max_workers=20;inicio=2025-01-16 16:09:26;fim=2025-01-16 16:20:18;tempo_total=0:10:51.700942
-
-pool_size=15;passada=4;max_workers=20;inicio=2025-01-16 16:20:20;fim=2025-01-16 16:31:13;tempo_total=0:10:52.710960
-
-pool_size=15;passada=4;max_workers=19;inicio=2025-01-16 16:31:14;fim=2025-01-16 16:41:43;tempo_total=0:10:28.903292
-
-pool_size=15;passada=4;max_workers=18;inicio=2025-01-16 16:41:45;fim=2025-01-16 16:52:49;tempo_total=0:11:03.964160
-
-pool_size=15;passada=4;max_workers=17;inicio=2025-01-16 16:52:51;fim=2025-01-16 17:03:44;tempo_total=0:10:53.224701
-
-pool_size=15;passada=4;max_workers=16;inicio=2025-01-16 17:03:45;fim=2025-01-16 17:14:36;tempo_total=0:10:50.809237
-
-pool_size=15;passada=4;max_workers=15;inicio=2025-01-16 17:14:38;fim=2025-01-16 17:24:56;tempo_total=0:10:18.681653
-
-pool_size=15;passada=4;max_workers=14;inicio=2025-01-16 17:24:58;fim=2025-01-16 17:34:37;tempo_total=0:09:39.234264
-
-pool_size=15;passada=4;max_workers=13;inicio=2025-01-16 17:34:39;fim=2025-01-16 17:43:41;tempo_total=0:09:01.761949
-
-pool_size=15;passada=4;max_workers=12;inicio=2025-01-16 17:43:42;fim=2025-01-16 17:51:20;tempo_total=0:07:37.669569
-
-pool_size=15;passada=4;max_workers=11;inicio=2025-01-16 17:51:22;fim=2025-01-16 17:58:31;tempo_total=0:07:09.340633
-
-pool_size=15;passada=4;max_workers=10;inicio=2025-01-16 17:58:33;fim=2025-01-16 18:05:11;tempo_total=0:06:38.337588
-
-pool_size=15;passada=4;max_workers=9;inicio=2025-01-16 18:05:12;fim=2025-01-16 18:11:29;tempo_total=0:06:16.748109
-
-pool_size=15;passada=4;max_workers=8;inicio=2025-01-16 18:11:31;fim=2025-01-16 18:17:19;tempo_total=0:05:47.980713
-
-pool_size=15;passada=4;max_workers=7;inicio=2025-01-16 18:17:20;fim=2025-01-16 18:22:58;tempo_total=0:05:37.977268
-
-pool_size=15;passada=4;max_workers=6;inicio=2025-01-16 18:23:00;fim=2025-01-16 18:28:30;tempo_total=0:05:29.499700
-
-pool_size=15;passada=4;max_workers=5;inicio=2025-01-16 18:28:31;fim=2025-01-16 18:33:56;tempo_total=0:05:24.758090
-
-pool_size=20;passada=1;max_workers=5;inicio=2025-01-16 19:13:19;fim=2025-01-16 19:18:51;tempo_total=0:05:31.966403
-
-pool_size=20;passada=1;max_workers=6;inicio=2025-01-16 19:18:53;fim=2025-01-16 19:24:20;tempo_total=0:05:27.083377
-
-pool_size=20;passada=1;max_workers=7;inicio=2025-01-16 19:24:22;fim=2025-01-16 19:29:56;tempo_total=0:05:34.462805
-
-pool_size=20;passada=1;max_workers=8;inicio=2025-01-16 19:29:58;fim=2025-01-16 19:35:48;tempo_total=0:05:50.451745
-
-pool_size=20;passada=1;max_workers=9;inicio=2025-01-16 19:35:50;fim=2025-01-16 19:41:57;tempo_total=0:06:06.796706
-
-pool_size=20;passada=1;max_workers=10;inicio=2025-01-16 19:41:58;fim=2025-01-16 19:48:32;tempo_total=0:06:33.978220
-
-pool_size=20;passada=1;max_workers=11;inicio=2025-01-16 19:48:34;fim=2025-01-16 19:56:06;tempo_total=0:07:32.217795
-
-pool_size=20;passada=1;max_workers=12;inicio=2025-01-16 19:56:08;fim=2025-01-16 20:03:53;tempo_total=0:07:45.346762
-
-pool_size=20;passada=1;max_workers=13;inicio=2025-01-16 20:03:55;fim=2025-01-16 20:12:25;tempo_total=0:08:30.630846
-
-pool_size=20;passada=1;max_workers=14;inicio=2025-01-16 20:12:27;fim=2025-01-16 20:22:31;tempo_total=0:10:04.153113
-
-pool_size=20;passada=1;max_workers=15;inicio=2025-01-16 20:22:33;fim=2025-01-16 20:33:19;tempo_total=0:10:45.937865
-
-pool_size=20;passada=1;max_workers=16;inicio=2025-01-16 20:33:20;fim=2025-01-16 20:45:19;tempo_total=0:11:58.234132
-
-pool_size=20;passada=1;max_workers=17;inicio=2025-01-16 20:45:20;fim=2025-01-16 21:00:10;tempo_total=0:14:50.151020
-
-pool_size=20;passada=1;max_workers=18;inicio=2025-01-16 21:00:12;fim=2025-01-16 21:15:15;tempo_total=0:15:03.561854
-
-pool_size=20;passada=1;max_workers=19;inicio=2025-01-16 21:15:17;fim=2025-01-16 21:33:36;tempo_total=0:18:18.814887
-
-pool_size=20;passada=1;max_workers=20;inicio=2025-01-16 21:33:37;fim=2025-01-16 21:52:29;tempo_total=0:18:51.221061
-
-pool_size=20;passada=2;max_workers=20;inicio=2025-01-16 21:52:30;fim=2025-01-16 22:12:44;tempo_total=0:20:14.096089
-
-pool_size=20;passada=2;max_workers=19;inicio=2025-01-16 22:12:46;fim=2025-01-16 22:27:44;tempo_total=0:14:58.035786
-
-pool_size=20;passada=2;max_workers=18;inicio=2025-01-16 22:27:46;fim=2025-01-16 22:42:42;tempo_total=0:14:56.233525
-
-pool_size=20;passada=2;max_workers=17;inicio=2025-01-16 22:42:44;fim=2025-01-16 22:55:27;tempo_total=0:12:43.249940
-
-pool_size=20;passada=2;max_workers=16;inicio=2025-01-16 22:55:28;fim=2025-01-16 23:06:34;tempo_total=0:11:05.984347
-
-pool_size=20;passada=2;max_workers=15;inicio=2025-01-16 23:06:36;fim=2025-01-16 23:17:32;tempo_total=0:10:55.633315
-
-pool_size=20;passada=2;max_workers=14;inicio=2025-01-16 23:17:33;fim=2025-01-16 23:27:05;tempo_total=0:09:31.981385
-
-pool_size=20;passada=2;max_workers=13;inicio=2025-01-16 23:27:07;fim=2025-01-16 23:35:16;tempo_total=0:08:09.188615
-
-pool_size=20;passada=2;max_workers=12;inicio=2025-01-16 23:35:17;fim=2025-01-16 23:43:06;tempo_total=0:07:49.078147
-
-pool_size=20;passada=2;max_workers=11;inicio=2025-01-16 23:43:08;fim=2025-01-16 23:49:59;tempo_total=0:06:51.336057
-
-pool_size=20;passada=2;max_workers=10;inicio=2025-01-16 23:50:01;fim=2025-01-16 23:56:24;tempo_total=0:06:22.480920
-
-pool_size=20;passada=2;max_workers=9;inicio=2025-01-16 23:56:25;fim=2025-01-17 00:02:29;tempo_total=0:06:03.766587
-
-pool_size=20;passada=2;max_workers=8;inicio=2025-01-17 00:02:30;fim=2025-01-17 00:07:12;tempo_total=0:04:41.966592
-
-pool_size=20;passada=2;max_workers=7;inicio=2025-01-17 00:07:14;fim=2025-01-17 00:11:46;tempo_total=0:04:32.317962
-
-pool_size=20;passada=2;max_workers=6;inicio=2025-01-17 00:11:48;fim=2025-01-17 00:16:15;tempo_total=0:04:27.307040
-
-pool_size=20;passada=2;max_workers=5;inicio=2025-01-17 00:16:17;fim=2025-01-17 00:20:38;tempo_total=0:04:21.726890
-
-pool_size=20;passada=3;max_workers=5;inicio=2025-01-17 00:20:40;fim=2025-01-17 00:25:01;tempo_total=0:04:21.250457
-
-pool_size=20;passada=3;max_workers=6;inicio=2025-01-17 00:25:03;fim=2025-01-17 00:29:30;tempo_total=0:04:26.740238
-
-pool_size=20;passada=3;max_workers=7;inicio=2025-01-17 00:29:31;fim=2025-01-17 00:34:03;tempo_total=0:04:31.473292
-
-pool_size=20;passada=3;max_workers=8;inicio=2025-01-17 00:34:04;fim=2025-01-17 00:38:45;tempo_total=0:04:40.297421
-
-pool_size=20;passada=3;max_workers=9;inicio=2025-01-17 00:38:46;fim=2025-01-17 00:43:43;tempo_total=0:04:56.771773
-
-pool_size=20;passada=3;max_workers=10;inicio=2025-01-17 00:43:45;fim=2025-01-17 00:49:07;tempo_total=0:05:22.040929
-
-pool_size=20;passada=3;max_workers=11;inicio=2025-01-17 00:49:08;fim=2025-01-17 00:54:51;tempo_total=0:05:43.227556
-
-pool_size=20;passada=3;max_workers=12;inicio=2025-01-17 00:54:53;fim=2025-01-17 01:01:26;tempo_total=0:06:32.980960
-
-pool_size=20;passada=3;max_workers=13;inicio=2025-01-17 01:01:28;fim=2025-01-17 01:08:25;tempo_total=0:06:57.342758
-
-pool_size=20;passada=3;max_workers=14;inicio=2025-01-17 01:08:27;fim=2025-01-17 01:16:02;tempo_total=0:07:35.596823
-
-pool_size=20;passada=3;max_workers=15;inicio=2025-01-17 01:16:04;fim=2025-01-17 01:24:55;tempo_total=0:08:51.097603
-
-pool_size=20;passada=3;max_workers=16;inicio=2025-01-17 01:24:56;fim=2025-01-17 01:34:31;tempo_total=0:09:34.824459
-
-pool_size=20;passada=3;max_workers=17;inicio=2025-01-17 01:34:33;fim=2025-01-17 01:44:46;tempo_total=0:10:13.410151
-
-pool_size=20;passada=3;max_workers=18;inicio=2025-01-17 01:44:48;fim=2025-01-17 01:57:37;tempo_total=0:12:49.197529
-
-pool_size=20;passada=3;max_workers=19;inicio=2025-01-17 01:57:38;fim=2025-01-17 02:12:03;tempo_total=0:14:24.459089
-
-pool_size=20;passada=3;max_workers=20;inicio=2025-01-17 02:12:04;fim=2025-01-17 02:27:19;tempo_total=0:15:14.952437
-
-pool_size=20;passada=4;max_workers=20;inicio=2025-01-17 02:27:21;fim=2025-01-17 02:43:23;tempo_total=0:16:01.593479
-
-pool_size=20;passada=4;max_workers=19;inicio=2025-01-17 02:43:24;fim=2025-01-17 02:55:49;tempo_total=0:12:24.450979
-
-pool_size=20;passada=4;max_workers=18;inicio=2025-01-17 02:55:50;fim=2025-01-17 03:08:16;tempo_total=0:12:26.294589
-
-pool_size=20;passada=4;max_workers=17;inicio=2025-01-17 03:08:18;fim=2025-01-17 03:18:23;tempo_total=0:10:05.126143
-
-pool_size=20;passada=4;max_workers=16;inicio=2025-01-17 03:18:25;fim=2025-01-17 03:27:47;tempo_total=0:09:22.654388
-
-pool_size=20;passada=4;max_workers=15;inicio=2025-01-17 03:27:49;fim=2025-01-17 03:36:32;tempo_total=0:08:43.108385
-
-pool_size=20;passada=4;max_workers=14;inicio=2025-01-17 03:36:34;fim=2025-01-17 03:44:01;tempo_total=0:07:26.624474
-
-pool_size=20;passada=4;max_workers=13;inicio=2025-01-17 03:44:02;fim=2025-01-17 03:50:59;tempo_total=0:06:57.210332
-
-pool_size=20;passada=4;max_workers=12;inicio=2025-01-17 03:51:01;fim=2025-01-17 03:57:19;tempo_total=0:06:18.400897
-
-pool_size=20;passada=4;max_workers=11;inicio=2025-01-17 03:57:21;fim=2025-01-17 04:03:06;tempo_total=0:05:45.286482
-
-pool_size=20;passada=4;max_workers=10;inicio=2025-01-17 04:03:08;fim=2025-01-17 04:08:25;tempo_total=0:05:16.676864
-
-pool_size=20;passada=4;max_workers=9;inicio=2025-01-17 04:08:26;fim=2025-01-17 04:13:23;tempo_total=0:04:57.119682
-
-pool_size=20;passada=4;max_workers=8;inicio=2025-01-17 04:13:25;fim=2025-01-17 04:18:05;tempo_total=0:04:40.569795
-
-pool_size=20;passada=4;max_workers=7;inicio=2025-01-17 04:18:07;fim=2025-01-17 04:22:37;tempo_total=0:04:30.271709
-
-pool_size=20;passada=4;max_workers=6;inicio=2025-01-17 04:22:39;fim=2025-01-17 04:27:04;tempo_total=0:04:25.798903
-
-pool_size=20;passada=4;max_workers=5;inicio=2025-01-17 04:27:06;fim=2025-01-17 04:31:26;tempo_total=0:04:19.677483
-
+14.255.350/0001-03;141528;BALCAO;2025-01-07;SDL EMPREENDIMENTOS LTDA ME;J;29237547000197;45260000;CAETANOS;BA;77;988040205;;;;;;2.0000;162.182124248497;5;;FILTRO AR PRIMARIO - TURBO;63.41;26.338559507587917;45.252023246492996;5
+14.255.350/0001-03;141528;BALCAO;2025-01-07;SDL EMPREENDIMENTOS LTDA ME;J;29237547000197;45260000;CAETANOS;BA;77;988040205;;;;;1527219;1.0000;57.375751503006015;5;;FILTRO DE AR SECUNDÁRIO IMP.VER TR25491;23.0;7.864801396226413;15.441753507014035;5
+14.255.350/0001-03;141526;BALCAO;2025-01-07;ENGINE COM PCS E MANUT TRATORES LTDA-ME;J;22822963000103;45051035;VITÓRIA DA CONQUISTA;BA;77;34255829;;;;;1U3302RC;5.0000;200.0;2;;PONTA ESCAV CAT 311 AILLI (5.0KG);85.04;36.69958308371321;48.959999999999994;5
+14.255.350/0001-03;141530;BALCAO;2025-01-07;VALDIONOR MARTINS JUNIOR;F;51443236500;39915000;ITAGUAJÉ;MG;33;37221376;;;;;N-014373;2.0000;70.0;5;;RÓTULA PINO TRIANGULO INFERIOR;27.48;9.396727929056597;19.420000000000005;5
+14.255.350/0001-03;141534;BALCAO;2025-01-07;VR COMERCIO DE PECAS E SERVICOS DE LOCACAO LIMITADA;J;44864946000171;45023280;VITÓRIA DA CONQUISTA;BA;77;999301099;;;;;539120;1.0000;12.75;5;;JUNTA COM CHAPA;5.25;1.7952264056603782;3.2925000000000004;5
+14.255.350/0001-03;141527;BALCAO;2025-01-07;CONQUISTA SERVICOS DE TERRAPLENAGEM LTDA;J;11704265000197;45002130;VITÓRIA DA CONQUISTA;BA;77;030170760;;;;;73125482;4.0000;182.835;5;;PLACA CELERON (SAPATA);77.8956;26.63623581043018;44.60385000000001;5
+14.255.350/0001-03;141527;BALCAO;2025-01-07;CONQUISTA SERVICOS DE TERRAPLENAGEM LTDA;J;11704265000197;45002130;VITÓRIA DA CONQUISTA;BA;77;030170760;;;;;84165760;4.0000;71.91;5;;PLACA DE DESG.POLIAMIDA (CURVA);27.24;9.314660436226411;20.939700000000006;5
+14.255.350/0001-03;141527;BALCAO;2025-01-07;CONQUISTA SERVICOS DE TERRAPLENAGEM LTDA;J;11704265000197;45002130;VITÓRIA DA CONQUISTA;BA;77;030170760;;;;;84165763;4.0000;69.615;5;;PLACA DE DESG.POLIAMIDA(ABAULADA);27.24;9.314660436226411;19.40205;5
+14.255.350/0001-03;141533;BALCAO;2025-01-07;VR COMERCIO DE PECAS E SERVICOS DE LOCACAO LIMITADA;J;44864946000171;45023280;VITÓRIA DA CONQUISTA;BA;77;999301099;;;;;84209920;1.0000;224.9115857605178;5;;REPARO ESTABILIZADOR B90B;129.51;57.367065396226394;21.18076245954694;5
+14.255.350/0001-03;141533;BALCAO;2025-01-07;VR COMERCIO DE PECAS E SERVICOS DE LOCACAO LIMITADA;J;44864946000171;45023280;VITÓRIA DA CONQUISTA;BA;77;999301099;;;;;87428627;2.0000;157.5911111111111;5;;REPARO CAÇAMBA LB90/110 - B90B/110 A PATIR 2006;92.7012;41.062433809811324;12.88484444444444;5
+14.255.350/0001-03;141533;BALCAO;2025-01-07;VR COMERCIO DE PECAS E SERVICOS DE LOCACAO LIMITADA;J;44864946000171;45023280;VITÓRIA DA CONQUISTA;BA;77;999301099;;;;;1542923C2;1.0000;169.06619201725997;5;;REPARO CIL. CAÇAMBA RETRO B90B/95B/110B;99.6759;44.15191007433964;13.598448651564183;5
+14.255.350/0001-03;141536;BALCAO;2025-01-07;WM COMERCIO E SERVIÇOS LTDA;J;21542125000113;45155000;RIBEIRA DO AMPARO;BA;77;991446111;;;;;2057019570RC;5.0000;175.0;2;;PONTA ESCAV. KOM. PC200 - NTX/YTC;73.47;31.706471885705653;43.78;5
+14.255.350/0001-03;141535;BALCAO;2025-01-07;M C TERRAPLANAGEM E CONSTRUTORA LTDA - EPP;J;08086996000101;45208000;JEQUIÉ;BA;77;30463360;;;;;75200633;2.0000;351.0112758738548;5;;MANCAL TRUCK AD7B (SUPORTE);260.0;115.16822641509427;-24.822445164517262;5
+14.255.350/0001-03;141535;BALCAO;2025-01-07;M C TERRAPLANAGEM E CONSTRUTORA LTDA - EPP;J;08086996000101;45208000;JEQUIÉ;BA;77;30463360;;;;;545147;4.0000;81.09052577173487;5;;BUCHA DE BRONZE (CASQUILHO);38.0;16.83227924528302;16.33065226706237;5
+14.255.350/0001-03;141535;BALCAO;2025-01-07;M C TERRAPLANAGEM E CONSTRUTORA LTDA - EPP;J;08086996000101;45208000;JEQUIÉ;BA;77;30463360;;;;;14x65x1.50;3.0000;4.977032269896713;5;;PARAFUSO (11227031);1.5928;0.6908363826984154;1.741811620830798;5
+14.255.350/0001-03;141535;BALCAO;2025-01-07;M C TERRAPLANAGEM E CONSTRUTORA LTDA - EPP;J;08086996000101;45208000;JEQUIÉ;BA;77;30463360;;;;;14x90x1.50;4.0000;7.434048200605217;5;;PARAFUSO SEXTAVADO - 8.8 - RP;5.5;2.4362509433962263;-0.5191877055945042;5
+14.255.350/0001-03;141535;BALCAO;2025-01-07;M C TERRAPLANAGEM E CONSTRUTORA LTDA - EPP;J;08086996000101;45208000;JEQUIÉ;BA;77;30463360;;;;;14 mmp;8.0000;1.0710069441549888;5;;ARRUELA PRESSAO 14MM;0.59;0.26134328301886794;0.1275746525838426;5
+14.255.350/0001-03;141532;BALCAO;2025-01-07;JOSEMAR MOREIRA DOS SANTOS;F;02211384552;45000000;VITÓRIA DA CONQUISTA;BA;77;988398849;;;;;0700003032;1.0000;1.36;2;;ANEL 31.34X3.53 ORING;0.3254;0.14413746490566037;0.5858000000000001;5
+14.255.350/0001-03;141532;BALCAO;2025-01-07;JOSEMAR MOREIRA DOS SANTOS;F;02211384552;45000000;VITÓRIA DA CONQUISTA;BA;77;988398849;;;;;0700003035;1.0000;1.53;2;;ANEL 34.52X3.53 ORING;0.3604;0.15964088000000004;0.6647000000000001;5
+14.255.350/0001-03;141532;BALCAO;2025-01-07;JOSEMAR MOREIRA DOS SANTOS;F;02211384552;45000000;VITÓRIA DA CONQUISTA;BA;77;988398849;;;;;10x25x1.25;2.0000;1.28;2;;PARAFUSO SEXTAVADO - 8.8 - RI;0.3956;0.1715814119760754;0.462;5
+14.255.350/0001-03;141532;BALCAO;2025-01-07;JOSEMAR MOREIRA DOS SANTOS;F;02211384552;45000000;VITÓRIA DA CONQUISTA;BA;77;988398849;;;;;10 mmp;2.0000;1.0;2;;ARRUELA PRESSAO 10MM;0.35;0.15503415094339626;0.32000000000000006;5
+14.255.350/0001-03;141532;BALCAO;2025-01-07;JOSEMAR MOREIRA DOS SANTOS;F;02211384552;45000000;VITÓRIA DA CONQUISTA;BA;77;988398849;;;;;12x30x1.75;1.0000;2.55;2;;PARAFUSO SEXT. (10.9);0.709;0.30751067009867894;0.9994999999999999;5
+14.255.350/0001-03;141531;BALCAO;2025-01-07;MARIA APARECIDA DOS SANTOS DE SOUZA;F;04732165583;00000000;MARACÁS;BA;73;988144487;;;;;0701210080;1.0000;71.22905027932961;2;;RETENTOR - NOK;26.28;12.071687193889808;21.44346368715084;5
+14.255.350/0001-03;141531;BALCAO;2025-01-07;MARIA APARECIDA DOS SANTOS DE SOUZA;F;04732165583;00000000;MARACÁS;BA;73;988144487;;;;;0700003125;2.0000;3.5661080074487894;2;;ANEL 123.42X3.53 ORING;1.5855;0.7023047037735847;0.8037923649906891;5
+14.255.350/0001-03;141531;BALCAO;2025-01-07;MARIA APARECIDA DOS SANTOS DE SOUZA;F;04732165583;00000000;MARACÁS;BA;73;988144487;;;;;0700003110;2.0000;3.9571694599627563;2;;ANEL 110.72X3.53 ORING;1.1;0.37614267547169816;1.5513035381750466;5
+14.255.350/0001-03;141531;BALCAO;2025-01-07;MARIA APARECIDA DOS SANTOS DE SOUZA;F;04732165583;00000000;MARACÁS;BA;73;988144487;;;;;7B5054;20.0000;0.186219739292365;2;;REBITE;;;;5
+14.255.350/0001-03;141542;BALCAO;2025-01-07;ATLANTICA AMBIENTAL LTDA;J;10805198000134;45652140;ILHÉUS;BA;73;999748275;;;;;75210204;1.0000;569.74477994256;5;;CARDAN AD7 RCA119 - STAHL;247.31;95.91576891882741;134.41900256151519;5
+14.255.350/0001-03;141542;BALCAO;2025-01-07;ATLANTICA AMBIENTAL LTDA;J;10805198000134;45652140;ILHÉUS;BA;73;999748275;;;;;8x20x1.25;4.0000;1.5254210975704416;5;;PARAFUSO ALLEN (14306321);0.2527;0.10960218100696222;0.769332135372196;5
+14.255.350/0001-03;141542;BALCAO;2025-01-07;ATLANTICA AMBIENTAL LTDA;J;10805198000134;45652140;ILHÉUS;BA;73;999748275;;;;;8 mmp;4.0000;0.5383839167895677;5;;ARRUELA PRESSAO 8MM;0.22;0.09745003773584907;0.14071722424901037;5
+14.255.350/0001-03;141539;BALCAO;2025-01-07;OSMARCI FERREIRA SALGADO;F;09962158591;45000000;VITÓRIA DA CONQUISTA;BA;77;999335982;;;;;16x60x2.00;8.0000;7.182708648036254;2;;PARAFUSO - (10.9);2.7843;1.207619123773981;2.0281147941842903;5
+14.255.350/0001-03;141539;BALCAO;2025-01-07;OSMARCI FERREIRA SALGADO;F;09962158591;45000000;VITÓRIA DA CONQUISTA;BA;77;999335982;;;;;16 mmp;8.0000;1.408374244712991;2;;ARRUELA PRESSAO 16MM;0.59;0.26134328301886794;0.3536107439577041;5
+14.255.350/0001-03;141539;BALCAO;2025-01-07;OSMARCI FERREIRA SALGADO;F;09962158591;45000000;VITÓRIA DA CONQUISTA;BA;77;999335982;;;;;12x25x1.75;8.0000;1.7557732250755287;2;;PARAFUSO;0.6633;0.287689460474547;0.5130680608006042;5
+14.255.350/0001-03;141539;BALCAO;2025-01-07;OSMARCI FERREIRA SALGADO;F;09962158591;45000000;VITÓRIA DA CONQUISTA;BA;77;999335982;;;;;12 mml;8.0000;1.2018126888217522;2;;ARRUELA LISA 12MM;0.55;0.24362509433962265;0.255214501510574;5
+14.255.350/0001-03;141539;BALCAO;2025-01-07;OSMARCI FERREIRA SALGADO;F;09962158591;45000000;VITÓRIA DA CONQUISTA;BA;77;999335982;;;;;12 mmp;8.0000;0.8825811933534743;2;;ARRUELA PRESSAO 12MM;0.44;0.19490007547169813;0.15132939954682784;5
+14.255.350/0001-03;141544;BALCAO;2025-01-07;MADSON DARLES DOS SANTOS SANTANA;F;03408696586;45545000;UBAITABA;BA;73;991926608;;;;;991/00157;1.0000;187.0;5;;REPARO CIL DIREÇÃO 3CX, 50X90;96.5725;42.77724440566037;28.7175;5
+14.255.350/0001-03;141544;BALCAO;2025-01-07;MADSON DARLES DOS SANTOS SANTANA;F;03408696586;45545000;UBAITABA;BA;73;991926608;;;;;332/Y8994;1.0000;240.55;5;;REPARO CILINDRO CAÇAMBA 416-3CX;127.92;56.662767396226414;33.24850000000002;5
+14.255.350/0001-03;141541;BALCAO;2025-01-07;VR COMERCIO DE PECAS E SERVICOS DE LOCACAO LIMITADA;J;44864946000171;45023280;VITÓRIA DA CONQUISTA;BA;77;999301099;;;;;LB-283;1.0000;82.45;5;;FILTRO BLINDADO LUBRIFICANTE - VOX;29.295;12.168240037451316;25.9465;5
+14.255.350/0001-03;141541;BALCAO;2025-01-07;VR COMERCIO DE PECAS E SERVICOS DE LOCACAO LIMITADA;J;44864946000171;45023280;VITÓRIA DA CONQUISTA;BA;77;999301099;;;;;222421A1;1.0000;107.1;5;;FILTRO DE AR PRIMARIO - CNH 580M/580N - TURBO;38.37;15.937715317870182;33.38700000000001;5
+14.255.350/0001-03;141541;BALCAO;2025-01-07;VR COMERCIO DE PECAS E SERVICOS DE LOCACAO LIMITADA;J;44864946000171;45023280;VITÓRIA DA CONQUISTA;BA;77;999301099;;;;;222422A1;1.0000;65.45;5;;FILTRO AR SECUNDARIO- CNH 580L/580M - TURBO;23.06;9.578413219444526;20.791500000000003;5
+14.255.350/0001-03;141543;BALCAO;2025-01-07;MARIO MARCOS SOARES MOURA;F;44730560582;45280000;IGUAÍ;BA;73;988549580;;;;;2456375;1.0000;248.2;5;;FILTRO DE AR PRIMARIO - CAT 120K/12K/140K - TURBO;91.12;37.84843939964376;75.174;5
+14.255.350/0001-03;141543;BALCAO;2025-01-07;MARIO MARCOS SOARES MOURA;F;44730560582;45280000;IGUAÍ;BA;73;988549580;;;;;2456376;1.0000;98.6;5;;FILTRO AR SECUNDARIO - CAT.120K - TURBO;34.58;14.363466137397733;31.482;5
+14.255.350/0001-03;141543;BALCAO;2025-01-07;MARIO MARCOS SOARES MOURA;F;44730560582;45280000;IGUAÍ;BA;73;988549580;;;;;3261644;1.0000;268.6;5;;FILTRO SEPARADOR S/ COPO - PRO FILTER;100.0;38.52365283018865;79.96200000000002;5
+14.255.350/0001-03;141543;BALCAO;2025-01-07;MARIO MARCOS SOARES MOURA;F;44730560582;45280000;IGUAÍ;BA;73;988549580;;;;;1R0762;1.0000;199.75;5;;FILTRO COMBUST. CAT120K IMP;70.0;32.15441794415094;63.83250000000001;5
+14.255.350/0001-03;141543;BALCAO;2025-01-07;MARIO MARCOS SOARES MOURA;F;44730560582;45280000;IGUAÍ;BA;73;988549580;;;;;2P4004;1.0000;128.35;5;;FILTRO LUBRIFICANTE IMP. (1R1807);45.0;20.670697249811333;40.9945;5
+14.255.350/0001-03;141543;BALCAO;2025-01-07;MARIO MARCOS SOARES MOURA;F;44730560582;45280000;IGUAÍ;BA;73;988549580;;;;;3283655;1.0000;383.35;5;;FILTRO TRANSMISSÃO PRO-FILTERS (P573354);160.0;54.71166188679247;96.84450000000004;5
+14.255.350/0001-03;141546;BALCAO;2025-01-07;GRANSOL MINERACAO;J;37133602000127;45180000;ANAGÉ;BA;77;998310219;;;;;190493A1;1.0000;52.84552845528455;5;;ANEL 202.79X3.53 VITON;28.5774;12.658494129056601;6.829104065040649;5
+14.255.350/0001-03;141546;BALCAO;2025-01-07;GRANSOL MINERACAO;J;37133602000127;45180000;ANAGÉ;BA;77;998310219;;;;;190492A1;1.0000;47.15447154471545;5;;ANEL 177.39X3.53 VITON;25.9689;11.50304674981132;5.624595934959352;5
+14.255.350/0001-03;141549;BALCAO;2025-01-07;CONSUMIDOR - A VISTA;F;00000000000;45000000;;BA;73;2782117;;;;;70927700;1.0000;3.0;5;;TRAVA;0.74;0.2530414362264152;1.2700000000000002;5
+14.255.350/0001-03;141548;BALCAO;2025-01-07;BASE CONSTRUTORA E TERRAPLANAGEM;J;21442493000190;45658250;ILHÉUS;BA;73;9;;;;;2057019570RC;2.0000;188.4181818181818;5;;PONTA ESCAV. KOM. PC200 - NTX/YTC;73.47;31.706471885705653;52.770181818181825;5
+14.255.350/0001-03;141548;BALCAO;2025-01-07;BASE CONSTRUTORA E TERRAPLANAGEM;J;21442493000190;45658250;ILHÉUS;BA;73;9;;;;;0924402496;2.0000;26.581818181818182;5;;JG PINO TRAVA KOM PC200;9.3;4.444255194566038;8.509818181818183;5
+14.255.350/0001-03;141537;BALCAO;2025-01-07;DIATOMIL - DIATOMITA INDUSTRIAL LTDA;J;09450022000128;45007070;VITÓRIA DA CONQUISTA;BA;77;991991731;;;;;6 mml;20.0000;0.5;5;;ARRUELA LISA 6MM;0.2;0.08859094339622642;0.135;5
+14.255.350/0001-03;141537;BALCAO;2025-01-07;DIATOMIL - DIATOMITA INDUSTRIAL LTDA;J;09450022000128;45007070;VITÓRIA DA CONQUISTA;BA;77;991991731;;;;;6 mmp;20.0000;0.5;5;;ARRUELA PRESSAO 6MM;0.13;0.05758411320754715;0.20500000000000002;5
+14.255.350/0001-03;141537;BALCAO;2025-01-07;DIATOMIL - DIATOMITA INDUSTRIAL LTDA;J;09450022000128;45007070;VITÓRIA DA CONQUISTA;BA;77;991991731;;;;;51205;1.0000;28.0;5;;ADESIVO 3M (73G);10.35;4.584581320754716;8.410000000000002;5
+14.255.350/0001-03;141537;BALCAO;2025-01-07;DIATOMIL - DIATOMITA INDUSTRIAL LTDA;J;09450022000128;45007070;VITÓRIA DA CONQUISTA;BA;77;991991731;;;;;51200;2.0000;4.9;5;;ESTOPA BRANCA;1.75;0.7751707547169808;1.5330000000000004;5
+14.255.350/0001-03;141537;BALCAO;2025-01-07;DIATOMIL - DIATOMITA INDUSTRIAL LTDA;J;09450022000128;45007070;VITÓRIA DA CONQUISTA;BA;77;991991731;;;;;6x30x1.00;20.0000;0.65;5;;PARAFUSO (10902721);0.367;0.16256438113207533;0.06850000000000006;5
+14.255.350/0001-03;141537;BALCAO;2025-01-07;DIATOMIL - DIATOMITA INDUSTRIAL LTDA;J;09450022000128;45007070;VITÓRIA DA CONQUISTA;BA;77;991991731;;;;;14x60x1.50;2.0000;8.82;5;;PARAFUSO 8.8;5.0;2.21477358490566;0.9094000000000007;5
+14.255.350/0001-03;141537;BALCAO;2025-01-07;DIATOMIL - DIATOMITA INDUSTRIAL LTDA;J;09450022000128;45007070;VITÓRIA DA CONQUISTA;BA;77;991991731;;;;;14x1.50\";2.0000;2.65;5;;PORCA SEXTAVADA AUTO TRAVANTE;1.5;0.6644320754716977;0.2755000000000001;5
+14.255.350/0001-03;141551;BALCAO;2025-01-07;ROSANE OLIVEIRA SOUZA;F;62557726591;45000000;VITÓRIA DA CONQUISTA;BA;77;988689135;;;;;10 MMC 45;5.0000;3.0;5;;GRAXEIRO CURVO 45º 10 MM (13407811);1.68;0.744163924528302;0.3300000000000003;5
+14.255.350/0001-03;141547;BALCAO;2025-01-07;C F DO NASCIMENTO PECAS E ACESSORIOS;J;08312128000100;45545000;UBAITABA;BA;73;988151975;;;;;320/03119OR;1.0000;900.0;5;;RETENTOR DIANTEIRO DO MOTOR;577.27;255.70446947169813;25.730000000000018;5
+14.255.350/0001-03;141547;BALCAO;2025-01-07;C F DO NASCIMENTO PECAS E ACESSORIOS;J;08312128000100;45545000;UBAITABA;BA;73;988151975;;;;;320/07189A;4.0000;32.5;5;;ABRAÇADEIRA TUBO COMBUSTIVEL;20.85;9.235605849056602;0.9250000000000007;5
+14.255.350/0001-03;141554;BALCAO;2025-01-07;BASE CONSTRUTORA E TERRAPLANAGEM;J;21442493000190;45658250;ILHÉUS;BA;73;9;;;;;JL819349/10;2.0000;220.0;2;;ROLAMENTO - A&S CONE CAPA;139.99;62.009230830188656;7.409999999999997;5
+14.255.350/0001-03;141550;BALCAO;2025-01-07;VIACAO TRANSLIMEIRA LTDA;J;07080380000160;45118000;VITÓRIA DA CONQUISTA;BA;77;998168880;;;;;75220700;1.0000;254.0874524714829;2;;REPARO INC. ROD. C/GAXETA ZO FG70/75;145.8021;64.58372794075473;24.436493155893544;5
+14.255.350/0001-03;141550;BALCAO;2025-01-07;VIACAO TRANSLIMEIRA LTDA;J;07080380000160;45118000;VITÓRIA DA CONQUISTA;BA;77;998168880;;;;;73065112;2.0000;75.45627376425855;2;;REPARO CIL. DIR. FG-170/200;44.6995;19.799854371698107;5.856203422053234;5
+14.255.350/0001-03;141553;BALCAO;2025-01-07;RONI CONQUISTA COMERCIO DE AUTOPECAS LTDA;J;36600942000310;45051205;VITÓRIA DA CONQUISTA;BA;77;034238160;;;;;8320209;1.0000;289.86675590167926;2;;BUCHA DE BRONZE - MANCAL TRUCK AD7B;131.07;58.058074754717;63.140726454125115;5
+14.255.350/0001-03;141553;BALCAO;2025-01-07;RONI CONQUISTA COMERCIO DE AUTOPECAS LTDA;J;36600942000310;45051205;VITÓRIA DA CONQUISTA;BA;77;034238160;;;;;6x20x1.00;4.0000;0.38589072767096616;2;;PARAFUSO (10902321);0.1217;0.05278427158111318;0.13684678753954735;5
+14.255.350/0001-03;141553;BALCAO;2025-01-07;RONI CONQUISTA COMERCIO DE AUTOPECAS LTDA;J;36600942000310;45051205;VITÓRIA DA CONQUISTA;BA;77;034238160;;;;;6x1.00;4.0000;0.2243550742273059;2;;PORCA (15896211);0.0195;0.009421282171698114;0.130817899732295;5
+14.255.350/0001-03;141553;BALCAO;2025-01-07;RONI CONQUISTA COMERCIO DE AUTOPECAS LTDA;J;36600942000310;45051205;VITÓRIA DA CONQUISTA;BA;77;034238160;;;;;6 mmp;4.0000;0.4487101484546118;2;;ARRUELA PRESSAO 6MM;0.13;0.05758411320754715;0.17063579946458995;5
+14.255.350/0001-03;141553;BALCAO;2025-01-07;RONI CONQUISTA COMERCIO DE AUTOPECAS LTDA;J;36600942000310;45051205;VITÓRIA DA CONQUISTA;BA;77;034238160;;;;;14457080;1.0000;0.8974202969092236;2;;ANEL 12.37X2.62 ORING;0.0844;0.037385378113207544;0.5168715989291799;5
+14.255.350/0001-03;141555;BALCAO;2025-01-07;HENOCK VASCONCELOS GUIMARAES;F;02136104500;45000000;VITÓRIA DA CONQUISTA;BA;77;4255200;;;;;TCS0118;1.0000;20.0;5;;RETENTOR 31.70X50.80X12.27;9.9487;4.406823592830188;3.4513;5
+14.255.350/0001-03;141555;BALCAO;2025-01-07;HENOCK VASCONCELOS GUIMARAES;F;02136104500;45000000;VITÓRIA DA CONQUISTA;BA;77;4255200;;;;;13010B2810;2.0000;311.0;5;;CRUZETA CZ-123 - STAHL;134.34;57.97532915646792;74.03;5
+14.255.350/0001-03;141555;BALCAO;2025-01-07;HENOCK VASCONCELOS GUIMARAES;F;02136104500;45000000;VITÓRIA DA CONQUISTA;BA;77;4255200;;;;;13002B1810;1.0000;100.0;5;;FILTRO DE AR PRIMÁRIO HP9834 VOX;37.452;15.55640641347079;29.548000000000002;5
+14.255.350/0001-03;141555;BALCAO;2025-01-07;HENOCK VASCONCELOS GUIMARAES;F;02136104500;45000000;VITÓRIA DA CONQUISTA;BA;77;4255200;;;;;13002B1820;1.0000;64.0;5;;FILTRO DE AR SECUNDÁRIO HS-3012/FS2530/HS820;23.2725;9.666679169536975;19.6075;5
+14.255.350/0001-03;141555;BALCAO;2025-01-07;HENOCK VASCONCELOS GUIMARAES;F;02136104500;45000000;VITÓRIA DA CONQUISTA;BA;77;4255200;;;;;0412022270;1.0000;137.0;5;;CORREIA  23X1765;67.0;18.076610113207543;24.790000000000006;5
+14.255.350/0001-03;141555;BALCAO;2025-01-07;HENOCK VASCONCELOS GUIMARAES;F;02136104500;45000000;VITÓRIA DA CONQUISTA;BA;77;4255200;;;;;13001B1740;1.0000;57.0;5;;CORREIA 13AV1450;14.51;6.933993857328296;23.680000000000007;5
+14.255.350/0001-03;141552;BALCAO;2025-01-07;BASE CONSTRUTORA E TERRAPLANAGEM;J;21442493000190;45658250;ILHÉUS;BA;73;9;;;;;311569A1;1.0000;87.8096856678346;2;;RETENTOR RODA APC K7 4X4 (130X160);46.0074;20.379194846037734;12.82508939744919;5
+14.255.350/0001-03;141552;BALCAO;2025-01-07;BASE CONSTRUTORA E TERRAPLANAGEM;J;21442493000190;45658250;ILHÉUS;BA;73;9;;;;;144466A1;1.0000;1224.2696559457709;2;;CUBO RODA DIANTEIRA 4X4;456.12;155.9692701237735;364.14066948366656;5
+14.255.350/0001-03;141552;BALCAO;2025-01-07;BASE CONSTRUTORA E TERRAPLANAGEM;J;21442493000190;45658250;ILHÉUS;BA;73;9;;;;;100556A1;8.0000;21.108097516306394;2;;PRISIONEIRO RODA DIANT. 4X4;7.95;2.7184856999999987;6.192425335925285;5
+14.255.350/0001-03;141552;BALCAO;2025-01-07;BASE CONSTRUTORA E TERRAPLANAGEM;J;21442493000190;45658250;ILHÉUS;BA;73;9;;;;;K-395089;8.0000;8.443239006522557;2;;PORCA RODA DIANTEIRA - 18X1.50 - CH-27;2.2074;0.9574034600505282;3.4495701343701137;5
+14.255.350/0001-03;141552;BALCAO;2025-01-07;BASE CONSTRUTORA E TERRAPLANAGEM;J;21442493000190;45658250;ILHÉUS;BA;73;9;;;;;100552A1;1.0000;6.754591205218046;2;;ANEL  215.57X2.62 CUBO EIXO DIANTEIRO;2.2485;0.9959836811320752;2.2770761074960912;5
+14.255.350/0001-03;141552;BALCAO;2025-01-07;BASE CONSTRUTORA E TERRAPLANAGEM;J;21442493000190;45658250;ILHÉUS;BA;73;9;;;;;905876R1;2.0000;2.5329717019567672;2;;PARAFUSO ALLEN CUBO RODA;0.3;0.10258436603773585;1.3970910403110341;5
+14.255.350/0001-03;141552;BALCAO;2025-01-07;BASE CONSTRUTORA E TERRAPLANAGEM;J;21442493000190;45658250;ILHÉUS;BA;73;9;;;;;100562A1;3.0000;186.247919261527;2;;PLANETARIA - PV (23 DENTES);125.0;55.36933962264152;-0.21389409477690435;5
+14.255.350/0001-03;141552;BALCAO;2025-01-07;BASE CONSTRUTORA E TERRAPLANAGEM;J;21442493000190;45658250;ILHÉUS;BA;73;9;;;;;114295A1;90.0000;2.105843140450332;2;;ROLETE - UNIDADE;0.95;0.4208069811320754;0.4609149041017224;5
+14.255.350/0001-03;141552;BALCAO;2025-01-07;BASE CONSTRUTORA E TERRAPLANAGEM;J;21442493000190;45658250;ILHÉUS;BA;73;9;;;;;144278A1;2.0000;97.0972485750094;2;;CRUZETA CZ-210 - STAHL (580-L/M);33.1;14.284527282113203;31.955156545256308;5
+14.255.350/0001-03;141552;BALCAO;2025-01-07;BASE CONSTRUTORA E TERRAPLANAGEM;J;21442493000190;45658250;ILHÉUS;BA;73;9;;;;;K-395091;3.0000;16.389816895014377;2;;ARRUELA ENCOSTO - ORIGINAL;11.0;4.8725018867924526;-0.01882268034036727;1
+14.255.350/0001-03;141552;BALCAO;2025-01-07;BASE CONSTRUTORA E TERRAPLANAGEM;J;21442493000190;45658250;ILHÉUS;BA;73;9;;;;;800-1134;3.0000;2.5329717019567672;2;;ANEL 29.60X1.70 TRAVA LIVRE;0.23;0.10991168760754716;1.4670910403110342;5
+14.255.350/0001-03;141557;BALCAO;2025-01-08;RCX LOCACOES E COMERCIO DE MATERIAIS ELETRICOS EIRELI;J;02492594000120;45603182;ITABUNA;BA;73;30261642;;;;;2P1272;2.0000;165.0;2;;CORREIA 23AV1650/0645 - GATES;68.0;18.346410264150947;42.55000000000001;5
+14.255.350/0001-03;141363;TELEP;2025-01-08;MAGNITOS - MAGNAGO GRANITOS LTDA;J;06025749000331;46190000;PARAMIRIM;BA;28;21018300;;;;;2552272;1.0000;1633.7;55;;RETENTOR DUOCONE COMANDO FINAL CAT.330,336;578.86;224.50285874551133;515.7190000000002;5
+14.255.350/0001-03;141540;BALCAO;2025-01-08;JOSE ERIVALDO ROSA DO AMPARO;F;36125695549;45700000;ITAPETINGA;BA;77;81324142;;;;;E-096001;1.0000;99.45;5;;REPARO DIRECAO;51.7421;22.919407261509427;14.889400000000002;5
+14.255.350/0001-03;141447;BALCAO;2025-01-08;MAGNITOS - MAGNAGO GRANITOS LTDA;J;06025749000331;46190000;PARAMIRIM;BA;28;21018300;;;;;SAE 90;5.0000;29.0;5;;OLEO 90 (1 LT);15.9;7.04298;3.5299999999999994;5
+14.255.350/0001-03;141447;BALCAO;2025-01-08;MAGNITOS - MAGNAGO GRANITOS LTDA;J;06025749000331;46190000;PARAMIRIM;BA;28;21018300;;;;;9800096;1.0000;30.6;5;;TINTA SPRAY PRETO FOSCO 350ML;15.56;6.8923753962264165;4.942000000000002;5
+14.255.350/0001-03;141556;BALCAO;2025-01-08;CONQUISTA SERVICOS DE TERRAPLENAGEM LTDA;J;11704265000197;45002130;VITÓRIA DA CONQUISTA;BA;77;030170760;;;;;51205;1.0000;23.8;5;;ADESIVO 3M (73G);10.35;4.584581320754716;5.596000000000002;5
+14.255.350/0001-03;141556;BALCAO;2025-01-08;CONQUISTA SERVICOS DE TERRAPLENAGEM LTDA;J;11704265000197;45002130;VITÓRIA DA CONQUISTA;BA;77;030170760;;;;;51204;1.0000;52.7;5;;ADESIVO SIL. MWM (60G);34.71;15.374958226415092;0.5990000000000038;5
+14.255.350/0001-03;141560;BALCAO;2025-01-08;CONSUMIDOR - A VISTA;F;00000000000;45000000;;BA;73;2782117;;;;;ORI2208;5.0000;1.0;5;;ANEL 15.47X3.53 ORING;0.172;0.07618821132075469;0.49800000000000005;5
+14.255.350/0001-03;141564;BALCAO;2025-01-08;TRATORMAIS COM. DE PECAS PARA TRATORES LTDA - ME;J;23681021000115;45051015;VITÓRIA DA CONQUISTA;BA;77;988580413;;;;;0924402496;1.0000;25.0;2;;JG PINO TRAVA KOM PC200;9.3;4.444255194566038;7.449999999999999;5
+14.255.350/0001-03;141565;BALCAO;2025-01-08;EMBASA EMP BAIANA DE AGUA E SANEAMTO S/A;J;13504675000110;45020907;VITÓRIA DA CONQUISTA;BA;77;34247750;;;;;HS-840;6.0000;119.0;2;;FILTRO SEC. SCANIA 6106838;38.78;13.260739049811317;40.95;5
+14.255.350/0001-03;141562;BALCAO;2025-01-08;FABIANO ALVES DE SOUSA;F;80242243568;45025120;VITÓRIA DA CONQUISTA;BA;77;991534645;;;;;85999136;8.0000;8.08;2;;GAXETA 18.50X25.00X5.20 ESP.PU;3.8804;1.7188414837735837;1.5332000000000008;5
+14.255.350/0001-03;141562;BALCAO;2025-01-08;FABIANO ALVES DE SOUSA;F;80242243568;45025120;VITÓRIA DA CONQUISTA;BA;77;991534645;;;;;85999138;8.0000;6.8;2;;ANEL 19.00X25.00X2.10 TEFLON;3.46;1.5326233207547173;1.096;5
+14.255.350/0001-03;141562;BALCAO;2025-01-08;FABIANO ALVES DE SOUSA;F;80242243568;45025120;VITÓRIA DA CONQUISTA;BA;77;991534645;;;;;51200;1.0000;4.9;2;;ESTOPA BRANCA;1.75;0.7751707547169808;1.5330000000000004;5
+14.255.350/0001-03;141563;BALCAO;2025-01-08;JEOVANE MOREIRA SANTOS;F;05549811570;45065550;VITÓRIA DA CONQUISTA;BA;77;988415343;;;;;51205;1.0000;23.8;5;;ADESIVO 3M (73G);10.35;4.584581320754716;5.596000000000002;5
+14.255.350/0001-03;141563;BALCAO;2025-01-08;JEOVANE MOREIRA SANTOS;F;05549811570;45065550;VITÓRIA DA CONQUISTA;BA;77;988415343;;;;;904/50033;1.0000;136.85;5;;RETENTOR R. JCB (127X160X14.5/16.5);72.7187;32.21109117773584;18.970799999999997;5
+14.255.350/0001-03;141569;TELEP;2025-01-08;JOSE DUARTE DE SOUSA;F;57844305649;39990000;ÁGUAS VERMELHAS;MG;33;37551299;;;;;543964;4.0000;22.95;56;;PRATO;8.86;3.02965827698113;6.516500000000001;5
+14.255.350/0001-03;141558;BALCAO;2025-01-08;ADERIVALDO ANDRADE SOUZA;F;33810249572;45075225;VITÓRIA DA CONQUISTA;BA;38;38412289;;;;;4981134;1.0000;290.0132704633368;5;;SILENCIOSO;138.0;52.2548773951698;56.30889121043569;5
+14.255.350/0001-03;141558;BALCAO;2025-01-08;ADERIVALDO ANDRADE SOUZA;F;33810249572;45075225;VITÓRIA DA CONQUISTA;BA;38;38412289;;;;;10x40x1.25;4.0000;1.6790241974193183;5;;PARAFUSO;0.6747;0.2926339197680944;0.4502462122709433;5
+14.255.350/0001-03;141558;BALCAO;2025-01-08;ADERIVALDO ANDRADE SOUZA;F;33810249572;45075225;VITÓRIA DA CONQUISTA;BA;38;38412289;;;;;10 mmp;4.0000;0.8978739023632719;5;;ARRUELA PRESSAO 10MM;0.35;0.15503415094339626;0.2515755145833922;5
+14.255.350/0001-03;141558;BALCAO;2025-01-08;ADERIVALDO ANDRADE SOUZA;F;33810249572;45075225;VITÓRIA DA CONQUISTA;BA;38;38412289;;;;;539120;1.0000;11.447892255131716;5;;JUNTA COM CHAPA;5.25;1.7952264056603782;2.4200878109382504;5
+14.255.350/0001-03;141558;BALCAO;2025-01-08;ADERIVALDO ANDRADE SOUZA;F;33810249572;45075225;VITÓRIA DA CONQUISTA;BA;38;38412289;;;;;10x1.25;4.0000;0.4579156902052687;5;;PORCA;0.1773;0.07689935374964155;0.12950351243753;5
+14.255.350/0001-03;141558;BALCAO;2025-01-08;ADERIVALDO ANDRADE SOUZA;F;33810249572;45075225;VITÓRIA DA CONQUISTA;BA;38;38412289;;;;;51200;1.0000;4.399582121580032;5;;ESTOPA BRANCA;1.75;0.7751707547169808;1.1977200214586214;5
+14.255.350/0001-03;141568;BALCAO;2025-01-08;FABIANO ALVES DE SOUSA;F;80242243568;45025120;VITÓRIA DA CONQUISTA;BA;77;991534645;;;;;ORI2017;4.0000;1.5;2;;ANEL 17.17X1.78 ORING;0.0727;0.0322028079245283;0.9323000000000001;5
+14.255.350/0001-03;141572;BALCAO;2025-01-08;SAO JORGE TERRAPLANAGEM LTDA;J;22177713000168;45120000;BARRA DO CHOÇA;BA;77;999673844;;;;;84226263;1.0000;210.0;5;;FILTRO HID. NEW HOLLAND B90-B;78.5;36.0588829802264;62.20000000000002;5
+14.255.350/0001-03;141574;BALCAO;2025-01-08;FRANCISCO VICENTE NARVAES DINIZ;F;60859989615;46100000;BRUMADO;BA;77;4416862;;;;;4964852;1.0000;60.359550561797754;5;;JUNTA;25.218;8.623241809132068;15.222898876404496;5
+14.255.350/0001-03;141574;BALCAO;2025-01-08;FRANCISCO VICENTE NARVAES DINIZ;F;60859989615;46100000;BRUMADO;BA;77;4416862;;;;;594547;1.0000;7.640449438202247;5;;JUNTA;3.15;1.0771358433962266;1.969101123595506;5
+14.255.350/0001-03;141571;BALCAO;2025-01-08;REVAL AUTO PEÇAS E SERVIÇOS MECANICOS EM GERAL;J;05613745000140;45240000;MANOEL VITORINO;BA;73;998166743;;;;;8320105;1.0000;161.0223642172524;5;;TUBO;69.51;23.76879761094339;38.374984025559115;5
+14.255.350/0001-03;141571;BALCAO;2025-01-08;REVAL AUTO PEÇAS E SERVIÇOS MECANICOS EM GERAL;J;05613745000140;45240000;MANOEL VITORINO;BA;73;998166743;;;;;4970364;1.0000;78.9776357827476;5;;ALAVANCA SUP. REVERSORA - TGL;33.95;11.609130756603776;18.965015974440888;5
+14.255.350/0001-03;141576;BALCAO;2025-01-08;MATEUS SILVA NOLASCO TRANSPORTES LTDA;J;32684553000105;45051075;VITÓRIA DA CONQUISTA;BA;77;988558352;;;;;85805977;1.0000;400.0;2;;BARRA DIREÇAO LONGA - DELLA ROSA;164.46;63.783540319398114;103.53999999999999;5
+14.255.350/0001-03;141567;BALCAO;2025-01-08;DIATOMIL - DIATOMITA INDUSTRIAL LTDA;J;09450022000128;45007070;VITÓRIA DA CONQUISTA;BA;77;991991731;;;;;8x60x1.25;2.0000;0.89;5;;PARAFUSO (16044321);0.2107;0.10179816172188678;0.38560000000000005;5
+14.255.350/0001-03;141567;BALCAO;2025-01-08;DIATOMIL - DIATOMITA INDUSTRIAL LTDA;J;09450022000128;45007070;VITÓRIA DA CONQUISTA;BA;77;991991731;;;;;8x70x1.25;2.0000;1.11;5;;PARAFUSO SEXT;0.2964;0.14320348900981136;0.44730000000000014;5
+14.255.350/0001-03;141567;BALCAO;2025-01-08;DIATOMIL - DIATOMITA INDUSTRIAL LTDA;J;09450022000128;45007070;VITÓRIA DA CONQUISTA;BA;77;991991731;;;;;8x1.25;4.0000;0.3;5;;PORCA;0.036;0.017393136316981136;0.165;5
+14.255.350/0001-03;141567;BALCAO;2025-01-08;DIATOMIL - DIATOMITA INDUSTRIAL LTDA;J;09450022000128;45007070;VITÓRIA DA CONQUISTA;BA;77;991991731;;;;;8 mml;4.0000;0.43;5;;ARRUELA LISA 8MM;0.19;0.0841613962264151;0.09810000000000002;5
+14.255.350/0001-03;141567;BALCAO;2025-01-08;DIATOMIL - DIATOMITA INDUSTRIAL LTDA;J;09450022000128;45007070;VITÓRIA DA CONQUISTA;BA;77;991991731;;;;;8 mmp;4.0000;0.6;5;;ARRUELA PRESSAO 8MM;0.22;0.09745003773584907;0.18200000000000002;5
+14.255.350/0001-03;141567;BALCAO;2025-01-08;DIATOMIL - DIATOMITA INDUSTRIAL LTDA;J;09450022000128;45007070;VITÓRIA DA CONQUISTA;BA;77;991991731;;;;;14 mmp;4.0000;1.19;5;;ARRUELA PRESSAO 14MM;0.59;0.26134328301886794;0.20730000000000004;5
+14.255.350/0001-03;141579;BALCAO;2025-01-08;WESLEY FERREIRA DE SOUSA SILVEIRA;F;47843110500;45025690;VITÓRIA DA CONQUISTA;BA;77;88151244;;;;;75202603;2.0000;50.0;2;;CORREIA - 13AV1420/1425;19.22;9.184794068769811;14.280000000000001;5
+14.255.350/0001-03;141581;BALCAO;2025-01-08;BASE CONSTRUTORA E TERRAPLANAGEM;J;21442493000190;45658250;ILHÉUS;BA;73;9;;;;;DNI8028;1.0000;550.0;5;;VALVULA SOLENOIDE;395.3;175.0999996226415;-26.80000000000001;5
+14.255.350/0001-03;141583;BALCAO;2025-01-08;COMPEÇAS COM. DE PEÇAS LTDA;J;16184178000170;45023325;VITÓRIA DA CONQUISTA;BA;77;4241811;;;;;16x40x2.00;8.0000;5.95;5;;PARAFUSO - (10.9);2.0332;0.9823256877690567;1.9533000000000005;5
+14.255.350/0001-03;141566;BALCAO;2025-01-08;PEDRO SAVIO DA SILVA NETO;J;31097242000179;45000000;VITÓRIA DA CONQUISTA;BA;77;999489991;;;;;367259A1;1.0000;146.31970260223048;2;;REPARO  PROFUNDIDADE 580-M;86.3748;38.260125088301905;11.65940074349443;5
+14.255.350/0001-03;141566;BALCAO;2025-01-08;PEDRO SAVIO DA SILVA NETO;J;31097242000179;45000000;VITÓRIA DA CONQUISTA;BA;77;999489991;;;;;LB-282;1.0000;30.483271375464685;2;;FILTRO LUB. VOX;11.7625;4.88577994335283;8.661291821561342;5
+14.255.350/0001-03;141566;BALCAO;2025-01-08;PEDRO SAVIO DA SILVA NETO;J;31097242000179;45000000;VITÓRIA DA CONQUISTA;BA;77;999489991;;;;;FBS530/1;1.0000;56.394052044609666;2;;FILTRO SEP. AGUA 580L/M (FBS-3028);22.3317;9.275899847904135;15.452314869888479;5
+14.255.350/0001-03;141566;BALCAO;2025-01-08;PEDRO SAVIO DA SILVA NETO;J;31097242000179;45000000;VITÓRIA DA CONQUISTA;BA;77;999489991;;;;;FBD-72/2;1.0000;22.100371747211895;2;;FILTRO DIESEL - VOX;8.4367;3.5043451347999826;6.37054907063197;5
+14.255.350/0001-03;141566;BALCAO;2025-01-08;PEDRO SAVIO DA SILVA NETO;J;31097242000179;45000000;VITÓRIA DA CONQUISTA;BA;77;999489991;;;;;222421A1;1.0000;96.02230483271376;2;;FILTRO DE AR PRIMARIO - CNH 580M/580N - TURBO;38.37;15.937715317870182;25.964944237918225;5
+14.255.350/0001-03;141566;BALCAO;2025-01-08;PEDRO SAVIO DA SILVA NETO;J;31097242000179;45000000;VITÓRIA DA CONQUISTA;BA;77;999489991;;;;;222422A1;1.0000;58.680297397769515;2;;FILTRO AR SECUNDARIO- CNH 580L/580M - TURBO;23.06;9.578413219444526;16.25579925650558;5
+14.255.350/0001-03;141585;BALCAO;2025-01-08;CONSUMIDOR - A VISTA;F;00000000000;45000000;;BA;73;2782117;;;;;3/8 R;4.0000;2.61734693877551;2;;GRAXEIRO RETO 3/8;1.15;0.5093979245283019;0.603622448979592;5
+14.255.350/0001-03;141585;BALCAO;2025-01-08;CONSUMIDOR - A VISTA;F;00000000000;45000000;;BA;73;2782117;;;;;3/8 C 45;2.0000;2.13265306122449;2;;GRAXEIRO CURVO 45º 3/8;3.14;1.0737163645283028;-1.7111224489795918;5
+14.255.350/0001-03;141585;BALCAO;2025-01-08;CONSUMIDOR - A VISTA;F;00000000000;45000000;;BA;73;2782117;;;;;3/8 C 90;2.0000;2.13265306122449;2;;GRAXEIRO CURVO 90º 3/8;14.31;6.511525839899996;-12.881122448979593;5
+14.255.350/0001-03;141578;BALCAO;2025-01-08;RONI CONQUISTA COMERCIO DE AUTOPECAS LTDA;J;36600942000310;45051205;VITÓRIA DA CONQUISTA;BA;77;034238160;;;;;585940B;1.0000;42.08313872022419;2;;BUCHA TAMPA  BOMBA EMBREAGEM;19.0;8.41613962264151;9.19570294255021;5
+14.255.350/0001-03;141578;BALCAO;2025-01-08;RONI CONQUISTA COMERCIO DE AUTOPECAS LTDA;J;36600942000310;45051205;VITÓRIA DA CONQUISTA;BA;77;034238160;;;;;6x20x1.00;4.0000;0.40168145726296123;2;;PARAFUSO (10902321);0.1217;0.05278427158111318;0.14742657636618403;5
+14.255.350/0001-03;141578;BALCAO;2025-01-08;RONI CONQUISTA COMERCIO DE AUTOPECAS LTDA;J;36600942000310;45051205;VITÓRIA DA CONQUISTA;BA;77;034238160;;;;;6x1.00;4.0000;0.23353573096683794;2;;PORCA (15896211);0.0195;0.009421282171698114;0.13696893974778143;5
+14.255.350/0001-03;141578;BALCAO;2025-01-08;RONI CONQUISTA COMERCIO DE AUTOPECAS LTDA;J;36600942000310;45051205;VITÓRIA DA CONQUISTA;BA;77;034238160;;;;;14457080;1.0000;0.9341429238673518;2;;ANEL 12.37X2.62 ORING;0.0844;0.037385378113207544;0.5414757589911257;5
+14.255.350/0001-03;141578;BALCAO;2025-01-08;RONI CONQUISTA COMERCIO DE AUTOPECAS LTDA;J;36600942000310;45051205;VITÓRIA DA CONQUISTA;BA;77;034238160;;;;;22x32;1.0000;10.723960765997198;2;;ABRAÇADEIRA - 14MM REFORÇADA;4.35;1.9268530188679245;2.835053713218123;5
+14.255.350/0001-03;141578;BALCAO;2025-01-08;RONI CONQUISTA COMERCIO DE AUTOPECAS LTDA;J;36600942000310;45051205;VITÓRIA DA CONQUISTA;BA;77;034238160;;;;;585938;1.0000;143.71788883699205;2;;BUCHA DE BRONZE;65.0;28.792056603773567;31.290985520784673;5
+14.255.350/0001-03;141570;BALCAO;2025-01-08;REVAL AUTO PEÇAS E SERVIÇOS MECANICOS EM GERAL;J;05613745000140;45240000;MANOEL VITORINO;BA;73;998166743;;;;;311569A1;2.0000;79.44444444444444;5;;RETENTOR RODA APC K7 4X4 (130X160);46.0074;20.379194846037734;7.2203777777777844;5
+14.255.350/0001-03;141570;BALCAO;2025-01-08;REVAL AUTO PEÇAS E SERVIÇOS MECANICOS EM GERAL;J;05613745000140;45240000;MANOEL VITORINO;BA;73;998166743;;;;;85824346;2.0000;44.30555555555556;5;;RETENTOR 35.00X52.00X14.50;25.4949;11.293086213962262;4.189822222222222;5
+14.255.350/0001-03;141570;BALCAO;2025-01-08;REVAL AUTO PEÇAS E SERVIÇOS MECANICOS EM GERAL;J;05613745000140;45240000;MANOEL VITORINO;BA;73;998166743;;;;;402359A1;2.0000;45.06944444444444;5;;RETENTOR COQUILHO  APC 45,00X60,00X16,00;26.0666;11.546323425660376;4.129927777777777;5
+14.255.350/0001-03;141570;BALCAO;2025-01-08;REVAL AUTO PEÇAS E SERVIÇOS MECANICOS EM GERAL;J;05613745000140;45240000;MANOEL VITORINO;BA;73;998166743;;;;;N-014373;2.0000;67.22222222222223;5;;RÓTULA PINO TRIANGULO INFERIOR;27.48;9.396727929056597;17.558888888888898;5
+14.255.350/0001-03;141570;BALCAO;2025-01-08;REVAL AUTO PEÇAS E SERVIÇOS MECANICOS EM GERAL;J;05613745000140;45240000;MANOEL VITORINO;BA;73;998166743;;;;;100552A1;2.0000;6.111111111111111;5;;ANEL  215.57X2.62 CUBO EIXO DIANTEIRO;2.2485;0.9959836811320752;1.8459444444444442;5
+14.255.350/0001-03;141570;BALCAO;2025-01-08;REVAL AUTO PEÇAS E SERVIÇOS MECANICOS EM GERAL;J;05613745000140;45240000;MANOEL VITORINO;BA;73;998166743;;;;;905876R1;2.0000;2.2916666666666665;5;;PARAFUSO ALLEN CUBO RODA;0.3;0.10258436603773585;1.2354166666666666;5
+14.255.350/0001-03;141570;BALCAO;2025-01-08;REVAL AUTO PEÇAS E SERVIÇOS MECANICOS EM GERAL;J;05613745000140;45240000;MANOEL VITORINO;BA;73;998166743;;;;;87428630;2.0000;195.55555555555554;5;;REPARO ESTAB.  LB90/110-B90B/110 (87315528R);124.8016;55.281457406792455;6.220622222222218;5
+14.255.350/0001-03;141588;BALCAO;2025-01-08;EDILSON MUNIZ FERREIRA SOBRINHO;F;63536064515;45570000;IPIAÚ;BA;73;35315514;;;;;585440;1.0000;450.0;2;;PORCA REGULAGEM;300.0;132.88641509433958;1.5;5
+14.255.350/0001-03;141587;BALCAO;2025-01-08;MERENQUALY COM. DE PRODUTOS ALIMENT. LTDA - EPP;J;07958307000149;45027580;VITÓRIA DA CONQUISTA;BA;77;34274300;;;;;TEK115810;1.0000;19.55;5;;ANTIFERRUGEM/DESENGRIPANTE 300ML/150G TEKBOND;9.98;4.420688075471699;3.118500000000001;5
+14.255.350/0001-03;141587;BALCAO;2025-01-08;MERENQUALY COM. DE PRODUTOS ALIMENT. LTDA - EPP;J;07958307000149;45027580;VITÓRIA DA CONQUISTA;BA;77;34274300;;;;;ORI7453;2.0000;0.68;5;;ANEL 20.00X3.00 ORING;0.1873;0.08296541849056603;0.2683000000000001;5
+14.255.350/0001-03;141587;BALCAO;2025-01-08;MERENQUALY COM. DE PRODUTOS ALIMENT. LTDA - EPP;J;07958307000149;45027580;VITÓRIA DA CONQUISTA;BA;77;34274300;;;;;ORI7277;2.0000;0.85;5;;ANEL 18.50X2.00 ORING;0.1424;0.06307675169811319;0.42710000000000004;5
+14.255.350/0001-03;141586;BALCAO;2025-01-08;WAGNER LOPES CORREIA;F;00824246594;45150000;ENCRUZILHADA;BA;77;981323500;;;;;12x1.75;8.0000;1.87;5;;PORCA PARLOCK;0.89;0.3942296981132076;0.3629000000000001;5
+14.255.350/0001-03;141586;BALCAO;2025-01-08;WAGNER LOPES CORREIA;F;00824246594;45150000;ENCRUZILHADA;BA;77;981323500;;;;;0701200055;2.0000;46.75;5;;RETENTOR - NOK (VERDE);14.71;6.757021256549432;16.6125;5
+14.255.350/0001-03;141586;BALCAO;2025-01-08;WAGNER LOPES CORREIA;F;00824246594;45150000;ENCRUZILHADA;BA;77;981323500;;;;;0700003125;2.0000;3.83;5;;ANEL 123.42X3.53 ORING;1.5855;0.7023047037735847;0.9806000000000001;5
+14.255.350/0001-03;141586;BALCAO;2025-01-08;WAGNER LOPES CORREIA;F;00824246594;45150000;ENCRUZILHADA;BA;77;981323500;;;;;0700002125;2.0000;3.4;5;;ANEL 120.32X2.62 ORING;1.3164;0.583105589433962;0.9616;5
+14.255.350/0001-03;141586;BALCAO;2025-01-08;WAGNER LOPES CORREIA;F;00824246594;45150000;ENCRUZILHADA;BA;77;981323500;;;;;32211;1.0000;175.1;5;;ROLAMENTO - SKF;67.0;25.81084739622642;50.31700000000001;5
+14.255.350/0001-03;141580;BALCAO;2025-01-08;NILSON ALMEIDA CAMPOS;F;00280719566;45000000;ITAQUARA;BA;73;88054219;;;;;8S3970;1.0000;407.1156490184146;2;;ANTCAMARA - ITR;135.0;58.26015658867923;137.7674848423378;5
+14.255.350/0001-03;141580;BALCAO;2025-01-08;NILSON ALMEIDA CAMPOS;F;00280719566;45000000;ITAQUARA;BA;73;88054219;;;;;7S3206;6.0000;8.142312980368292;2;;ANEL 46.99X5.33  ORING;3.6614;1.6218344007547165;1.7939496968467563;5
+14.255.350/0001-03;141580;BALCAO;2025-01-08;NILSON ALMEIDA CAMPOS;F;00280719566;45000000;ITAQUARA;BA;73;88054219;;;;;5M2667;2.0000;12.213469470552438;2;;ARRUELA ANTCAMARA - 3/16\";4.6;1.5729602792452828;3.583024545270135;5
+14.255.350/0001-03;141580;BALCAO;2025-01-08;NILSON ALMEIDA CAMPOS;F;00280719566;45000000;ITAQUARA;BA;73;88054219;;;;;3T9562;2.0000;29.31232672932585;2;;VELA LONGA (3S9624/4S7824);10.0;5.241970898113205;9.63925890864832;5
+14.255.350/0001-03;141580;BALCAO;2025-01-08;NILSON ALMEIDA CAMPOS;F;00280719566;45000000;ITAQUARA;BA;73;88054219;;;;;2Y5721;1.0000;82.23736110171974;2;;TUBO INJ;31.9;10.908137588679242;23.19903193815223;5
+14.255.350/0001-03;141580;BALCAO;2025-01-08;NILSON ALMEIDA CAMPOS;F;00280719566;45000000;ITAQUARA;BA;73;88054219;;;;;2Y5723;1.0000;82.23736110171974;2;;TUBO INJ;31.9;10.908137588679242;23.19903193815223;5
+14.255.350/0001-03;141580;BALCAO;2025-01-08;NILSON ALMEIDA CAMPOS;F;00280719566;45000000;ITAQUARA;BA;73;88054219;;;;;2Y5724;1.0000;82.23736110171974;2;;TUBO INJ;31.9;10.908137588679242;23.19903193815223;5
+14.255.350/0001-03;141580;BALCAO;2025-01-08;NILSON ALMEIDA CAMPOS;F;00280719566;45000000;ITAQUARA;BA;73;88054219;;;;;5H7225;1.0000;13.765298532693217;2;;PORCA;3.5;1.690999364150943;5.722750016904456;5
+14.255.350/0001-03;141580;BALCAO;2025-01-08;NILSON ALMEIDA CAMPOS;F;00280719566;45000000;ITAQUARA;BA;73;88054219;;;;;9M4849;4.0000;5.297293033110194;2;;ANEL 23.16X5.33 ORING;2.01;0.7743254218867923;1.5391863321838306;5
+14.255.350/0001-03;141580;BALCAO;2025-01-08;NILSON ALMEIDA CAMPOS;F;00280719566;45000000;ITAQUARA;BA;73;88054219;;;;;6F1069;4.0000;5.699619086257805;2;;ANEL 14.00X3.00 ORING;2.0;0.9186976555471699;1.8187447877927294;5
+14.255.350/0001-03;141580;BALCAO;2025-01-08;NILSON ALMEIDA CAMPOS;F;00280719566;45000000;ITAQUARA;BA;73;88054219;;;;;5B3718;4.0000;1.6284625960736583;2;;ANEL 20.62X4.78 ORING;0.58;0.19832977433962257;0.5110699393693511;5
+14.255.350/0001-03;141584;BALCAO;2025-01-08;EDILSON MUNIZ FERREIRA SOBRINHO;F;63536064515;45570000;IPIAÚ;BA;73;35315514;;;;;594550;1.0000;520.0;2;;PLATO DINAMICA;235.0;104.09435849056602;113.40000000000003;5
+14.255.350/0001-03;141584;BALCAO;2025-01-08;EDILSON MUNIZ FERREIRA SOBRINHO;F;63536064515;45570000;IPIAÚ;BA;73;35315514;;;;;587830;1.0000;465.0;2;;PLATO;205.0;70.09931679245287;106.55000000000001;5
+14.255.350/0001-03;141584;BALCAO;2025-01-08;EDILSON MUNIZ FERREIRA SOBRINHO;F;63536064515;45570000;IPIAÚ;BA;73;35315514;;;;;4S9072;2.0000;355.0;2;;DISCO EMB. D4/AD7/7D - SKW/HN;158.14;60.921304585660394;79.71000000000004;5
+14.255.350/0001-03;141584;BALCAO;2025-01-08;EDILSON MUNIZ FERREIRA SOBRINHO;F;63536064515;45570000;IPIAÚ;BA;73;35315514;;;;;585451;1.0000;328.33;2;;LUVA DINAMICA;150.0;66.44320754716979;69.9811;5
+14.255.350/0001-03;141584;BALCAO;2025-01-08;EDILSON MUNIZ FERREIRA SOBRINHO;F;63536064515;45570000;IPIAÚ;BA;73;35315514;;;;;594557;1.0000;55.0;2;;PRATO LISO;26.06;8.911161929811318;10.790000000000003;5
+14.255.350/0001-03;141584;BALCAO;2025-01-08;EDILSON MUNIZ FERREIRA SOBRINHO;F;63536064515;45570000;IPIAÚ;BA;73;35315514;;;;;594558;1.0000;60.0;2;;PRATO PESCOCO;26.67;9.119750140754721;13.530000000000001;5
+14.255.350/0001-03;141584;BALCAO;2025-01-08;EDILSON MUNIZ FERREIRA SOBRINHO;F;63536064515;45570000;IPIAÚ;BA;73;35315514;;;;;6x20x1.00;4.0000;0.43;2;;PARAFUSO (10902321);0.1217;0.05278427158111318;0.16640000000000002;5
+14.255.350/0001-03;141584;BALCAO;2025-01-08;EDILSON MUNIZ FERREIRA SOBRINHO;F;63536064515;45570000;IPIAÚ;BA;73;35315514;;;;;6x1.00;4.0000;0.25;2;;PORCA (15896211);0.0195;0.009421282171698114;0.14800000000000002;5
+14.255.350/0001-03;141584;BALCAO;2025-01-08;EDILSON MUNIZ FERREIRA SOBRINHO;F;63536064515;45570000;IPIAÚ;BA;73;35315514;;;;;6 mmp;4.0000;0.5;2;;ARRUELA PRESSAO 6MM;0.13;0.05758411320754715;0.20500000000000002;5
+14.255.350/0001-03;141584;BALCAO;2025-01-08;EDILSON MUNIZ FERREIRA SOBRINHO;F;63536064515;45570000;IPIAÚ;BA;73;35315514;;;;;14457080;1.0000;1.0;2;;ANEL 12.37X2.62 ORING;0.0844;0.037385378113207544;0.5856;5
+14.255.350/0001-03;141584;BALCAO;2025-01-08;EDILSON MUNIZ FERREIRA SOBRINHO;F;63536064515;45570000;IPIAÚ;BA;73;35315514;;;;;10619520;1.0000;5.95;2;;CHAVETA PEQUENA;2.02;0.6907347313207548;1.9665000000000004;5

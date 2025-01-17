@@ -4,7 +4,7 @@ import sys
 
 def main():
     # pool_sizes que você deseja testar
-    pool_sizes = [5, 10, 15, 20]
+    pool_sizes = [20]
 
     # As 4 passadas de threads que você quer:
     #  1) 5->20

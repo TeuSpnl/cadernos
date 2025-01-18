@@ -498,134 +498,134 @@ def main():
 
     print("Usuários processados.")
 
-    # 3) FATURAMENTO
-    # Empresa Loja (CNPJ = 14.255.350/0001-03)
-    # Data: de 2 anos atrás até hoje
-    # Para cada item de cada pedido, uma linha.
+    # # 3) FATURAMENTO
+    # # Empresa Loja (CNPJ = 14.255.350/0001-03)
+    # # Data: de 2 anos atrás até hoje
+    # # Para cada item de cada pedido, uma linha.
 
-    # start_date = (datetime.datetime.now() - datetime.timedelta(days=2*365)).strftime('%Y-%m-%d')
-    start_date = (datetime.datetime.now() - datetime.timedelta(days=10)).strftime('%Y-%m-%d')
-    end_date = datetime.datetime.now().strftime('%Y-%m-%d')
+    # # start_date = (datetime.datetime.now() - datetime.timedelta(days=2*365)).strftime('%Y-%m-%d')
+    # start_date = (datetime.datetime.now() - datetime.timedelta(days=10)).strftime('%Y-%m-%d')
+    # end_date = datetime.datetime.now().strftime('%Y-%m-%d')
 
-    # Vamos buscar pedidos desta empresa e deste período
-    # Assumindo: PEDIDOVENDA possui CDPEDIDOVENDA, DATA, NOMECLIENTE, CDCLIENTE, CDFUNC.
-    # ITENSPEDIDOVENDA: CDPEDIDOVENDA, CDPRODUTO, NUMORIGINAL, QUANTIDADE, VALORUNITARIOCDESC, DESCRICAO
-    # FUNCIONARIO: CDFUNC, NUMCNH
-    # CLIENTE: CDCLIENTE, CPF_CNPJ, CEP, CIDADE, ESTADO
-    # FONE: CDCLIENTE, FONE (uma entrada? se houver várias, pegar uma. Não está claro, vamos pegar a primeira.)
-    # NOTA: Para cada item, buscaremos a NF de compra mais recente. Se não houver, campos vazios.
-    # Canal: se NUMCNH = "TELEPECAS", então canal = "TELEP", senão canal = NUMCNH
+    # # Vamos buscar pedidos desta empresa e deste período
+    # # Assumindo: PEDIDOVENDA possui CDPEDIDOVENDA, DATA, NOMECLIENTE, CDCLIENTE, CDFUNC.
+    # # ITENSPEDIDOVENDA: CDPEDIDOVENDA, CDPRODUTO, NUMORIGINAL, QUANTIDADE, VALORUNITARIOCDESC, DESCRICAO
+    # # FUNCIONARIO: CDFUNC, NUMCNH
+    # # CLIENTE: CDCLIENTE, CPF_CNPJ, CEP, CIDADE, ESTADO
+    # # FONE: CDCLIENTE, FONE (uma entrada? se houver várias, pegar uma. Não está claro, vamos pegar a primeira.)
+    # # NOTA: Para cada item, buscaremos a NF de compra mais recente. Se não houver, campos vazios.
+    # # Canal: se NUMCNH = "TELEPECAS", então canal = "TELEP", senão canal = NUMCNH
 
-    # Primeiro pegamos todos PEDIDOVENDA da empresa neste período
-    cur.execute("""
-        SELECT P.CDPEDIDOVENDA, P.DATA, P.NOMECLIENTE, P.CDCLIENTE, P.CDFUNC, P.DESCONTO, P.VALORTOTAL
-        FROM PEDIDOVENDA P
-        JOIN EMPRESA E ON E.CNPJ = ?
-        WHERE P.DATA BETWEEN ? AND ? AND
-        P.EFETIVADO = 'S'
-    """, (cnpj_loja, start_date, end_date))
-    pedidos = cur.fetchall()
+    # # Primeiro pegamos todos PEDIDOVENDA da empresa neste período
+    # cur.execute("""
+    #     SELECT P.CDPEDIDOVENDA, P.DATA, P.NOMECLIENTE, P.CDCLIENTE, P.CDFUNC, P.DESCONTO, P.VALORTOTAL
+    #     FROM PEDIDOVENDA P
+    #     JOIN EMPRESA E ON E.CNPJ = ?
+    #     WHERE P.DATA BETWEEN ? AND ? AND
+    #     P.EFETIVADO = 'S'
+    # """, (cnpj_loja, start_date, end_date))
+    # pedidos = cur.fetchall()
 
-    # Vamos construir um dicionário de pedidos -> itens
-    # Depois buscar os dados auxiliares
-    pedidos_ids = [p[0] for p in pedidos]
-    itens = []
-    if pedidos_ids:
-        grp_size = 1499  # Limite no Firebird
-        # Obter itens
-        for grupo in dividir_em_blocos(pedidos_ids, grp_size):
-            format_strings = ','.join(['?'] * len(grupo))
-            sql_itens = f"""
-                SELECT I.CDPEDIDOVENDA, I.CDPRODUTO, I.NUMORIGINAL, I.QUANTIDADE, I.VALORUNITARIOCDESC, I.DESCRICAO
-                FROM ITENSPEDIDOVENDA I
-                WHERE I.CDPEDIDOVENDA IN ({format_strings})
-            """
-            cur.execute(sql_itens, tuple(grupo))
-            itens.extend(cur.fetchall())
+    # # Vamos construir um dicionário de pedidos -> itens
+    # # Depois buscar os dados auxiliares
+    # pedidos_ids = [p[0] for p in pedidos]
+    # itens = []
+    # if pedidos_ids:
+    #     grp_size = 1499  # Limite no Firebird
+    #     # Obter itens
+    #     for grupo in dividir_em_blocos(pedidos_ids, grp_size):
+    #         format_strings = ','.join(['?'] * len(grupo))
+    #         sql_itens = f"""
+    #             SELECT I.CDPEDIDOVENDA, I.CDPRODUTO, I.NUMORIGINAL, I.QUANTIDADE, I.VALORUNITARIOCDESC, I.DESCRICAO
+    #             FROM ITENSPEDIDOVENDA I
+    #             WHERE I.CDPEDIDOVENDA IN ({format_strings})
+    #         """
+    #         cur.execute(sql_itens, tuple(grupo))
+    #         itens.extend(cur.fetchall())
 
-    # Organizar itens por pedido
-    itens_por_pedido = {}
-    for (cd_ped, cd_prod, num_orig, qtd, valorcdesc, desc) in itens:
-        if cd_ped not in itens_por_pedido:
-            itens_por_pedido[cd_ped] = []
-        itens_por_pedido[cd_ped].append((cd_prod, num_orig, qtd, valorcdesc, desc))
+    # # Organizar itens por pedido
+    # itens_por_pedido = {}
+    # for (cd_ped, cd_prod, num_orig, qtd, valorcdesc, desc) in itens:
+    #     if cd_ped not in itens_por_pedido:
+    #         itens_por_pedido[cd_ped] = []
+    #     itens_por_pedido[cd_ped].append((cd_prod, num_orig, qtd, valorcdesc, desc))
 
-    # Precisamos dados dos clientes dos pedidos
-    cd_clientes = set(p[3] for p in pedidos if p[3] is not None)
-    clientes_dict = {}
-    if cd_clientes:
-        format_strings = ','.join(['?']*len(cd_clientes))  # IN (?, ?, ...)
-        sql_clientes = f"""
-            SELECT CDCLIENTE, CPF_CNPJ, CEP, CIDADE, ESTADO
-            FROM CLIENTE
-            WHERE CDCLIENTE IN ({format_strings})
-        """
-        cur.execute(sql_clientes, tuple(cd_clientes))
-        for row in cur.fetchall():
-            (cd_cli, cpf_cnpj_cli, cep_cli, cid_cli, uf_cli) = row
-            clientes_dict[cd_cli] = {
-                'cpf_cnpj': normalizar_texto(cpf_cnpj_cli),
-                'cep': normalizar_texto(cep_cli),
-                'cidade': normalizar_texto(cid_cli),
-                'uf': normalizar_texto(uf_cli)
-            }
+    # # Precisamos dados dos clientes dos pedidos
+    # cd_clientes = set(p[3] for p in pedidos if p[3] is not None)
+    # clientes_dict = {}
+    # if cd_clientes:
+    #     format_strings = ','.join(['?']*len(cd_clientes))  # IN (?, ?, ...)
+    #     sql_clientes = f"""
+    #         SELECT CDCLIENTE, CPF_CNPJ, CEP, CIDADE, ESTADO
+    #         FROM CLIENTE
+    #         WHERE CDCLIENTE IN ({format_strings})
+    #     """
+    #     cur.execute(sql_clientes, tuple(cd_clientes))
+    #     for row in cur.fetchall():
+    #         (cd_cli, cpf_cnpj_cli, cep_cli, cid_cli, uf_cli) = row
+    #         clientes_dict[cd_cli] = {
+    #             'cpf_cnpj': normalizar_texto(cpf_cnpj_cli),
+    #             'cep': normalizar_texto(cep_cli),
+    #             'cidade': normalizar_texto(cid_cli),
+    #             'uf': normalizar_texto(uf_cli)
+    #         }
 
-    # Dados de telefone do cliente, pegamos apenas o primeiro
-    fones_dict = {}
-    if cd_clientes:
-        sql_fones = f"""
-            SELECT CDCLIENTE, FONE
-            FROM FONE
-            WHERE CDCLIENTE IN ({format_strings})
-        """
-        cur.execute(sql_fones, tuple(cd_clientes))
-        for (cd_cli, fone) in cur.fetchall():
-            if cd_cli not in fones_dict:  # Pega apenas o primeiro
-                fones_dict[cd_cli] = normalizar_texto(fone)
+    # # Dados de telefone do cliente, pegamos apenas o primeiro
+    # fones_dict = {}
+    # if cd_clientes:
+    #     sql_fones = f"""
+    #         SELECT CDCLIENTE, FONE
+    #         FROM FONE
+    #         WHERE CDCLIENTE IN ({format_strings})
+    #     """
+    #     cur.execute(sql_fones, tuple(cd_clientes))
+    #     for (cd_cli, fone) in cur.fetchall():
+    #         if cd_cli not in fones_dict:  # Pega apenas o primeiro
+    #             fones_dict[cd_cli] = normalizar_texto(fone)
 
-    # Dados dos funcionários (para canal)
-    cd_funcs = set(p[4] for p in pedidos if p[4] is not None)
-    funcs_dict = {}
-    if cd_funcs:
-        format_strings = ','.join(['?']*len(cd_funcs))
-        sql_func = f"""
-            SELECT CDFUNC, NUMCNH
-            FROM FUNCIONARIO
-            WHERE CDFUNC IN ({format_strings})
-        """
-        cur.execute(sql_func, tuple(cd_funcs))
-        for (cdf, ncnh) in cur.fetchall():
-            ncnh = normalizar_texto(ncnh)
-            canal = "TELEP" if ncnh.upper() == "TELEPECAS" else ncnh.upper()
-            funcs_dict[cdf] = canal
+    # # Dados dos funcionários (para canal)
+    # cd_funcs = set(p[4] for p in pedidos if p[4] is not None)
+    # funcs_dict = {}
+    # if cd_funcs:
+    #     format_strings = ','.join(['?']*len(cd_funcs))
+    #     sql_func = f"""
+    #         SELECT CDFUNC, NUMCNH
+    #         FROM FUNCIONARIO
+    #         WHERE CDFUNC IN ({format_strings})
+    #     """
+    #     cur.execute(sql_func, tuple(cd_funcs))
+    #     for (cdf, ncnh) in cur.fetchall():
+    #         ncnh = normalizar_texto(ncnh)
+    #         canal = "TELEP" if ncnh.upper() == "TELEPECAS" else ncnh.upper()
+    #         funcs_dict[cdf] = canal
 
-    conn.close()
+    # conn.close()
 
-    # 2) Definir os diferentes pool_sizes
-    lista_pool_sizes = [5, 10, 15, 20]
+    # # 2) Definir os diferentes pool_sizes
+    # lista_pool_sizes = [5, 10, 15, 20]
 
-    # Montar o CSV de faturamento
-    # Sem cabeçalho, sem rodapé, sem espaço extra
-    with open("arquivos/faturamento-comagro.csv", "w", encoding="utf-8", newline='') as f:
-        writer = csv.writer(f, delimiter=';', quoting=csv.QUOTE_NONE, escapechar='\\')
-        # Sem cabeçalho
+    # # Montar o CSV de faturamento
+    # # Sem cabeçalho, sem rodapé, sem espaço extra
+    # with open("arquivos/faturamento-comagro.csv", "w", encoding="utf-8", newline='') as f:
+    #     writer = csv.writer(f, delimiter=';', quoting=csv.QUOTE_NONE, escapechar='\\')
+    #     # Sem cabeçalho
 
-        writer.writerow(["Teste com 4 passadas (ida/volta) em cada pool_size."])
+    #     writer.writerow(["Teste com 4 passadas (ida/volta) em cada pool_size."])
 
-        # 4) Loop para cada pool_size
-        for ps in lista_pool_sizes:
-            # 4.1) Criar o pool
-            pool = create_connection_pool(pool_size=ps)
+    #     # 4) Loop para cada pool_size
+    #     for ps in lista_pool_sizes:
+    #         # 4.1) Criar o pool
+    #         pool = create_connection_pool(pool_size=ps)
 
-            # 4.2) Executar as passadas (ida e volta)
-            rodar_ida_e_volta(pool, pedidos, writer, ps, itens_por_pedido, clientes_dict, fones_dict, funcs_dict, cnpj)
+    #         # 4.2) Executar as passadas (ida e volta)
+    #         rodar_ida_e_volta(pool, pedidos, writer, ps, itens_por_pedido, clientes_dict, fones_dict, funcs_dict, cnpj)
 
-            # 4.3) Fechar as conexões do pool
-            while not pool.empty():
-                c = pool.get()
-                c.close()
+    #         # 4.3) Fechar as conexões do pool
+    #         while not pool.empty():
+    #             c = pool.get()
+    #             c.close()
 
-        print("Faturamento processado.")
+    #     print("Faturamento processado.")
 
     print("Processamento concluído.")
 

@@ -412,9 +412,9 @@ def main():
     # Vamos supor que há apenas uma empresa principal, ou pegar a primeira. Caso precise filtrar,
     # o usuário não especificou qual empresa. Vamos supor que é a empresa contratada.
     # Caso haja várias, poderia precisar um filtro, mas não foi especificado. Pegaremos a empresa LOJA
-    # se não for especificado. Entretanto, no faturamento citou a empresa "Loja (14.255.350/0001-03)".
+    # se não for especificado. Entretanto, no faturamento citou a empresa "Loja (14255350000103)".
     # Vamos pegar esta, pois parece ser a empresa principal.
-    cnpj_loja = "14.255.350/0001-03"
+    cnpj_loja = "14255350000103"
     cur = conn.cursor()
     cur.execute("""
         SELECT CNPJ, INSCRICAOESTADUAL, NOMEFANTASIA, RAZAOSOCIAL, ENDERECO, NUMERO, CEP, CIDADE, UF
@@ -499,7 +499,7 @@ def main():
     print("Usuários processados.")
 
     # 3) FATURAMENTO
-    # Empresa Loja (CNPJ = 14.255.350/0001-03)
+    # Empresa Loja (CNPJ = 14255350000103)
     # Data: de 2 anos atrás até hoje
     # Para cada item de cada pedido, uma linha.
 

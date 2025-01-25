@@ -412,13 +412,13 @@ def main():
     # Conexão com Firebird
     conn = get_firebird_connection()
 
-    cnpj_loja = "14.255.350/0001-03"
+    cnpj_loja = "14255350000103"
     cur = conn.cursor()
     
     cnpj = normalizar_texto(cnpj_loja)
 
     # 3) FATURAMENTO
-    # Empresa Loja (CNPJ = 14.255.350/0001-03)
+    # Empresa Loja (CNPJ = 14255350000103)
     # Data: de 2 anos atrás até hoje
     # Para cada item de cada pedido, uma linha.
 

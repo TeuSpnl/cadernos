@@ -28,9 +28,12 @@ def get_firebird_connection():
     )
 
 
-def create_connection_pool(pool_size):
-    # Criar um pool para conexões Firebird
+def create_connection_pool(pool_size=20):
+    """
+    Cria pool de conexões Firebird com pool_size=20 (fixo).
+    """
     pool = Queue(maxsize=pool_size)
+
     for _ in range(pool_size):
         conn = get_firebird_connection()
         pool.put(conn)
@@ -259,13 +262,13 @@ def obter_valores_custo_imposto_margem(conn, numdocumento, cd_produto, valor_fin
 
 def processar_pedido(pool, pedido, itens_por_pedido, clientes_dict, fones_dict, funcs_dict, cnpj):
     """ Processa um pedido e seus itens, retornando uma lista de linhas para o CSV de faturamento."""
-    print(f"Processando pedido nº {pedido[0]}...")
-
     # Abrir conexão DENTRO da thread
+    cd_ped, data_ped, nome_cli, cd_cli, cd_func, desc_ped, vl_total_ped = pedido
+
     conn_local = get_connection_from_pool(pool)
+    linhas = []
 
     try:
-        cd_ped, data_ped, nome_cli, cd_cli, cd_func, desc_ped, vl_total_ped = pedido
         # Dados do cliente
         if cd_cli in clientes_dict:
             cpf_cnpj_cli = clientes_dict[cd_cli]['cpf_cnpj']
@@ -292,7 +295,7 @@ def processar_pedido(pool, pedido, itens_por_pedido, clientes_dict, fones_dict, 
         linhas = []
         # Para cada item do pedido
         if cd_ped in itens_por_pedido:
-            for cd_prod, num_orig, qtd, valor_c_d, desc in itens_por_pedido[cd_ped]:
+            for (cd_prod, num_orig, qtd, valor_c_d, desc) in itens_por_pedido[cd_ped]:
                 # Normalizar campos
                 num_orig = normalizar_texto(num_orig)
                 desc = normalizar_texto(desc)
@@ -329,10 +332,32 @@ def processar_pedido(pool, pedido, itens_por_pedido, clientes_dict, fones_dict, 
                 # valor_custo | valor_impostos | valor_margem | classificacao_peca
 
                 linha = [
-                    cnpj, cd_ped, canal, data_ped.strftime("%Y-%m-%d"),
-                    nome_cli, tipo_cli, cpf_cnpj_limpo, cep_cli, cid_cli, uf_cli, ddd, telnum, "", "", "", "",
-                    num_orig, qtd, valor_final, cd_func, "", desc, valor_custo, valor_impostos, valor_margem,
-                    classificacao_peca
+                    cnpj,  # código_concessionária
+                    cd_ped,  # numero_nota
+                    canal,  # canal
+                    data_ped.strftime("%Y-%m-%d"),  # data
+                    nome_cli,  # nome_cliente
+                    tipo_cli,  # tipo_cliente
+                    cpf_cnpj_limpo,  # cpf_cnpj
+                    cep_cli,  # cep
+                    cid_cli,  # cidade
+                    uf_cli,  # uf
+                    ddd,  # ddd_telefone
+                    telnum,  # telefone
+                    "",  # chassi
+                    "",  # modelo
+                    "",  # ano
+                    "",  # placa
+                    num_orig,  # codigo_peca
+                    qtd,  # quantidade
+                    valor_final,  # valor
+                    cd_func,  # codigo_externo
+                    "",  # classificacao_item
+                    desc,  # descricao_peca
+                    valor_custo,  # valor_custo
+                    valor_impostos,  # valor_impostos
+                    valor_margem,  # valor_margem
+                    classificacao_peca  # classificacao_peca
                 ]
 
                 linha_str = [str(x) if x is not None else "" for x in linha]
@@ -342,57 +367,6 @@ def processar_pedido(pool, pedido, itens_por_pedido, clientes_dict, fones_dict, 
     finally:
         release_connection_to_pool(pool, conn_local)
     return linhas
-
-
-def rodar_teste_passada(pool, pedidos, max_workers, itens_por_pedido, clientes_dict, fones_dict, funcs_dict, cnpj):
-    """
-    Executa 1 "passada" de processamento usando 'max_workers' threads.
-    Retorna (linhas_consolidadas, tempo_total, inicio, fim).
-    """
-    inicio = datetime.datetime.now()
-
-    linhas_consolidadas = []
-    with ThreadPoolExecutor(max_workers=max_workers) as executor:
-        futures = [
-            executor.submit(processar_pedido, pool, pedido, itens_por_pedido, clientes_dict, fones_dict, funcs_dict, cnpj)
-            for pedido in pedidos
-        ]
-        for fut in as_completed(futures):
-            res = fut.result()
-            if res:
-                linhas_consolidadas.extend(res)
-
-    fim = datetime.datetime.now()
-    tempo_total = fim - inicio
-    return linhas_consolidadas, tempo_total, inicio, fim
-
-
-# def rodar_ida_e_volta(pool, pedidos, writer, pool_size_label, itens_por_pedido, clientes_dict, fones_dict, funcs_dict, cnpj):
-#     """
-#     Faz as 4 passadas (ida 5->20, volta 20->5, ida 5->20, volta 20->5)
-#     usando a função rodar_teste_passada.
-#     Escreve os resultados no 'writer' (CSV).
-#     'pool_size_label' só para identificar no log qual pool_size está sendo usado.
-#     """
-
-#     passadas = [
-#         range(5, 21),        # 1ª: 5 a 20
-#         range(20, 4, -1),    # 2ª: 20 a 5
-#         range(5, 21),        # 3ª: 5 a 20
-#         range(20, 4, -1)     # 4ª: 20 a 5
-#     ]
-
-#     for idx_passada, pass_range in enumerate(passadas, start=1):
-#         # Logging no CSV
-#         writer.writerow([f"*** Passada #{idx_passada} (pool_size={pool_size_label}) ***"])
-
-#         for mw in pass_range:
-            
-
-#             print(f"[Pool={pool_size_label}] Passada={idx_passada}, threads={mw}, tempo={tempo_total}")
-
-#         writer.writerow([])  # linha em branco para separar passadas
-
 
 
 def main():
@@ -422,12 +396,8 @@ def main():
     # Data: de 2 anos atrás até hoje
     # Para cada item de cada pedido, uma linha.
 
-    # start_date = (datetime.datetime.now() - datetime.timedelta(days=2*365)).strftime('%Y-%m-%d')
-    start_date = (datetime.datetime.now() - datetime.timedelta(days=10)).strftime('%Y-%m-%d')
-    end_date = datetime.datetime.now().strftime('%Y-%m-%d')
-
     # Vamos buscar pedidos desta empresa e deste período
-    # Assumindo: PEDIDOVENDA possui CDPEDIDOVENDA, DATA, NOMECLIENTE, CDCLIENTE, CDFUNC.
+    # PEDIDOVENDA possui CDPEDIDOVENDA, DATA, NOMECLIENTE, CDCLIENTE, CDFUNC.
     # ITENSPEDIDOVENDA: CDPEDIDOVENDA, CDPRODUTO, NUMORIGINAL, QUANTIDADE, VALORUNITARIOCDESC, DESCRICAO
     # FUNCIONARIO: CDFUNC, NUMCNH
     # CLIENTE: CDCLIENTE, CPF_CNPJ, CEP, CIDADE, ESTADO
@@ -435,118 +405,173 @@ def main():
     # NOTA: Para cada item, buscaremos a NF de compra mais recente. Se não houver, campos vazios.
     # Canal: se NUMCNH = "TELEPECAS", então canal = "TELEP", senão canal = NUMCNH
 
-    # Primeiro pegamos todos PEDIDOVENDA da empresa neste período
-    cur.execute("""
-        SELECT P.CDPEDIDOVENDA, P.DATA, P.NOMECLIENTE, P.CDCLIENTE, P.CDFUNC, P.DESCONTO, P.VALORTOTAL
-        FROM PEDIDOVENDA P
-        JOIN EMPRESA E ON E.CNPJ = ?
-        WHERE P.DATA BETWEEN ? AND ? AND
-        P.EFETIVADO = 'S'
-    """, (cnpj_loja, start_date, end_date))
-    pedidos = cur.fetchall()
+    # Data de início e fim (2 anos atrás até hoje)
+    start_date = (datetime.datetime.now() - datetime.timedelta(days=730)).strftime('%Y-%m-%d')
+    end_date = datetime.datetime.now().strftime('%Y-%m-%d')
 
-    # Vamos construir um dicionário de pedidos -> itens
-    # Depois buscar os dados auxiliares
-    pedidos_ids = [p[0] for p in pedidos]
-    itens = []
-    if pedidos_ids:
-        grp_size = 1499  # Limite no Firebird
-        # Obter itens
-        for grupo in dividir_em_blocos(pedidos_ids, grp_size):
-            format_strings = ','.join(['?'] * len(grupo))
-            sql_itens = f"""
-                SELECT I.CDPEDIDOVENDA, I.CDPRODUTO, I.NUMORIGINAL, I.QUANTIDADE, I.VALORUNITARIOCDESC, I.DESCRICAO
-                FROM ITENSPEDIDOVENDA I
-                WHERE I.CDPEDIDOVENDA IN ({format_strings})
+    # Chunk de 30 dias para não estourar a memória
+    chunk_days = 30
+
+    # Variáveis para usar com o chunk de 30 dias
+    current_start = start_date
+    current_start = datetime.datetime.strptime(current_start, "%Y-%m-%d")
+    end_full = end_date
+    end_full = datetime.datetime.strptime(end_full, "%Y-%m-%d")
+
+    # Definindo pool_size=20 e max_workers=5
+    pool_size = 20
+    max_workers = 5
+
+    # Caminho do CVS
+    csv_path = "./arquivos/faturamento-comagro.csv"
+
+    # Criando ou limpando o arquivo CSV no primeiro chunk
+    if current_start == start_date:
+        with open(csv_path, "w", encoding="utf-8", newline='') as csv_file:
+            writer = csv.writer(csv_file, delimiter=';', quoting=csv.QUOTE_NONE, escapechar='\\')
+
+    # Loop principal para processar os chunks de 30 dias até a data final
+    while current_start <= end_full:
+        # Definindo o chunk de 30 dias
+        current_end = current_start + datetime.timedelta(days=chunk_days - 1)
+
+        # Se o chunk de 30 dias ultrapassar a data final, ajustar para a data final
+        if current_end > end_full:
+            current_end = end_full
+
+        print(f"\n=== Processando chunk: {current_start} até {current_end} ===")
+
+        # Conexão com Firebird
+        conn = get_firebird_connection()
+        cur = conn.cursor()
+
+        # CNPJ da empresa
+        cnpj_loja = "14.255.350/0001-03"
+        cnpj = normalizar_texto(cnpj_loja)
+
+        # Primeiro pegamos todos PEDIDOVENDA da empresa neste período
+        cur.execute("""
+            SELECT P.CDPEDIDOVENDA, P.DATA, P.NOMECLIENTE, P.CDCLIENTE, P.CDFUNC, P.DESCONTO, P.VALORTOTAL
+            FROM PEDIDOVENDA P
+            JOIN EMPRESA E ON E.CNPJ = ?
+            WHERE P.DATA BETWEEN ? AND ? AND
+            P.EFETIVADO = 'S'
+        """, (cnpj_loja, current_start, current_end))
+        pedidos = cur.fetchall()
+
+        # Vamos construir um dicionário de pedidos -> itens
+        # Depois buscar os dados auxiliares
+        pedidos_ids = [p[0] for p in pedidos]
+        itens = []
+        if pedidos_ids:
+            grp_size = 1499  # Limite no Firebird
+            # Obter itens
+            for grupo in dividir_em_blocos(pedidos_ids, grp_size):
+                format_strings = ','.join(['?'] * len(grupo))
+                sql_itens = f"""
+                    SELECT I.CDPEDIDOVENDA, I.CDPRODUTO, I.NUMORIGINAL, I.QUANTIDADE, I.VALORUNITARIOCDESC, I.DESCRICAO
+                    FROM ITENSPEDIDOVENDA I
+                    WHERE I.CDPEDIDOVENDA IN ({format_strings})
+                """
+                cur.execute(sql_itens, tuple(grupo))
+                itens.extend(cur.fetchall())
+
+        # Organizar itens por pedido
+        itens_por_pedido = {}
+        for (cd_ped, cd_prod, num_orig, qtd, valorcdesc, desc) in itens:
+            if cd_ped not in itens_por_pedido:
+                itens_por_pedido[cd_ped] = []
+            itens_por_pedido[cd_ped].append((cd_prod, num_orig, qtd, valorcdesc, desc))
+
+        # Dados dos clientes de todos os pedidos do período
+        cd_clientes = set(p[3] for p in pedidos if p[3] is not None)
+        clientes_dict = {}
+        fones_dict = {}
+        if cd_clientes:
+            format_strings = ','.join(['?']*len(cd_clientes))  # IN (?, ?, ...)
+            sql_clientes = f"""
+                SELECT CDCLIENTE, CPF_CNPJ, CEP, CIDADE, ESTADO
+                FROM CLIENTE
+                WHERE CDCLIENTE IN ({format_strings})
             """
-            cur.execute(sql_itens, tuple(grupo))
-            itens.extend(cur.fetchall())
+            cur.execute(sql_clientes, tuple(cd_clientes))
+            for row in cur.fetchall():
+                (cd_cli, cpf_cnpj_cli, cep_cli, cid_cli, uf_cli) = row
+                clientes_dict[cd_cli] = {
+                    'cpf_cnpj': normalizar_texto(cpf_cnpj_cli),
+                    'cep': normalizar_texto(cep_cli),
+                    'cidade': normalizar_texto(cid_cli),
+                    'uf': normalizar_texto(uf_cli)
+                }
 
-    # Organizar itens por pedido
-    itens_por_pedido = {}
-    for (cd_ped, cd_prod, num_orig, qtd, valorcdesc, desc) in itens:
-        if cd_ped not in itens_por_pedido:
-            itens_por_pedido[cd_ped] = []
-        itens_por_pedido[cd_ped].append((cd_prod, num_orig, qtd, valorcdesc, desc))
+            # Dados de telefone do cliente, pegamos apenas o primeiro
+            sql_fones = f"""
+                SELECT CDCLIENTE, FONE
+                FROM FONE
+                WHERE CDCLIENTE IN ({format_strings})
+            """
+            cur.execute(sql_fones, tuple(cd_clientes))
+            for (cd_cli, fone) in cur.fetchall():
+                if cd_cli not in fones_dict:  # Pega apenas o primeiro
+                    fones_dict[cd_cli] = normalizar_texto(fone)
 
-    # Precisamos dados dos clientes dos pedidos
-    cd_clientes = set(p[3] for p in pedidos if p[3] is not None)
-    clientes_dict = {}
-    if cd_clientes:
-        format_strings = ','.join(['?']*len(cd_clientes))  # IN (?, ?, ...)
-        sql_clientes = f"""
-            SELECT CDCLIENTE, CPF_CNPJ, CEP, CIDADE, ESTADO
-            FROM CLIENTE
-            WHERE CDCLIENTE IN ({format_strings})
-        """
-        cur.execute(sql_clientes, tuple(cd_clientes))
-        for row in cur.fetchall():
-            (cd_cli, cpf_cnpj_cli, cep_cli, cid_cli, uf_cli) = row
-            clientes_dict[cd_cli] = {
-                'cpf_cnpj': normalizar_texto(cpf_cnpj_cli),
-                'cep': normalizar_texto(cep_cli),
-                'cidade': normalizar_texto(cid_cli),
-                'uf': normalizar_texto(uf_cli)
-            }
+        # Dados dos funcionários (para canal de vendas)
+        cd_funcs = set(p[4] for p in pedidos if p[4] is not None)
+        funcs_dict = {}
+        if cd_funcs:
+            format_strings = ','.join(['?']*len(cd_funcs))
+            sql_func = f"""
+                SELECT CDFUNC, NUMCNH
+                FROM FUNCIONARIO
+                WHERE CDFUNC IN ({format_strings})
+            """
+            cur.execute(sql_func, tuple(cd_funcs))
+            for (cdf, ncnh) in cur.fetchall():
+                ncnh = normalizar_texto(ncnh)
+                canal = "TELEP" if ncnh.upper() == "TELEPECAS" else ncnh.upper()
+                funcs_dict[cdf] = canal
 
-    # Dados de telefone do cliente, pegamos apenas o primeiro
-    fones_dict = {}
-    if cd_clientes:
-        sql_fones = f"""
-            SELECT CDCLIENTE, FONE
-            FROM FONE
-            WHERE CDCLIENTE IN ({format_strings})
-        """
-        cur.execute(sql_fones, tuple(cd_clientes))
-        for (cd_cli, fone) in cur.fetchall():
-            if cd_cli not in fones_dict:  # Pega apenas o primeiro
-                fones_dict[cd_cli] = normalizar_texto(fone)
+        conn.close()
 
-    # Dados dos funcionários (para canal)
-    cd_funcs = set(p[4] for p in pedidos if p[4] is not None)
-    funcs_dict = {}
-    if cd_funcs:
-        format_strings = ','.join(['?']*len(cd_funcs))
-        sql_func = f"""
-            SELECT CDFUNC, NUMCNH
-            FROM FUNCIONARIO
-            WHERE CDFUNC IN ({format_strings})
-        """
-        cur.execute(sql_func, tuple(cd_funcs))
-        for (cdf, ncnh) in cur.fetchall():
-            ncnh = normalizar_texto(ncnh)
-            canal = "TELEP" if ncnh.upper() == "TELEPECAS" else ncnh.upper()
-            funcs_dict[cdf] = canal
+        # Criando a pool de conexões sempre com pool_size=20
+        pool = create_connection_pool(pool_size=pool_size)
 
-    conn.close()
+        # Processando os pedidos sempre com max_workers=5
+        linhas_csv = []
+        start_chunk = datetime.datetime.now()  # Início do chunk
+        with ThreadPoolExecutor(max_workers=max_workers) as executor:
+            futures = []
+            for pedido in pedidos:
+                # Processar cada pedido em uma thread
+                fut = executor.submit(
+                    processar_pedido, pool, pedido,
+                    itens_por_pedido, clientes_dict, fones_dict, funcs_dict,
+                    cnpj
+                )
+                futures.append(fut)
+            for fut in as_completed(futures):
+                # Agregar as linhas de cada pedido no CSV
+                res = fut.result()
+                if res:
+                    linhas_csv.extend(res)
 
-    pool = create_connection_pool(pool_size=ps)
+        end_chunk = datetime.datetime.now()  # Fim do chunk
+        elapsed = end_chunk - start_chunk  # Tempo de processamento do chunk
+        print(f"Chunk {current_start} - {current_end} finalizado em {elapsed}.")
 
-    # Montar o CSV de faturamento
-    # Sem cabeçalho, sem rodapé, sem espaço extra
-    with open("arquivos/faturamento-comagro.csv", "a", encoding="utf-8", newline='') as f:
-        writer = csv.writer(f, delimiter=';', quoting=csv.QUOTE_NONE, escapechar='\\')
-        # Sem cabeçalho        
-        linhas, tempo_total, inicio, fim = rodar_teste_passada(pool, pedidos, max_workers, itens_por_pedido, clientes_dict, fones_dict, funcs_dict, cnpj)
-
-        # Registrar info no CSV
-        writer.writerow([
-            f"pool_size={ps}",
-            f"passada={passada}",
-            f"max_workers={max_workers}",
-            f"inicio={inicio.strftime('%Y-%m-%d %H:%M:%S')}",
-            f"fim={fim.strftime('%Y-%m-%d %H:%M:%S')}",
-            f"tempo_total={tempo_total}"
-        ])
-        
-        writer.writerow([])  # mais uma linha em branco ao final de cada pool_size
-        
         # 4.3) Fechar as conexões do pool
         while not pool.empty():
             c = pool.get()
             c.close()
 
-        print(f"== Faturamento finalizado: pool_size={ps}, threads={max_workers}, passada={passada} ==\n")
+        # Escrever as linhas no CSV
+        with open(csv_path, "a", encoding="utf-8", newline='') as csv_file:
+            writer = csv.writer(csv_file, delimiter=';', quoting=csv.QUOTE_NONE, escapechar='\\')
+            for row in linhas_csv:
+                writer.writerow(row)
+
+        # Avançar para o próximo chunk
+        current_start = current_end + datetime.timedelta(days=1)
 
     print("Processamento concluído.")
 

@@ -4,6 +4,7 @@ import csv
 import datetime
 import argparse
 import firebirdsql
+import pysftp
 
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from dotenv import load_dotenv
@@ -26,6 +27,25 @@ def get_firebird_connection():
         wire_crypt=False,
         charset='ISO8859_1'
     )
+
+
+# Função fictícia de SFTP (dados incompletos)
+def enviar_arquivo_sftp(file_path):
+    """
+    Função para ilustrar uma conexão SFTP.
+    Dados de host, user, password etc. ainda não estão definidos.
+    """
+
+    # Configuração do servidor SFTP
+    sftp_host = os.getenv('SFTP_HOST')
+    sftp_user = os.getenv('SFTP_USER')
+    sftp_pass = os.getenv('SFTP_PASSWORD')
+    remote_dir = ' /workarea'
+
+    with pysftp.Connection(host=sftp_host, username=sftp_user, password=sftp_pass) as sftp:
+        with sftp.cd(remote_dir):
+            sftp.put(file_path)  # envia o arquivo
+            print("Arquivo enviado com sucesso.")
 
 
 def create_connection_pool(pool_size=20):
@@ -117,6 +137,31 @@ def determinar_tipo_cliente(cpf_cnpj_limpo):
     elif length == 14:
         return 'J'  # Pessoa Jurídica
     return ''  # caso não seja nem 11 nem 14
+
+
+def normalizar_numero(valor):
+    """
+    Substitui o ponto decimal por vírgula, 
+    arredonda para duas casas decimais se for numérico.
+    Se 'valor' não for conversível em float, 
+    apenas faz 'replace' de '.' por ','.
+    """
+    if not valor:
+        return ""
+
+    try:
+        # Tenta converter em float
+        f_val = float(valor)
+        # Arredonda para duas casas decimais
+        f_val = round(f_val, 2)
+        # Formata com 2 casas decimais e troca '.' por ','
+        val_str = f"{f_val:.2f}".replace('.', ',')
+        return val_str
+    except ValueError:
+        # Se não der para converter em float,
+        # apenas troca '.' por ',' no texto original
+        val_str = str(valor).replace('.', ',')
+        return val_str
 
 
 def get_data_insercao_item(conn, cd_produto, cd_ped):
@@ -304,11 +349,8 @@ def processar_pedido(pool, pedido, itens_por_pedido, clientes_dict, fones_dict, 
 
                 # Calcula o valor final retirando o desconto geral do pedido de forma proporcional
                 vl_proporc_desc_geral = desc_ped * (valor_uni / vl_total_ped)
-                valor_final = valor_uni - vl_proporc_desc_geral
-
                 # Garantir que o valor_final é float
-                if type(valor_final) != float:
-                    valor_final = float(valor_final)
+                valor_final = float(valor_uni - vl_proporc_desc_geral)
 
                 # Procurar NF de compra anterior
                 # Primeiro pegar data_insercao_item (data que o item foi inserido no pedido)
@@ -320,8 +362,16 @@ def processar_pedido(pool, pedido, itens_por_pedido, clientes_dict, fones_dict, 
                 valor_custo, valor_impostos, valor_margem = "", "", ""
                 if numdocumento_compra is not None:
                     # Obtém valores de custo, impostos e margem
-                    valor_custo, valor_impostos, valor_margem = obter_valores_custo_imposto_margem(
+                    custo, imp, marg = obter_valores_custo_imposto_margem(
                         conn_local, numdocumento_compra, cd_prod, valor_final)
+                    # Converte para string e troca '.' por ','
+                    valor_custo = normalizar_numero(custo)
+                    valor_impostos = normalizar_numero(imp)
+                    valor_margem = normalizar_numero(marg)
+
+                # Transforma o valor_final e a quantidade em string e troca '.' por ','
+                valor_final = normalizar_numero(valor_final)
+                qtd = normalizar_numero(qtd)
 
                 print(f"Pedido {cd_ped}, Produto {cd_prod}, Num. Original {num_orig}, Qtd {qtd}, Valor {
                       valor_final}, Desc. {desc}, Custo {valor_custo}, Impostos {valor_impostos}, Margem {valor_margem}")
@@ -335,7 +385,7 @@ def processar_pedido(pool, pedido, itens_por_pedido, clientes_dict, fones_dict, 
                     cnpj,  # código_concessionária
                     cd_ped,  # numero_nota
                     canal,  # canal
-                    data_ped.strftime("%Y-%m-%d"),  # data
+                    data_ped.strftime("%d/%m/%Y"),  # data no formato dd/mm/aaaa
                     nome_cli,  # nome_cliente
                     tipo_cli,  # tipo_cliente
                     cpf_cnpj_limpo,  # cpf_cnpj
@@ -382,18 +432,18 @@ def main():
     passada = args.passada
 
     print(f"== Iniciando FATURAMENTO: pool_size={ps}, threads={max_workers}, passada={passada} ==\n")
-    
+
     # Conexão com Firebird
     conn = get_firebird_connection()
 
     cnpj_loja = "14255350000103"
     cur = conn.cursor()
-    
+
     cnpj = normalizar_texto(cnpj_loja)
 
     # 3) FATURAMENTO
     # Empresa Loja (CNPJ = 14255350000103)
-    # Data: de 2 anos atrás até hoje
+    # Data: todo dia
     # Para cada item de cada pedido, uma linha.
 
     # Vamos buscar pedidos desta empresa e deste período
@@ -405,9 +455,10 @@ def main():
     # NOTA: Para cada item, buscaremos a NF de compra mais recente. Se não houver, campos vazios.
     # Canal: se NUMCNH = "TELEPECAS", então canal = "TELEP", senão canal = NUMCNH
 
-    # Data de início e fim (2 anos atrás até hoje)
-    start_date = (datetime.datetime.now() - datetime.timedelta(days=730)).strftime('%Y-%m-%d')
-    end_date = datetime.datetime.now().strftime('%Y-%m-%d')
+    # Data de início e fim
+    start_date = '2023-01-18'
+    # start_date = (datetime.datetime.now() - datetime.timedelta(days=1)).strftime('%Y-%m-%d')
+    end_date = (datetime.datetime.now() - datetime.timedelta(days=1)).strftime('%Y-%m-%d')
 
     # Chunk de 30 dias para não estourar a memória
     chunk_days = 30
@@ -422,8 +473,12 @@ def main():
     pool_size = 20
     max_workers = 5
 
+    date_start_date = datetime.datetime.strptime(start_date, "%Y-%m-%d")
+    date_end_date = datetime.datetime.strptime(end_date, "%Y-%m-%d")
+
     # Caminho do CVS
-    csv_path = "./arquivos/faturamento-comagro.csv"
+    csv_path = f"./arquivos/faturamento-comagro-{date_start_date.day}_{
+        date_start_date.month}-{date_end_date.day}_{date_end_date.month}.csv"
 
     # Criando ou limpando o arquivo CSV no primeiro chunk
     if current_start == start_date:
@@ -533,6 +588,9 @@ def main():
 
         conn.close()
 
+        # Limpar o CNPJ da loja
+        cnpj = remover_caracteres_nao_numericos(cnpj)
+
         # Criando a pool de conexões sempre com pool_size=20
         pool = create_connection_pool(pool_size=pool_size)
 
@@ -564,6 +622,8 @@ def main():
             c = pool.get()
             c.close()
 
+        print(f"Linhas CSV: {len(linhas_csv)}")
+
         # Escrever as linhas no CSV
         with open(csv_path, "a", encoding="utf-8", newline='') as csv_file:
             writer = csv.writer(csv_file, delimiter=';', quoting=csv.QUOTE_NONE, escapechar='\\')
@@ -573,6 +633,7 @@ def main():
         # Avançar para o próximo chunk
         current_start = current_end + datetime.timedelta(days=1)
 
+    enviar_arquivo_sftp(csv_path)
     print("Processamento concluído.")
 
 

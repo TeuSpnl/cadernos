@@ -35,14 +35,19 @@ def enviar_arquivo_sftp(file_path):
     Função para ilustrar uma conexão SFTP.
     Dados de host, user, password etc. ainda não estão definidos.
     """
+    
+    cnopts = pysftp.CnOpts()
+
+    # Carrega o arquivo 'my_known_hosts' com chaves conhecidas
+    cnopts.hostkeys.load('my_known_hosts')
 
     # Configuração do servidor SFTP
     sftp_host = os.getenv('SFTP_HOST')
     sftp_user = os.getenv('SFTP_USER')
     sftp_pass = os.getenv('SFTP_PASSWORD')
-    remote_dir = ' /workarea'
+    remote_dir = '/workarea'
 
-    with pysftp.Connection(host=sftp_host, username=sftp_user, password=sftp_pass) as sftp:
+    with pysftp.Connection(host=sftp_host, username=sftp_user, password=sftp_pass, cnopts=cnopts) as sftp:
         with sftp.cd(remote_dir):
             sftp.put(file_path)  # envia o arquivo
             print("Arquivo enviado com sucesso.")
@@ -456,8 +461,8 @@ def main():
     # Canal: se NUMCNH = "TELEPECAS", então canal = "TELEP", senão canal = NUMCNH
 
     # Data de início e fim
-    start_date = '2023-01-18'
-    # start_date = (datetime.datetime.now() - datetime.timedelta(days=1)).strftime('%Y-%m-%d')
+    # start_date = '2023-01-18'
+    start_date = (datetime.datetime.now() - datetime.timedelta(days=1)).strftime('%Y-%m-%d')
     end_date = (datetime.datetime.now() - datetime.timedelta(days=1)).strftime('%Y-%m-%d')
 
     # Chunk de 30 dias para não estourar a memória

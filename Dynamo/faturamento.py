@@ -35,7 +35,7 @@ def enviar_arquivo_sftp(file_path):
     Função para ilustrar uma conexão SFTP.
     Dados de host, user, password etc. ainda não estão definidos.
     """
-    
+
     cnopts = pysftp.CnOpts()
 
     # Carrega o arquivo 'my_known_hosts' com chaves conhecidas
@@ -461,7 +461,7 @@ def main():
     # Canal: se NUMCNH = "TELEPECAS", então canal = "TELEP", senão canal = NUMCNH
 
     # Data de início e fim
-    # start_date = '2023-01-18'
+    # start_date = '2025-01-30'
     start_date = (datetime.datetime.now() - datetime.timedelta(days=1)).strftime('%Y-%m-%d')
     end_date = (datetime.datetime.now() - datetime.timedelta(days=1)).strftime('%Y-%m-%d')
 
@@ -478,12 +478,15 @@ def main():
     pool_size = 20
     max_workers = 5
 
-    date_start_date = datetime.datetime.strptime(start_date, "%Y-%m-%d")
-    date_end_date = datetime.datetime.strptime(end_date, "%Y-%m-%d")
+    date_start_date = datetime.datetime.strptime(start_date, "%Y-%m-%d").strftime("%d%m%y")
+    date_end_date = datetime.datetime.strptime(end_date, "%Y-%m-%d").strftime("%d%m%y")
 
-    # Caminho do CVS
-    csv_path = f"./arquivos/faturamento-comagro-{date_start_date.day}_{
-        date_start_date.month}-{date_end_date.day}_{date_end_date.month}.csv"
+    if end_date == start_date:
+        # Caminho do CVS
+        csv_path = f"./arquivos/faturamento_diario_{date_start_date}.csv"
+    else:
+        # Caminho do CVS
+        csv_path = f"./arquivos/faturamento_retroativo_{date_start_date}_{date_end_date}.csv"
 
     # Criando ou limpando o arquivo CSV no primeiro chunk
     if current_start == start_date:

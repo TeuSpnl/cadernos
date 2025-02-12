@@ -461,7 +461,7 @@ def main():
     # Canal: se NUMCNH = "TELEPECAS", então canal = "TELEP", senão canal = NUMCNH
 
     # Data de início e fim
-    # start_date = '2025-01-30'
+    # start_date = '2025-02-10'
     start_date = (datetime.datetime.now() - datetime.timedelta(days=1)).strftime('%Y-%m-%d')
     end_date = (datetime.datetime.now() - datetime.timedelta(days=1)).strftime('%Y-%m-%d')
 

@@ -12,3 +12,6 @@ db.sqlite3
 
 # Arquivos de configuração locais
 .env
+
+# Arquivos gerados
+arquivos/

@@ -2,12 +2,13 @@ import os
 import firebirdsql
 import pandas as pd
 import numpy as np
-import xlsxwriter
+from xlsxwriter.utility import xl_col_to_name
 import datetime
 from dateutil.relativedelta import relativedelta
 from dotenv import load_dotenv
 from tkinter import Tk
 from tkinter.filedialog import askopenfilename
+from tkinter import messagebox
 
 # Carregar variáveis de ambiente
 load_dotenv()
@@ -43,7 +44,7 @@ def agrupar_pedidos(grupo):
     grupos = []
     grupo_atual = []
     data_inicio = None
-    
+
     for idx, row in grupo.iterrows():
         data_atual = row['DATA']
         if data_inicio is None:
@@ -60,6 +61,7 @@ def agrupar_pedidos(grupo):
     if grupo_atual:
         grupos.append(grupo_atual)
     return grupos
+
 
 filename = choose_file()
 
@@ -78,7 +80,7 @@ df = df.sort_values(['CLIENTE', 'DATA'])
 
 # Remove colunas indesejadas, se existirem
 df = df.drop(columns=["VALOR", "DT ULTIMO PGTO", "PAGO"], errors='ignore')
- 
+
 # Muda o nome da coluna "FALTA" para "VALOR"
 df.rename(columns={"FALTA": "VALOR"}, inplace=True)
 
@@ -86,11 +88,7 @@ df.rename(columns={"FALTA": "VALOR"}, inplace=True)
 df = df[~df['CLIENTE'].str.contains("comagro", case=False, na=False)]
 
 # Define a lista de clientes a serem removidos (a comparação é case insensitive)
-remove_clients = [
-    "ENGINE COM PCS E MANUT TRATORES LTDA-ME",
-    "TRATORMAIS COM. DE PECAS PARA TRATORES LTDA - ME",
-    "ROSANE OLIVEIRA SOUZA"
-]
+remove_clients = []
 df = df[~df['CLIENTE'].str.lower().isin([cliente.lower() for cliente in remove_clients])]
 
 # Cria a coluna VENCIMENTO para armazenar a data de faturamento (como datetime)
@@ -164,30 +162,29 @@ if "VENCIMENTO" in cols and "MÉDIA" in cols and "TIPO FATUR." in cols:
 
 save_filename = filename.replace('.xlsx', '_atualizado.xlsx')
 
-from xlsxwriter.utility import xl_col_to_name
 
 def add_media_formula(writer, df, sheet_name):
     workbook = writer.book
     worksheet = writer.sheets[sheet_name]
-    
+
     # Obtenha os índices dinâmicos das colunas relevantes
     media_col_idx = df.columns.get_loc("MÉDIA")
     data_col_idx = df.columns.get_loc("DATA")
     venc_col_idx = df.columns.get_loc("VENCIMENTO")
-    
+
     # Converte os índices para letras de coluna no formato Excel
     data_col_letter = xl_col_to_name(data_col_idx)
     venc_col_letter = xl_col_to_name(venc_col_idx)
-    
+
     total_rows = df.shape[0]
-    
+
     for row_idx in range(total_rows):
         # Considera que o cabeçalho está na linha 0; os dados começam na linha 1 (Excel: linha 2)
         excel_row = row_idx + 2
         # Monta a fórmula: se o valor na coluna VENCIMENTO for maior que 0, subtrai o valor da coluna DATA; senão, deixa em branco.
         formula = f'=IF({venc_col_letter}{excel_row}>0,{venc_col_letter}{excel_row}-{data_col_letter}{excel_row},"")'
         worksheet.write_formula(excel_row - 1, media_col_idx, formula)
-        
+
 
 with pd.ExcelWriter(
         save_filename,
@@ -198,7 +195,7 @@ with pd.ExcelWriter(
     df.to_excel(writer, index=False)
 
     # Referências ao workbook/worksheet
-    workbook  = writer.book
+    workbook = writer.book
     worksheet = writer.sheets[df.columns.name or 'Sheet1']
 
     # --- Formatação de moeda na coluna VALOR ---
@@ -211,3 +208,6 @@ with pd.ExcelWriter(
 
     # Adiciona as fórmulas da coluna MÉDIA
     add_media_formula(writer, df, df.columns.name or 'Sheet1')
+    
+# Exibe uma mensagem informando que o arquivo foi salvo
+messagebox.showinfo("Concluído", f"Planilha salva com sucesso em:\n{save_filename}")

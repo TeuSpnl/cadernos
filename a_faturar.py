@@ -86,11 +86,7 @@ df.rename(columns={"FALTA": "VALOR"}, inplace=True)
 df = df[~df['CLIENTE'].str.contains("comagro", case=False, na=False)]
 
 # Define a lista de clientes a serem removidos (a comparação é case insensitive)
-remove_clients = [
-    "ENGINE COM PCS E MANUT TRATORES LTDA-ME",
-    "TRATORMAIS COM. DE PECAS PARA TRATORES LTDA - ME",
-    "ROSANE OLIVEIRA SOUZA"
-]
+remove_clients = []
 df = df[~df['CLIENTE'].str.lower().isin([cliente.lower() for cliente in remove_clients])]
 
 # Cria a coluna VENCIMENTO para armazenar a data de faturamento (como datetime)

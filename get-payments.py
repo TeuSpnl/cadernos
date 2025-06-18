@@ -172,7 +172,6 @@ def apply_excel_formatting(ws, df_filtered, table_type="Geral", start_row_offset
     for index, row in df_filtered.iterrows():
         numcontacred = row['NUMCONTACRED']
         fill_color = COLORS.get(numcontacred, {}).get('fill')
-        font_color = COLORS.get(numcontacred, {}).get('font')
         delete_row = COLORS.get(numcontacred, {}).get('delete_row', False)
 
         if delete_row:
@@ -195,8 +194,6 @@ def apply_excel_formatting(ws, df_filtered, table_type="Geral", start_row_offset
             # Aplicar preenchimento apenas na tabela Geral
             if table_type == "Geral" and fill_color:
                 cell.fill = PatternFill(start_color=fill_color, end_color=fill_color, fill_type="solid")
-            if font_color:
-                cell.font = Font(color=font_color)
             cell.border = Border(top=Side(style='thin'), bottom=Side(style='thin'),
                                  left=Side(style='thin'), right=Side(style='thin'))
 
@@ -325,6 +322,9 @@ def fetch_data_and_generate_excel(start_date_str, end_date_str):
         df_banco = df_banco.sort_values(by='VALOR', ascending=True)
 
         if not df_banco.empty:
+            # Definir o preenchimento e fonte para o título da tabela do banco
+            font_color = COLORS.get(num_conta_cred_id, {}).get('font')
+
             # Pegar o nome da conta para o título
             nome_conta = df_banco['NOME_CONTA_CREDITO'].iloc[0]
             # Pegar a cor de preenchimento para este NUMCONTACRED
@@ -332,7 +332,7 @@ def fetch_data_and_generate_excel(start_date_str, end_date_str):
 
             # Título da tabela do banco
             ws.cell(row=current_row_offset, column=1, value=nome_conta.upper()
-                    ).font = Font(bold=True, size=12, color='000000')
+                    ).font = Font(bold=True, size=12, color=font_color)
             ws.cell(row=current_row_offset, column=1).fill = PatternFill(
                 start_color=fill_color, end_color=fill_color, fill_type="solid")
             current_row_offset += 1  # Sem espaço extra

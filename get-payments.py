@@ -116,9 +116,16 @@ def generate_filename(start_date_str, end_date_str):
     end_date = datetime.strptime(end_date_str, '%Y-%m-%d')
 
     if start_date == end_date:
-        return f"arquivos/Contas_A_Pagar-{start_date.strftime('%d_%m_%Y')}.xlsx"
+        filename = f"arquivos/Contas_A_Pagar-{start_date.strftime('%d_%m_%Y')}.xlsx"
     else:
-        return f"arquivos/Contas_A_Pagar-{start_date.strftime('%d%m%Y')}-{end_date.strftime('%d%m%Y')}.xlsx"
+        filename = f"arquivos/Contas_A_Pagar-{start_date.strftime('%d%m%Y')}-{end_date.strftime('%d%m%Y')}.xlsx"
+
+    # Garante que o diretório 'arquivos' exista
+    output_dir = os.path.dirname(filename)
+    if not os.path.exists(output_dir):
+        os.makedirs(output_dir)  # Cria o diretório e quaisquer subdiretórios necessários
+
+    return filename
 
 
 def apply_excel_formatting(ws, df_filtered, table_type="Geral", start_row_offset=0):

@@ -129,9 +129,9 @@ def apply_excel_formatting(ws, df_filtered, table_type="Geral", start_row_offset
     # Definir larguras de coluna
     ws.column_dimensions['A'].width = 20    # Largura (A): 20 - Nome da Conta de Crédito
     ws.column_dimensions['B'].width = 10    # Largura (B): 10 - Número do Documento
-    ws.column_dimensions['C'].width = 42    # Largura (C): 42 - Nome do Fornecedor
-    ws.column_dimensions['D'].width = 22    # Largura (D): 22 - CNPJ/Chave (para Pix)
-    ws.column_dimensions['E'].width = 17    # Largura (E): 17 - Valor (para Pix)
+    ws.column_dimensions['C'].width = 35    # Largura (C): 35 - Nome do Fornecedor
+    ws.column_dimensions['D'].width = 22    # Largura (D): 22 - Observação
+    ws.column_dimensions['E'].width = 17    # Largura (E): 17 - CNPJ (apenas para DDA, Banco do Brasil, Outros)
     ws.column_dimensions['F'].width = 12.5  # Largura (F): 12.5 - Valor Total (DDA, Banco do Brasil, Outros)
     ws.column_dimensions['G'].width = 12.5  # Largura (G): 12.5 - Valor Total (Geral)
 
@@ -232,25 +232,13 @@ def apply_excel_formatting(ws, df_filtered, table_type="Geral", start_row_offset
         table_ref = f"A{start_data_row-1}:{get_column_letter(len(headers))}{current_row-1}"
         tab_name = f"Table_{ws.title.replace(' ', '')}_{table_type.replace(' ', '')}_{start_row_offset-1}"  # Nome único
 
-        # Criação explícita dos objetos TableColumn
-        table_columns_list = []
-        for i, header_name in enumerate(headers):
-            tc = TableColumn(id=i+1, name=header_name)  # IDs de coluna começam de 1
-            if table_type == "Pix" and i == value_total_col_idx:
-                tc.totalsRowFunction = "sum"
-                tc.totalsRowLabel = "Total:"
-            elif table_type != "Pix" and i == value_col_idx:
-                tc.totalsRowFunction = "sum"
-                tc.totalsRowLabel = "Total:"
-            table_columns_list.append(tc)
-
-        tab = Table(displayName=tab_name, ref=table_ref, tableColumns=table_columns_list)  # Passa tableColumns aqui
+        # Criar a tabela com o nome e referência
+        tab = Table(displayName=tab_name, ref=table_ref)
 
         # Habilitar a linha de totais do Excel e definir estilo
         style = TableStyleInfo(name="TableStyleLight9", showFirstColumn=False,
-                               showLastColumn=False, showRowStripes=True, showColumnStripes=False)
+                               showLastColumn=False, showRowStripes=False, showColumnStripes=False)
         tab.tableStyleInfo = style
-        tab.showTotalsRow = True
 
         ws.add_table(tab)
 
@@ -274,7 +262,6 @@ def apply_excel_formatting(ws, df_filtered, table_type="Geral", start_row_offset
                     # O valor já está na primeira linha do bloco devido à ordenação
                     # Não precisamos pegar do df_filtered[df_filtered['NOMEFORNECEDOR'] == current_supplier]['VALOR_TOTAL'].iloc[0] novamente
                     merged_cell.alignment = openpyxl.styles.Alignment(horizontal='center', vertical='center')
-                    merged_cell.font = Font(bold=True)
                     merged_cell.number_format = '_-R$* #,##0.00_-;-R$* #,##0.00_-;_-R$* \"-\"??_-;_-@_-'
 
                 # Iniciar novo bloco de mesclagem
@@ -303,7 +290,32 @@ def apply_excel_formatting(ws, df_filtered, table_type="Geral", start_row_offset
             merged_cell.font = Font(bold=True)
             merged_cell.number_format = '_-R$* #,##0.00_-;-R$* #,##0.00_-;_-R$* \"-\"??_-;_-@_-'
 
-    current_row += 2  # Espaço entre tabelas (mantido para visualização clara entre as tabelas)
+    # Determinar a coluna e o intervalo para a soma
+    sum_col_idx = value_total_col_idx + 1 if table_type == "Pix" else value_col_idx + 1
+    sum_range_start_row = start_data_row
+    sum_range_end_row = current_row - 1  # A última linha de dados na tabela
+
+    total_sum_formula = f"=SUBTOTAL(9,{get_column_letter(sum_col_idx)}{sum_range_start_row}:{get_column_letter(sum_col_idx)}{sum_range_end_row})" if table_type == "Pix" else f"=SUBTOTAL(9,{tab_name}[VALOR])"
+
+    # Adicionar linha de total manual
+    total_label_cell = ws.cell(row=current_row, column=len(headers) - 1, value="TOTAL:")
+    total_label_cell.font = Font(bold=True)
+    total_label_cell.border = Border(top=Side(style='thin'), bottom=Side(style='thin'),
+                                     left=Side(style='thin'), right=Side(style='thin'))
+
+    total_value_cell = ws.cell(row=current_row, column=sum_col_idx, value=total_sum_formula)
+    total_value_cell.font = Font(bold=True)
+    total_value_cell.border = Border(top=Side(style='thin'), bottom=Side(style='thin'),
+                                     left=Side(style='thin'), right=Side(style='thin'))
+    total_value_cell.number_format = '_-R$* #,##0.00_-;-R$* #,##0.00_-;_-R$* \"-\"??_-;_-@_-'
+
+    # Adicionar bordas às células vazias da linha de total, se houver
+    for i in range(1, sum_col_idx):  # Do início até a coluna da soma
+        cell = ws.cell(row=current_row, column=i)
+        cell.border = Border(top=Side(style='thin'), bottom=Side(style='thin'),
+                             left=Side(style='thin'), right=Side(style='thin'))
+
+    current_row += 2  # Espaço entre tabelas
 
     return current_row
 
@@ -323,6 +335,9 @@ def fetch_data_and_generate_excel(start_date_str, end_date_str):
         wb = openpyxl.Workbook()
         ws = wb.active
         ws.title = "Contas a Pagar"
+
+        # Configurações de layout da página
+        ws.page_setup.showGridLines = False     # Não exibir linhas de grade na impressão
 
         # Adicionar cabeçalho do arquivo no cabeçalho da página (header)
         filename_for_header = generate_filename(start_date_str, end_date_str).replace(".xlsx", "")

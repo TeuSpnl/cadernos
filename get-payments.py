@@ -1,5 +1,4 @@
 import os
-import calendar
 import datetime
 import firebirdsql
 import pandas as pd
@@ -11,7 +10,7 @@ from dotenv import load_dotenv
 import openpyxl
 from openpyxl.styles import PatternFill, Font, Border, Side
 from openpyxl.utils import get_column_letter
-from openpyxl.worksheet.table import Table, TableStyleInfo
+from openpyxl.worksheet.table import Table, TableStyleInfo, TableColumn
 from openpyxl.worksheet.page import PageMargins
 
 # Carregar variáveis de ambiente
@@ -71,7 +70,8 @@ def fetch_data(start_date, end_date):
                 cc.NOME AS NOME_CONTA_CREDITO,
                 p.NUMDOCUMENTO,
                 p.NOMEFORNECEDOR,
-                p.VALOR
+                p.VALOR,
+                p.DESCRICAO
             FROM
                 APAGAR p
             LEFT JOIN
@@ -91,7 +91,6 @@ def fetch_data(start_date, end_date):
 
         # Lidar com o caso de NUMCONTACRED = NULL, que já é tratado pelo COALESCE para 8
         # Mas vamos garantir que o nome da conta para NUMCONTACRED=8 (originalmente NULL) seja "DDA"
-        # Isso é importante caso a CONTA_CREDITO com CODIGO 8 não exista ou tenha outro nome.
         if 8 in df['NUMCONTACRED'].unique():
             # Verifique se 'DDA' já é o nome para 8
             if not df[df['NUMCONTACRED'] == 8]['NOME_CONTA_CREDITO'].eq('DDA').all():
@@ -118,14 +117,7 @@ def generate_filename(start_date_str, end_date_str):
     if start_date == end_date:
         filename = f"arquivos/Contas_A_Pagar-{start_date.strftime('%d_%m_%Y')}.xlsx"
     else:
-        filename = f"arquivos/Contas_A_Pagar-{start_date.strftime('%d%m%Y')}-{end_date.strftime('%d%m%Y')}.xlsx"
-
-    # Garante que o diretório 'arquivos' exista
-    output_dir = os.path.dirname(filename)
-    if not os.path.exists(output_dir):
-        os.makedirs(output_dir)  # Cria o diretório e quaisquer subdiretórios necessários
-
-    return filename
+        return f"arquivos/Contas_A_Pagar-{start_date.strftime('%d_%m')}-{end_date.strftime('%d_%m_%Y')}.xlsx"
 
 
 def apply_excel_formatting(ws, df_filtered, table_type="Geral", start_row_offset=0):
@@ -134,28 +126,31 @@ def apply_excel_formatting(ws, df_filtered, table_type="Geral", start_row_offset
     e cria uma tabela Excel.
     """
 
-    # Definir larguras de coluna e margens (apenas uma vez para a planilha)
-    # Estas definições podem ser movidas para fetch_data_and_generate_excel se for para toda a planilha
-    # No entanto, se o ws for sempre o mesmo (active sheet), deixar aqui funciona.
-    ws.column_dimensions['A'].width = 20
-    ws.column_dimensions['B'].width = 15
-    ws.column_dimensions['C'].width = 42
-    ws.column_dimensions['D'].width = 17
-    ws.column_dimensions['E'].width = 13
+    # Definir larguras de coluna
+    ws.column_dimensions['A'].width = 20    # Largura (A): 20 - Nome da Conta de Crédito
+    ws.column_dimensions['B'].width = 10    # Largura (B): 10 - Número do Documento
+    ws.column_dimensions['C'].width = 42    # Largura (C): 42 - Nome do Fornecedor
+    ws.column_dimensions['D'].width = 22    # Largura (D): 22 - CNPJ/Chave (para Pix)
+    ws.column_dimensions['E'].width = 17    # Largura (E): 17 - Valor (para Pix)
+    ws.column_dimensions['F'].width = 12.5  # Largura (F): 12.5 - Valor Total (DDA, Banco do Brasil, Outros)
+    ws.column_dimensions['G'].width = 12.5  # Largura (G): 12.5 - Valor Total (Geral)
 
     ws.page_margins = PageMargins(left=0.25, right=0.25, top=0.75, bottom=0.75, header=0.3, footer=0.3)
 
-    current_row = start_row_offset
+    value_column_header = "VALOR"
 
-    headers = []
-    if table_type == "DDA":
-        headers = ["Banco", "Nº Doc", "Nome", "CNPJ", "VALOR"]
+    if table_type == "DDA" or table_type == "Banco do Brasil" or table_type == "Outros":
+        headers = ["Banco", "Nº DOC", "Nome", "OBSERVAÇÃO", "CNPJ", value_column_header]
+        value_col_idx = 5  # F (0-indexed)
     elif table_type == "Pix":
-        headers = ["Nome Recebedor", "Nº Doc", "Nome", "Chave", "VALOR"]
-    elif table_type in ["Banco do Brasil", "Outros"]:
-        headers = ["Banco", "Nº Doc", "Nome", "CNPJ", "VALOR"]
+        headers = ["Nome Recebedor", "Nº DOC", "Nome", "OBSERVAÇÃO", "Chave", value_column_header, "VALOR TOTAL"]
+        value_col_idx = 5  # F (0-indexed)
+        value_total_col_idx = 6  # G (0-indexed)
     else:  # Tabela Geral
-        headers = ["RECURSO", "Nº DOC", "FORNECEDOR", "VALOR"]
+        headers = ["RECURSO", "Nº DOC", "FORNECEDOR", "OBSERVAÇÃO", value_column_header]
+        value_col_idx = 4  # E (0-indexed)
+
+    current_row = start_row_offset
 
     # Escrever cabeçalhos da tabela
     for col_idx, header in enumerate(headers):
@@ -187,14 +182,24 @@ def apply_excel_formatting(ws, df_filtered, table_type="Geral", start_row_offset
             continue
 
         data_row = []
-        if table_type == "DDA":
-            data_row = ["", row['NUMDOCUMENTO'], row['NOMEFORNECEDOR'], "", row['VALOR']]
+
+        # Usar a descrição do BD
+        observacao = row['DESCRICAO'] if 'DESCRICAO' in row and row['DESCRICAO'] is not None else ""
+
+        if table_type == "DDA" or table_type == "Banco do Brasil" or table_type == "Outros":
+            data_row = ["", row['NUMDOCUMENTO'], row['NOMEFORNECEDOR'], observacao, "", row['VALOR']]
         elif table_type == "Pix":
-            data_row = ["", row['NUMDOCUMENTO'], row['NOMEFORNECEDOR'], "", row['VALOR']]
-        elif table_type in ["Banco do Brasil", "Outros"]:
-            data_row = ["", row['NUMDOCUMENTO'], row['NOMEFORNECEDOR'], "", row['VALOR']]
+            # Para Pix, VALOR_TOTAL já vem calculado no DataFrame
+            data_row = [
+                "",
+                row['NUMDOCUMENTO'],
+                row['NOMEFORNECEDOR'],
+                observacao,
+                "",
+                row['VALOR'],
+                row['VALOR_TOTAL']]
         else:  # Tabela Geral
-            data_row = [row['NOME_CONTA_CREDITO'], row['NUMDOCUMENTO'], row['NOMEFORNECEDOR'], row['VALOR']]
+            data_row = [row['NOME_CONTA_CREDITO'], row['NUMDOCUMENTO'], row['NOMEFORNECEDOR'], observacao, row['VALOR']]
 
         for col_idx, value in enumerate(data_row):
             cell = ws.cell(row=current_row, column=col_idx + 1, value=value)
@@ -204,9 +209,10 @@ def apply_excel_formatting(ws, df_filtered, table_type="Geral", start_row_offset
             cell.border = Border(top=Side(style='thin'), bottom=Side(style='thin'),
                                  left=Side(style='thin'), right=Side(style='thin'))
 
-            # Formatar coluna de valor como contábil (sempre a última coluna de dados)
-            if (table_type == "Geral" and col_idx == 3) or \
-               (table_type in ["DDA", "Pix", "Banco do Brasil", "Outros"] and col_idx == 4):
+            # Formatar colunas de valor como contábil
+            if (table_type == "Geral" and col_idx == value_col_idx) or \
+               ((table_type == "DDA" or table_type == "Banco do Brasil" or table_type == "Outros") and col_idx == value_col_idx) or \
+               (table_type == "Pix" and (col_idx == value_col_idx or col_idx == value_total_col_idx)):
                 cell.number_format = '_-R$* #,##0.00_-;-R$* #,##0.00_-;_-R$* \"-\"??_-;_-@_-'
 
         current_row += 1
@@ -220,31 +226,84 @@ def apply_excel_formatting(ws, df_filtered, table_type="Geral", start_row_offset
         if r_idx < start_data_row:
             start_data_row -= 1
 
-    # Criar a tabela Excel
+     # Criar a tabela Excel
     if start_data_row < current_row:  # Verifica se há dados para formar a tabela
+        # A linha de cabeçalho da tabela é (start_data_row - 1)
         table_ref = f"A{start_data_row-1}:{get_column_letter(len(headers))}{current_row-1}"
-        tab = Table(displayName=f"Table{ws.title.replace(' ', '')}{start_data_row-1}", ref=table_ref)
+        tab_name = f"Table_{ws.title.replace(' ', '')}_{table_type.replace(' ', '')}_{start_row_offset-1}"  # Nome único
+
+        # Criação explícita dos objetos TableColumn
+        table_columns_list = []
+        for i, header_name in enumerate(headers):
+            tc = TableColumn(id=i+1, name=header_name)  # IDs de coluna começam de 1
+            if table_type == "Pix" and i == value_total_col_idx:
+                tc.totalsRowFunction = "sum"
+                tc.totalsRowLabel = "Total:"
+            elif table_type != "Pix" and i == value_col_idx:
+                tc.totalsRowFunction = "sum"
+                tc.totalsRowLabel = "Total:"
+            table_columns_list.append(tc)
+
+        tab = Table(displayName=tab_name, ref=table_ref, tableColumns=table_columns_list)  # Passa tableColumns aqui
+
+        # Habilitar a linha de totais do Excel e definir estilo
         style = TableStyleInfo(name="TableStyleLight9", showFirstColumn=False,
                                showLastColumn=False, showRowStripes=True, showColumnStripes=False)
         tab.tableStyleInfo = style
+        tab.showTotalsRow = True
+
         ws.add_table(tab)
 
-    # Adicionar linha de total
-    total_row_value = df_filtered['VALOR'].sum() if not df_filtered.empty else 0
-    total_cell = ws.cell(row=current_row, column=len(headers), value=total_row_value)
-    total_cell.font = Font(bold=True)
-    total_cell.border = Border(top=Side(style='thin'), bottom=Side(style='thin'),
-                               left=Side(style='thin'), right=Side(style='thin'))
-    ws.cell(row=current_row, column=1, value="TOTAL:").font = Font(bold=True)
-    ws.cell(row=current_row, column=1).border = Border(top=Side(style='thin'), bottom=Side(style='thin'),
-                                                       left=Side(style='thin'), right=Side(style='thin'))
-    # Adicionar bordas nas células vazias antes do TOTAL
-    for i in range(1, len(headers)):
-        ws.cell(row=current_row, column=i).border = Border(top=Side(style='thin'), bottom=Side(style='thin'),
-                                                           left=Side(style='thin'), right=Side(style='thin'))
+    # Lógica de mesclagem para a tabela Pix (fora da criação da Table)
+    if table_type == "Pix":
+        # Agrupar por fornecedor para mesclar as células de VALOR TOTAL
+        current_supplier = None
+        start_merge_row = -1
 
-    total_cell.number_format = '_-R$* #,##0.00_-;-R$* #,##0.00_-;_-R$* \"-\"??_-;_-@_-'  # Formato monetário
-    current_row += 2  # Espaço entre tabelas
+        # Iterar pelas linhas do DataFrame filtrado e mesclar na planilha
+        row_in_excel = start_data_row  # A primeira linha de dados na planilha
+
+        for idx, row in df_filtered.iterrows():
+            if row['NOMEFORNECEDOR'] != current_supplier:
+                # Se mudou de fornecedor, mesclar o bloco anterior (se houver)
+                if start_merge_row != -1 and (row_in_excel - 1) > start_merge_row:
+                    ws.merge_cells(start_row=start_merge_row, start_column=value_total_col_idx + 1,
+                                   end_row=(row_in_excel - 1), end_column=value_total_col_idx + 1)
+                    # Colocar o total no centro da célula mesclada
+                    merged_cell = ws.cell(row=start_merge_row, column=value_total_col_idx + 1)
+                    # O valor já está na primeira linha do bloco devido à ordenação
+                    # Não precisamos pegar do df_filtered[df_filtered['NOMEFORNECEDOR'] == current_supplier]['VALOR_TOTAL'].iloc[0] novamente
+                    merged_cell.alignment = openpyxl.styles.Alignment(horizontal='center', vertical='center')
+                    merged_cell.font = Font(bold=True)
+                    merged_cell.number_format = '_-R$* #,##0.00_-;-R$* #,##0.00_-;_-R$* \"-\"??_-;_-@_-'
+
+                # Iniciar novo bloco de mesclagem
+                current_supplier = row['NOMEFORNECEDOR']
+                start_merge_row = row_in_excel
+
+            # Escrever o valor na célula para a coluna "VALOR TOTAL" apenas na primeira linha do bloco
+            if row_in_excel == start_merge_row:
+                ws.cell(row=row_in_excel, column=value_total_col_idx + 1).value = row['VALOR_TOTAL']
+            else:
+                # Limpar células subsequentes para mesclar
+                ws.cell(row=row_in_excel, column=value_total_col_idx + 1).value = ""
+
+            # Aplicar formato numérico mesmo nas células vazias para a mesclagem funcionar bem
+            ws.cell(row=row_in_excel, column=value_total_col_idx + 1).number_format = '_-R$* #,##0.00_-;-R$* #,##0.00_-;_-R$* \"-\"??_-;_-@_-'
+
+            row_in_excel += 1  # Próxima linha na planilha
+
+        # Mesclar o último bloco após o loop
+        if start_merge_row != -1 and (row_in_excel - 1) >= start_merge_row:
+            ws.merge_cells(start_row=start_merge_row, start_column=value_total_col_idx + 1,
+                           end_row=(row_in_excel - 1), end_column=value_total_col_idx + 1)
+            merged_cell = ws.cell(row=start_merge_row, column=value_total_col_idx + 1)
+            # O valor já deve estar na primeira célula do bloco.
+            merged_cell.alignment = openpyxl.styles.Alignment(horizontal='center', vertical='center')
+            merged_cell.font = Font(bold=True)
+            merged_cell.number_format = '_-R$* #,##0.00_-;-R$* #,##0.00_-;_-R$* \"-\"??_-;_-@_-'
+
+    current_row += 2  # Espaço entre tabelas (mantido para visualização clara entre as tabelas)
 
     return current_row
 
@@ -256,95 +315,107 @@ def fetch_data_and_generate_excel(start_date_str, end_date_str):
         messagebox.showinfo("Informação", "Nenhum dado encontrado para as datas selecionadas.")
         return
 
-    # Deletar linhas onde NUMCONTACRED é 1
-    df = df[df['NUMCONTACRED'] != 1].copy()  # Usar .copy() para evitar SettingWithCopyWarning
+    try:
+        # Deletar linhas onde NUMCONTACRED é 1
+        df = df[df['NUMCONTACRED'] != 1].copy()  # Usar .copy() para evitar SettingWithCopyWarning
 
-    # Criar um novo workbook e uma planilha
-    wb = openpyxl.Workbook()
-    ws = wb.active
-    ws.title = "Contas a Pagar"
+        # Criar um novo workbook e uma planilha
+        wb = openpyxl.Workbook()
+        ws = wb.active
+        ws.title = "Contas a Pagar"
 
-    # Adicionar cabeçalho do arquivo no cabeçalho da página (header)
-    filename_for_header = generate_filename(start_date_str, end_date_str).replace(".xlsx", "")
-    ws.oddHeader.center.text = filename_for_header
-    ws.oddHeader.center.font = "Arial,Bold"
-    ws.oddHeader.center.size = 14
+        # Adicionar cabeçalho do arquivo no cabeçalho da página (header)
+        filename_for_header = generate_filename(start_date_str, end_date_str).replace(".xlsx", "")
+        ws.oddHeader.center.text = filename_for_header
+        ws.oddHeader.center.font = "Arial,Bold"
+        ws.oddHeader.center.size = 14
 
-    current_row_offset = 1  # Começar a primeira tabela na linha 1
+        current_row_offset = 1  # Começar a primeira tabela na linha 1
 
-    # --- Tabela Geral ---
-    df_geral = df.copy()
-    # Ordenação da Tabela Geral
-    df_geral = df_geral.sort_values(by=['NOME_CONTA_CREDITO', 'NOMEFORNECEDOR', 'VALOR'],
-                                    ascending=[True, True, True])
-    # Título da tabela geral, sem espaço extra
-    current_row_offset = apply_excel_formatting(ws, df_geral, table_type="Geral", start_row_offset=current_row_offset)
-
-    # --- Tabelas Específicas ---
-
-    # DDA (NUMCONTACRED = 8 ou null)
-    df_dda = df[(df['NUMCONTACRED'] == 8) | (df['NUMCONTACRED'].isnull())].copy()
-    df_dda = df_dda.sort_values(by='VALOR', ascending=True)
-    if not df_dda.empty:
-        # Título da tabela DDA
-        ws.cell(row=current_row_offset, column=1, value="DDA").font = Font(bold=True, size=12, color='000000')
-        ws.cell(row=current_row_offset, column=1).fill = PatternFill(
-            start_color='FFFF00', end_color='FFFF00', fill_type="solid")
-        current_row_offset += 1  # Sem espaço extra
-        current_row_offset = apply_excel_formatting(ws, df_dda, table_type="DDA", start_row_offset=current_row_offset)
-
-    # Pix (NUMCONTACRED = 6)
-    df_pix = df[df['NUMCONTACRED'] == 6].copy()
-    df_pix = df_pix.sort_values(by='VALOR', ascending=True)
-    if not df_pix.empty:
-        # Título da tabela Pix
-        ws.cell(row=current_row_offset, column=1, value="PIX").font = Font(bold=True, size=12, color='000000')
-        ws.cell(row=current_row_offset, column=1).fill = PatternFill(
-            start_color='FE9250', end_color='FE9250', fill_type="solid")
-        current_row_offset += 1  # Sem espaço extra
-        current_row_offset = apply_excel_formatting(ws, df_pix, table_type="Pix", start_row_offset=current_row_offset)
-
-    # Banco do Brasil (NUMCONTACRED = 3)
-    df_bb = df[df['NUMCONTACRED'] == 3].copy()
-    df_bb = df_bb.sort_values(by='VALOR', ascending=True)
-    if not df_bb.empty:
-        # Título da tabela Banco do Brasil
-        ws.cell(
-            row=current_row_offset, column=1, value="BANCO DO BRASIL").font = Font(
-            bold=True, size=12, color='000000')
-        ws.cell(row=current_row_offset, column=1).fill = PatternFill(
-            start_color='0F9ED5', end_color='0F9ED5', fill_type="solid")
-        current_row_offset += 1  # Sem espaço extra
+        # --- Tabela Geral ---
+        df_geral = df.copy()
+        # Ordenação da Tabela Geral
+        df_geral = df_geral.sort_values(by=['NOME_CONTA_CREDITO', 'NOMEFORNECEDOR', 'VALOR'],
+                                        ascending=[True, True, True])
+        # Título da tabela geral, sem espaço extra
         current_row_offset = apply_excel_formatting(
-            ws, df_bb, table_type="Banco do Brasil", start_row_offset=current_row_offset)
+            ws, df_geral, table_type="Geral", start_row_offset=current_row_offset)
 
-    # Demais Bancos
-    # Obter os NUMCONTACREDs que já foram processados (1, 3, 6, 8)
-    processed_numcontacreds = [1, 3, 6, 8]
-    df_outros_bancos = df[~df['NUMCONTACRED'].isin(processed_numcontacreds)].copy()
+        # --- Tabelas Específicas ---
 
-    # Agrupar pelos demais NUMCONTACRED e gerar tabelas separadas
-    for num_conta_cred_id in sorted(df_outros_bancos['NUMCONTACRED'].unique()):
-        df_banco = df_outros_bancos[df_outros_bancos['NUMCONTACRED'] == num_conta_cred_id].copy()
-        df_banco = df_banco.sort_values(by='VALOR', ascending=True)
-
-        if not df_banco.empty:
-            # Definir o preenchimento e fonte para o título da tabela do banco
-            font_color = COLORS.get(num_conta_cred_id, {}).get('font')
-
-            # Pegar o nome da conta para o título
-            nome_conta = df_banco['NOME_CONTA_CREDITO'].iloc[0]
-            # Pegar a cor de preenchimento para este NUMCONTACRED
-            fill_color = COLORS.get(num_conta_cred_id, {}).get('fill', 'FFFFFF')  # Padrão branco se não definido
-
-            # Título da tabela do banco
-            ws.cell(row=current_row_offset, column=1, value=nome_conta.upper()
-                    ).font = Font(bold=True, size=12, color=font_color)
+        # DDA (NUMCONTACRED = 8 ou null)
+        df_dda = df[(df['NUMCONTACRED'] == 8) | (df['NUMCONTACRED'].isnull())].copy()
+        df_dda = df_dda.sort_values(by='VALOR', ascending=True)
+        if not df_dda.empty:
+            # Título da tabela DDA
+            ws.cell(row=current_row_offset, column=1, value="DDA").font = Font(bold=True, size=12, color='000000')
             ws.cell(row=current_row_offset, column=1).fill = PatternFill(
-                start_color=fill_color, end_color=fill_color, fill_type="solid")
+                start_color='FFFF00', end_color='FFFF00', fill_type="solid")
             current_row_offset += 1  # Sem espaço extra
             current_row_offset = apply_excel_formatting(
-                ws, df_banco, table_type="Outros", start_row_offset=current_row_offset)
+                ws, df_dda, table_type="DDA", start_row_offset=current_row_offset)
+
+        # Pix (NUMCONTACRED = 6)
+        df_pix = df[df['NUMCONTACRED'] == 6].copy()
+        # Calcular VALOR TOTAL para Pix antes de ordenar
+        df_pix['VALOR_TOTAL'] = df_pix.groupby('NOMEFORNECEDOR')['VALOR'].transform('sum')
+        # Ordenar Pix por VALOR_TOTAL (do menor para o maior)
+        df_pix = df_pix.sort_values(by=['VALOR_TOTAL', 'NOMEFORNECEDOR', 'VALOR'], ascending=[True, True, True])
+        if not df_pix.empty:
+            # Título da tabela Pix
+            ws.cell(row=current_row_offset, column=1, value="PIX").font = Font(bold=True, size=12, color='000000')
+            ws.cell(row=current_row_offset, column=1).fill = PatternFill(
+                start_color='FE9250', end_color='FE9250', fill_type="solid")
+            current_row_offset += 1  # Sem espaço extra
+            current_row_offset = apply_excel_formatting(
+                ws, df_pix, table_type="Pix", start_row_offset=current_row_offset)
+
+        # Banco do Brasil (NUMCONTACRED = 3)
+        df_bb = df[df['NUMCONTACRED'] == 3].copy()
+        df_bb = df_bb.sort_values(by='VALOR', ascending=True)
+        if not df_bb.empty:
+            # Título da tabela Banco do Brasil
+            ws.cell(
+                row=current_row_offset, column=1, value="BANCO DO BRASIL").font = Font(
+                bold=True, size=12, color='000000')
+            ws.cell(row=current_row_offset, column=1).fill = PatternFill(
+                start_color='0F9ED5', end_color='0F9ED5', fill_type="solid")
+            current_row_offset += 1  # Sem espaço extra
+            current_row_offset = apply_excel_formatting(
+                ws, df_bb, table_type="Banco do Brasil", start_row_offset=current_row_offset)
+
+        # Demais Bancos
+        # Obter os NUMCONTACREDs que já foram processados (1, 3, 6, 8)
+        processed_numcontacreds = [1, 3, 6, 8]
+        df_outros_bancos = df[~df['NUMCONTACRED'].isin(processed_numcontacreds)].copy()
+
+        # Agrupar pelos demais NUMCONTACRED e gerar tabelas separadas
+        for num_conta_cred_id in sorted(df_outros_bancos['NUMCONTACRED'].unique()):
+            df_banco = df_outros_bancos[df_outros_bancos['NUMCONTACRED'] == num_conta_cred_id].copy()
+            df_banco = df_banco.sort_values(by='VALOR', ascending=True)
+
+            if not df_banco.empty:
+                # Definir o preenchimento e fonte para o título da tabela do banco
+                font_color = COLORS.get(num_conta_cred_id, {}).get('font')
+
+                # Pegar o nome da conta para o título
+                nome_conta = df_banco['NOME_CONTA_CREDITO'].iloc[0]
+                # Pegar a cor de preenchimento para este NUMCONTACRED
+                fill_color = COLORS.get(num_conta_cred_id, {}).get('fill', 'FFFFFF')  # Padrão branco se não definido
+
+                # Título da tabela do banco
+                ws.cell(row=current_row_offset, column=1, value=nome_conta.upper()
+                        ).font = Font(bold=True, size=12, color=font_color)
+                ws.cell(row=current_row_offset, column=1).fill = PatternFill(
+                    start_color=fill_color, end_color=fill_color, fill_type="solid")
+                current_row_offset += 1  # Sem espaço extra
+                current_row_offset = apply_excel_formatting(
+                    ws, df_banco, table_type="Outros", start_row_offset=current_row_offset)
+
+    except Exception as e:
+        messagebox.showerror(
+            "Erro ao Gerar Excel", f"Ocorreu um erro ao gerar o arquivo Excel: {e}\n {e.__str__}\n {e.__class__}\n {e.__dict__}")
+        return
 
     # Salvar o arquivo Excel
     try:

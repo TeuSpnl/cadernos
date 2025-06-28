@@ -129,8 +129,8 @@ def apply_excel_formatting(ws, df_filtered, table_type="Geral", start_row_offset
     # Definir larguras de coluna
     ws.column_dimensions['A'].width = 20    # Largura (A): 20 - Nome da Conta de Crédito
     ws.column_dimensions['B'].width = 10    # Largura (B): 10 - Número do Documento
-    ws.column_dimensions['C'].width = 35    # Largura (C): 35 - Nome do Fornecedor
-    ws.column_dimensions['D'].width = 22    # Largura (D): 22 - Observação
+    ws.column_dimensions['C'].width = 22    # Largura (C): 22 - Nome do Fornecedor
+    ws.column_dimensions['D'].width = 35    # Largura (D): 35 - Observação
     ws.column_dimensions['E'].width = 17    # Largura (E): 17 - CNPJ (apenas para DDA, Banco do Brasil, Outros)
     ws.column_dimensions['F'].width = 12.5  # Largura (F): 12.5 - Valor Total (DDA, Banco do Brasil, Outros)
     ws.column_dimensions['G'].width = 12.5  # Largura (G): 12.5 - Valor Total (Geral)

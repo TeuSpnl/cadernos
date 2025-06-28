@@ -115,7 +115,7 @@ def generate_filename(start_date_str, end_date_str):
     end_date = datetime.strptime(end_date_str, '%Y-%m-%d')
 
     if start_date == end_date:
-        filename = f"arquivos/Contas_A_Pagar-{start_date.strftime('%d_%m_%Y')}.xlsx"
+        return f"arquivos/Contas_A_Pagar-{start_date.strftime('%d_%m_%Y')}.xlsx"
     else:
         return f"arquivos/Contas_A_Pagar-{start_date.strftime('%d_%m')}-{end_date.strftime('%d_%m_%Y')}.xlsx"
 

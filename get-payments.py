@@ -114,6 +114,9 @@ def generate_filename(start_date_str, end_date_str):
     start_date = datetime.strptime(start_date_str, '%Y-%m-%d')
     end_date = datetime.strptime(end_date_str, '%Y-%m-%d')
 
+    if not os.path.exists('arquivos'):
+        os.makedirs('arquivos')
+
     if start_date == end_date:
         return f"arquivos/Contas_A_Pagar-{start_date.strftime('%d_%m_%Y')}.xlsx"
     else:
@@ -127,13 +130,13 @@ def apply_excel_formatting(ws, df_filtered, table_type="Geral", start_row_offset
     """
 
     # Definir larguras de coluna
-    ws.column_dimensions['A'].width = 20    # Largura (A): 20 - Nome da Conta de Crédito
-    ws.column_dimensions['B'].width = 10    # Largura (B): 10 - Número do Documento
-    ws.column_dimensions['C'].width = 22    # Largura (C): 22 - Nome do Fornecedor
-    ws.column_dimensions['D'].width = 35    # Largura (D): 35 - Observação
-    ws.column_dimensions['E'].width = 17    # Largura (E): 17 - CNPJ (apenas para DDA, Banco do Brasil, Outros)
-    ws.column_dimensions['F'].width = 12.5  # Largura (F): 12.5 - Valor Total (DDA, Banco do Brasil, Outros)
-    ws.column_dimensions['G'].width = 12.5  # Largura (G): 12.5 - Valor Total (Geral)
+    ws.column_dimensions['A'].width = 20    # Largura (A) - Nome da Conta de Crédito
+    ws.column_dimensions['B'].width = 11    # Largura (B) - Número do Documento
+    ws.column_dimensions['C'].width = 15    # Largura (C) - Nome do Fornecedor
+    ws.column_dimensions['D'].width = 42    # Largura (D) - Observação
+    ws.column_dimensions['E'].width = 17    # Largura (E) - CNPJ (apenas para DDA, Banco do Brasil, Outros)
+    ws.column_dimensions['F'].width = 12.5  # Largura (F) - Valor Total (DDA, Banco do Brasil, Outros)
+    ws.column_dimensions['G'].width = 12.5  # Largura (G) - Valor Total (Geral)
 
     ws.page_margins = PageMargins(left=0.25, right=0.25, top=0.75, bottom=0.75, header=0.3, footer=0.3)
 
@@ -287,7 +290,6 @@ def apply_excel_formatting(ws, df_filtered, table_type="Geral", start_row_offset
             merged_cell = ws.cell(row=start_merge_row, column=value_total_col_idx + 1)
             # O valor já deve estar na primeira célula do bloco.
             merged_cell.alignment = openpyxl.styles.Alignment(horizontal='center', vertical='center')
-            merged_cell.font = Font(bold=True)
             merged_cell.number_format = '_-R$* #,##0.00_-;-R$* #,##0.00_-;_-R$* \"-\"??_-;_-@_-'
 
     # Determinar a coluna e o intervalo para a soma

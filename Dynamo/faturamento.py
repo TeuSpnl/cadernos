@@ -252,7 +252,7 @@ def recuperar_historico_numdocumento(conn, cd_produto, data_venda):
     return None
 
 
-def obter_valores_custo_imposto_margem(conn, numdocumento, cd_produto, valor_final):
+def obter_valores_custo_imposto_margem(conn, numdocumento, cd_produto, valor_final, qtd):
     """
     Para obter valor_custo, valor_imposto, valor_margem:
     1) Achar NOTACOMPRA.CDNOTACOMPRA usando NOTACOMPRA.NUMNOTA = numdocumento
@@ -288,26 +288,24 @@ def obter_valores_custo_imposto_margem(conn, numdocumento, cd_produto, valor_fin
     mva_st_original = 71.78 / 100
     icms_destino = 20.5 / 100
 
-    mva_ajustado = ((1 + mva_st_original) * (1 - icms_forn)) / (1 - icms_destino) - 1
-
-    ST = (((100 + 100 * mva_ajustado) * (1 + ipi) * (icms_destino * 100)) / 100 - 100 * icms_forn) / 100
-
+    mva_ajustado = (((1 + mva_st_original) * (1 - icms_forn) / (1 - icms_destino)) - 1) * 100
+    ST = (((((100 + mva_ajustado) * (1 + ipi)) * (icms_destino * 100)) / 100) - 100 * icms_forn) / 100
     valor_com_st = valor_custo + (ST * valor_custo)
-
     valor_com_st_e_ipi = valor_com_st + (valor_custo * ipi)
-
     frete = valor_com_st_e_ipi * 0.1
-
     valor_total = valor_com_st_e_ipi + frete
-
     valor_impostos = valor_total - valor_custo - frete
+
+    # Multiplicar pela quantidade para obter os valores totais da linha
+    valor_custo_total = valor_custo * qtd
+    valor_impostos_total = valor_impostos * qtd
 
     if valor_final is None:
         valor_margem = ""
     else:
-        valor_margem = (valor_final * 0.67) - valor_custo
+        valor_margem = (valor_final * 0.67) - valor_custo_total
 
-    return valor_custo, valor_impostos, valor_margem
+    return valor_custo_total, valor_impostos_total, valor_margem
 
 
 def processar_pedido(pool, pedido, itens_por_pedido, clientes_dict, fones_dict, funcs_dict, cnpj):
@@ -354,8 +352,16 @@ def processar_pedido(pool, pedido, itens_por_pedido, clientes_dict, fones_dict, 
 
                 # Calcula o valor final retirando o desconto geral do pedido de forma proporcional
                 vl_proporc_desc_geral = desc_ped * (valor_uni / vl_total_ped)
+
+                # Seta a quantidade como float
+                try:
+                    qtd = float(qtd)
+                except ValueError:
+                    print(f"Quantidade inválida para o pedido {cd_ped}, produto {cd_prod}: {qtd}")
+                    continue
+
                 # Garantir que o valor_final é float
-                valor_final = float(valor_uni - vl_proporc_desc_geral)
+                valor_final = float(valor_uni - vl_proporc_desc_geral) * qtd
 
                 # Procurar NF de compra anterior
                 # Primeiro pegar data_insercao_item (data que o item foi inserido no pedido)
@@ -368,7 +374,8 @@ def processar_pedido(pool, pedido, itens_por_pedido, clientes_dict, fones_dict, 
                 if numdocumento_compra is not None:
                     # Obtém valores de custo, impostos e margem
                     custo, imp, marg = obter_valores_custo_imposto_margem(
-                        conn_local, numdocumento_compra, cd_prod, valor_final)
+                        conn_local, numdocumento_compra, cd_prod, valor_final, qtd)
+
                     # Converte para string e troca '.' por ','
                     valor_custo = normalizar_numero(custo)
                     valor_impostos = normalizar_numero(imp)
@@ -461,9 +468,9 @@ def main():
     # Canal: se NUMCNH = "TELEPECAS", então canal = "TELEP", senão canal = NUMCNH
 
     # Data de início e fim
-    # start_date = '2025-02-10'
-    start_date = (datetime.datetime.now() - datetime.timedelta(days=1)).strftime('%Y-%m-%d')
-    end_date = (datetime.datetime.now() - datetime.timedelta(days=1)).strftime('%Y-%m-%d')
+    start_date = '2023-02-18'
+    # start_date = (datetime.datetime.now() - datetime.timedelta(days=1)).strftime('%Y-%m-%d')
+    end_date = (datetime.datetime.now() - datetime.timedelta(days=2)).strftime('%Y-%m-%d')
 
     # Chunk de 30 dias para não estourar a memória
     chunk_days = 30

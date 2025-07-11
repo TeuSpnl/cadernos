@@ -169,7 +169,7 @@ def normalizar_numero(valor):
         return val_str
 
 
-def pre_cache_historico_produtos(conn, produtos_ids):
+def pre_cache_historico_produtos(conn, produtos_ids, end_date):
     """
     Busca o histórico de produtos consultando cada uma das 10 tabelas de histórico
     separadamente e em blocos para respeitar os limites do Firebird 2.1.
@@ -200,7 +200,8 @@ def pre_cache_historico_produtos(conn, produtos_ids):
             """
 
             try:
-                cur.execute(sql, tuple(grupo_produtos))
+                params = tuple(grupo_produtos) + (end_date,)
+                cur.execute(sql, params)
                 for cd_produto, data, num_documento, tipo in cur.fetchall():
                     historico_por_produto[cd_produto].append({
                         'data': data,
@@ -510,7 +511,7 @@ def main():
         # --- OTIMIZAÇÃO PRINCIPAL ---
         # 2. Pré-cache do histórico de todos os produtos do chunk
         print("Pré-carregando histórico de produtos...")
-        historico_cache = pre_cache_historico_produtos(conn, list(todos_produtos_ids))
+        historico_cache = pre_cache_historico_produtos(conn, list(todos_produtos_ids), current_end_dt)
 
         # 3. Processar histórico em memória para achar NFs de compra
         item_compra_info = {}  # (cd_ped, cd_prod) -> num_documento_compra

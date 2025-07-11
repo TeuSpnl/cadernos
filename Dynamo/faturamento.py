@@ -434,9 +434,7 @@ def main():
         csv_path = f"./arquivos/faturamento_diario_{current_start_dt.strftime('%d%m%y')}.csv"
     else:
         # Caminho do CVS
-        csv_path = f"./arquivos/faturamento_retroativo_{
-            current_start_dt.strftime('%d%m%y')} _{
-            end_full_dt.strftime('%d%m%y')}.csv"
+        csv_path = f"./arquivos/faturamento_retroativo_{current_start_dt.strftime('%d%m%y')}_{end_full_dt.strftime('%d%m%y')}.csv"
 
     with open(csv_path, "w", encoding="utf-8", newline='') as f:
         # Apenas cria/limpa o arquivo
@@ -579,7 +577,7 @@ def main():
         current_start_dt = current_end_dt + datetime.timedelta(days=1)
 
     conn.close()
-    # enviar_arquiÏvo_sftp(csv_path)
+    # enviar_arquivo_sftp(csv_path)
     print("Processamento concluído.")
 
 

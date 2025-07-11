@@ -420,7 +420,7 @@ def main():
     # Data de início e fim
     start_date = '2023-02-18'
     # start_date = (datetime.datetime.now() - datetime.timedelta(days=1)).strftime('%Y-%m-%d')
-    end_date = (datetime.datetime.now() - datetime.timedelta(days=2)).strftime('%Y-%m-%d')
+    end_date = (datetime.datetime.now() - datetime.timedelta(days=1)).strftime('%Y-%m-%d')
 
     # Chunk de 30 dias para não estourar a memória
     chunk_days = 30

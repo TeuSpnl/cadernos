@@ -372,8 +372,8 @@ def processar_pedido_otimizado(pedido, itens_do_pedido, clientes_dict, fones_dic
                 "",  # ano
                 "",  # placa
                 num_orig,  # codigo_peca
-                qtd,  # quantidade
-                valor_final,  # valor
+                qtd_str,  # quantidade
+                valor_final_str,  # valor
                 cd_func,  # codigo_externo
                 "",  # classificacao_item
                 desc,  # descricao_peca

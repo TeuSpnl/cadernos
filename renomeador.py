@@ -150,7 +150,8 @@ class RenomeadorComprovantes:
         for regra in self.config.get("regras", []):
             grupo = regra.get("grupo", "")
             termos = regra.get("termos", [])
-            if any(termo.upper() in texto_upper for termo in termos):
+            # Usa Regex com \b para garantir palavra exata (evita que "DAS" case com "TODAS")
+            if any(re.search(r'\b' + re.escape(termo.upper()) + r'\b', texto_upper) for termo in termos):
                 desc_refinada = self.refinar_por_data(grupo, dados["data_pgto"])
                 if desc_refinada:
                     dados["descricao"] = termos[0] + "_" + desc_refinada
@@ -170,10 +171,10 @@ class RenomeadorComprovantes:
                 dados["nome_recebedor"] = match_fav.group(1).strip()
 
             # Descrição / Evento
-            match_evento = re.search(r'(?:EVENTO|DOCUMENTO):\s*(.*?)\n', texto)
+            match_evento = re.search(r'(?:EVENTO|DOCUMENTO|NR\. DOCUMENTO)[:\s]\s*(.*?)\n', texto, re.IGNORECASE)
             if match_evento:
                 valor = match_evento.group(1).strip()
-                if re.match(r'^\d+$', valor):  # Se for só número, é numero do documento
+                if re.match(r'^[\d.-]+$', valor):  # Se for só número (aceita ponto/hifen), é numero do documento
                     dados["num_doc"] = valor
                 elif dados["descricao"] == "PGTO":  # Só sobrescreve se ainda for default
                     dados["descricao"] = valor

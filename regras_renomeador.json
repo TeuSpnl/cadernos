@@ -1,0 +1,80 @@
+{
+    "regras": [
+        {
+            "grupo": "CONTA LUZ",
+            "termos": [
+                "COELBA",
+                "CEMIG",
+                "NEOENERGIA",
+                "ENEL",
+                "LIGHT",
+                "COMP ELE EST DA BA"
+            ]
+        },
+        {
+            "grupo": "CONTA AGUA",
+            "termos": [
+                "EMBASA",
+                "SABESP",
+                "CAESB",
+                "AGUAS DO",
+                "COPASA"
+            ]
+        },
+        {
+            "grupo": "TELEFONE",
+            "termos": [
+                "VIVO",
+                "CLARO",
+                "TELEFONICA"
+            ]
+        },
+        {
+            "grupo": "INTERNET",
+            "termos": [
+                "INTERNET",
+                "FIBRA",
+                "LINK",
+                "HE-NET",
+                "VIVO"
+            ]
+        },
+        {
+            "grupo": "SALARIO",
+            "termos": [
+                "SALARIO",
+                "FOLHA DE PAGAMENTO",
+                "PROVENTOS"
+            ]
+        },
+        {
+            "grupo": "IMPOSTOS",
+            "termos": [
+                "DARF",
+                "DAS",
+                "GPS",
+                "FGTS",
+                "DAE"
+            ]
+        }
+    ],
+    "recorrentes": [
+        "SALARIO",
+        "ALUGUEL",
+        "CONTA AGUA",
+        "CONTA LUZ",
+        "INTERNET",
+        "TELEFONE",
+        "13 SALARIO",
+        "ADIANTAMENTO",
+        "CONDOMINIO",
+        "IMPOSTOS"
+    ],
+    "termos_ignorar": [
+        "PIX ENVIADO",
+        "PAGAMENTO",
+        "TRANSFERENCIA",
+        "TED",
+        "DOC"
+    ]
+}

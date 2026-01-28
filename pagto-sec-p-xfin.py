@@ -208,7 +208,7 @@ def main():
     LEFT JOIN FORNECEDOR F ON A.CDFORNECEDOR = F.CDFORNECEDOR
     LEFT JOIN SUBSUBCONTA S ON A.SUBSUBNUMCONTA = S.SUBSUBNUMCONTA
     LEFT JOIN NOTACOMPRA N ON A.CDNOTACOMPRA = N.CDNOTACOMPRA
-    WHERE A.DTVENCIMENTO >= '2026-01-01' AND A.CDCENTRODECUSTO = 1
+    WHERE A.DTVENCIMENTO >= '2026-01-01' AND A.CDCENTRODECUSTO = 2
     ORDER BY A.DTVENCIMENTO ASC
     """
 
@@ -307,7 +307,7 @@ def main():
         if dados_sucesso:
             df_sucesso = pd.DataFrame(dados_sucesso)
             df_sucesso = df_sucesso.reindex(columns=colunas_finais)
-            nome_arq_sucesso = "arquivos/importacao_xfin_PRONTO.csv"
+            nome_arq_sucesso = "arquivos/importacao_xfin_oficina_PRONTO.csv"
             df_sucesso.to_csv(nome_arq_sucesso, index=False, sep=';', encoding='utf-8-sig')
             print(f"SUCESSO: '{nome_arq_sucesso}' gerado com {len(dados_sucesso)} registros.")
 
@@ -315,7 +315,7 @@ def main():
         if dados_analise:
             df_analise = pd.DataFrame(dados_analise)
             df_analise = df_analise.reindex(columns=colunas_finais)
-            nome_arq_analise = "arquivos/importacao_xfin_PARA_ANALISE.csv"
+            nome_arq_analise = "arquivos/importacao_xfin_oficina_PARA_ANALISE.csv"
             df_analise.to_csv(nome_arq_analise, index=False, sep=';', encoding='utf-8-sig')
             print(f"ATENÇÃO: '{nome_arq_analise}' gerado com {len(dados_analise)} registros para revisão.")
             print("Verifique a coluna 'Plano Contas*' neste arquivo.")

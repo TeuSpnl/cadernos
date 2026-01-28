@@ -413,13 +413,14 @@ def main():
     cur = conn.cursor()
 
     cnpj_loja = "14.255.350/0001-03"
-    cnpj = normalizar_texto(cnpj_loja)
+    cnpj = remover_caracteres_nao_numericos(cnpj_loja)
 
     # 3) FATURAMENTO
 
     # Data de início e fim
-    start_date = '2023-02-18'
-    # start_date = (datetime.datetime.now() - datetime.timedelta(days=1)).strftime('%Y-%m-%d')
+    # start_date = '2023-02-18'
+    # end_date = '2023-03-31'
+    start_date = (datetime.datetime.now() - datetime.timedelta(days=1)).strftime('%Y-%m-%d')
     end_date = (datetime.datetime.now() - datetime.timedelta(days=1)).strftime('%Y-%m-%d')
 
     # Chunk de 30 dias para não estourar a memória
@@ -434,7 +435,9 @@ def main():
         csv_path = f"./arquivos/faturamento_diario_{current_start_dt.strftime('%d%m%y')}.csv"
     else:
         # Caminho do CVS
-        csv_path = f"./arquivos/faturamento_retroativo_{current_start_dt.strftime('%d%m%y')}_{end_full_dt.strftime('%d%m%y')}.csv"
+        csv_path = f"./arquivos/faturamento_retroativo_{
+            current_start_dt.strftime('%d%m%y')} _{
+            end_full_dt.strftime('%d%m%y')}.csv"
 
     with open(csv_path, "w", encoding="utf-8", newline='') as f:
         # Apenas cria/limpa o arquivo
@@ -577,7 +580,7 @@ def main():
         current_start_dt = current_end_dt + datetime.timedelta(days=1)
 
     conn.close()
-    # enviar_arquivo_sftp(csv_path)
+    enviar_arquivo_sftp(csv_path)
     print("Processamento concluído.")
 
 

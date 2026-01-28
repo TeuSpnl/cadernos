@@ -76,5 +76,20 @@
         "TRANSFERENCIA",
         "TED",
         "DOC"
-    ]
+    ],
+    "regras_data": {
+        "CONTA AGUA": [
+            {"inicio": 1, "fim": 3, "descricao": "CONTA AGUA OFICINA"},
+            {"inicio": 10, "fim": 13, "descricao": "CONTA AGUA CENTRO INDUSTRIAL"},
+            {"inicio": 17, "fim": 20, "descricao": "CONTA AGUA LOJA"},
+            {"inicio": 22, "fim": 25, "descricao": "CONTA AGUA CLERISTON"}
+        ],
+        "CONTA LUZ": [
+            {"inicio": 12, "fim": 13, "descricao": "CONTA LUZ CENTRO INDUSTRIAL"},
+            {"inicio": 14, "fim": 15, "descricao": "CONTA LUZ DIVISA"},
+            {"inicio": 17, "fim": 20, "descricao": "CONTA LUZ CLERISTON"},
+            {"inicio": 23, "fim": 25, "descricao": "CONTA LUZ OFICINA"},
+            {"inicio": 26, "fim": 29, "descricao": "CONTA LUZ LOJA"}
+        ]
+    }
 }

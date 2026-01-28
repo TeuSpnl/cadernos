@@ -30,7 +30,8 @@ class RenomeadorComprovantes:
         config_padrao = {
             "regras": [],
             "recorrentes": [],
-            "termos_ignorar": []
+            "termos_ignorar": [],
+            "regras_data": {}
         }
         
         if not os.path.exists(arquivo_json):
@@ -112,6 +113,20 @@ class RenomeadorComprovantes:
                 return f"PAGAMENTOS_BB_{data_fmt}"
         return None
 
+    def refinar_por_data(self, grupo, data_pgto):
+        if not data_pgto: return None
+        try:
+            dia = int(data_pgto.split('-')[0])
+        except:
+            return None
+            
+        regras_data = self.config.get("regras_data", {})
+        if grupo in regras_data:
+            for regra in regras_data[grupo]:
+                if regra["inicio"] <= dia <= regra["fim"]:
+                    return regra["descricao"]
+        return None
+
     def extrair_dados(self, texto):
         dados = {
             "data_pgto": "",
@@ -133,7 +148,10 @@ class RenomeadorComprovantes:
             grupo = regra.get("grupo", "")
             termos = regra.get("termos", [])
             if any(termo.upper() in texto_upper for termo in termos):
-                if "AGUA" in grupo or "LUZ" in grupo:
+                desc_refinada = self.refinar_por_data(grupo, dados["data_pgto"])
+                if desc_refinada:
+                    dados["descricao"] = termos[0] + "_" + desc_refinada
+                elif "AGUA" in grupo or "LUZ" in grupo:
                     dados["descricao"] = termos[0] + "_" + grupo
                 else:
                     dados["descricao"] = grupo

@@ -1,7 +1,6 @@
 # run_schedule.py
 import schedule
 import time
-from email_alert import executar_sincronizacao
 import pagto_sec_p_xfin
 import xfin_uploader
 import email_alert

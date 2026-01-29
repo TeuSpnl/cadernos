@@ -30,11 +30,15 @@ def get_driver():
 def fazer_login(driver):
     print("Redirecionado para Login. Iniciando autenticação...")
     
+    if not XFIN_EMAIL or not XFIN_PASS:
+        print("ERRO: Credenciais XFIN_USER ou XFIN_PASS não encontradas no arquivo .env")
+        return False
+
     # 1. Preencher Usuário/Email
-    # Tenta encontrar por name="email", "username" ou type="email"
+    # Usa ID específico encontrado no HTML: id="Input_Email"
     try:
         email_elem = WebDriverWait(driver, 10).until(
-            EC.presence_of_element_located((By.CSS_SELECTOR, "input[name='email'], input[name='username'], input[type='email']"))
+            EC.presence_of_element_located((By.ID, "Input_Email"))
         )
         email_elem.clear()
         email_elem.send_keys(XFIN_EMAIL)
@@ -43,8 +47,9 @@ def fazer_login(driver):
         return False
 
     # 2. Preencher Senha
+    # Usa ID específico encontrado no HTML: id="Input_Password"
     try:
-        pass_elem = driver.find_element(By.CSS_SELECTOR, "input[type='password']")
+        pass_elem = driver.find_element(By.ID, "Input_Password")
         pass_elem.clear()
         pass_elem.send_keys(XFIN_PASS)
     except Exception as e:

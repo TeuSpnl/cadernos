@@ -217,7 +217,7 @@ def formatar_data(data_obj):
 def main():
     conn = get_firebird_connection()
     if not conn:
-        return
+        return None
 
     mapa_contas = carregar_mapa_contas()
     print("Mapa de contas carregado com sucesso.")
@@ -258,6 +258,7 @@ def main():
         # Listas separadas
         dados_sucesso = []
         dados_analise = []
+        ids_para_salvar = [] # Lista temporária de IDs processados com sucesso
 
         # Obter nomes das colunas para mapear no dict
         colunas = [desc[0] for desc in cursor.description]
@@ -336,6 +337,7 @@ def main():
             # Inserção direta na lista correta (sem variável 'destino')
             if encontrado:
                 dados_sucesso.append(item)
+                ids_para_salvar.append(id_unico)
             else:
                 dados_analise.append(item)
 
@@ -348,12 +350,16 @@ def main():
             "Parcela", "Número Documento", "Descrição"
         ]
 
+        arquivo_gerado = None
+
         # 1. Arquivo PRONTO (Sucesso) - Separador Ponto e Vírgula
         if dados_sucesso:
             df_sucesso = pd.DataFrame(dados_sucesso)
             df_sucesso = df_sucesso.reindex(columns=colunas_finais)
             nome_arq_sucesso = "arquivos/importacao_xfin_oficina_PRONTO.csv"
             df_sucesso.to_csv(nome_arq_sucesso, index=False, sep=';', encoding='utf-8-sig')
+            arquivo_gerado = nome_arq_sucesso
+            marcar_como_exportado(ids_para_salvar) # Persiste no SQLite
             print(f"SUCESSO: '{nome_arq_sucesso}' gerado com {len(dados_sucesso)} registros.")
 
         # 2. Arquivo PARA ANÁLISE (Erros/Faltantes) - Separador Ponto e Vírgula
@@ -365,8 +371,11 @@ def main():
             print(f"ATENÇÃO: '{nome_arq_analise}' gerado com {len(dados_analise)} registros para revisão.")
             print("Verifique a coluna 'Plano Contas*' neste arquivo.")
 
+        return arquivo_gerado
+
     except Exception as e:
         print(f"Erro ao processar dados: {e}")
+        return None
     finally:
         conn.close()
 

@@ -1,0 +1,57 @@
+
+
+
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Login - Escolha de Módulo</title>
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+
+    <link rel="stylesheet" href="/lib/bootstrap/dist/css/bootstrap.min.css" />
+    <link rel="stylesheet" href="/lib/font-awesome/css/all.min.css" />
+    <link rel="stylesheet" href="/css/animate.css" />
+    <link rel="stylesheet" href="/css/style.css?v=0ou5JTO17SBUodKm_IFL7diIQFdmdZvpP1AW8ZEGEXg" />
+
+    <script src="/lib/jquery/dist/jquery.min.js"></script>
+    <script src="/lib/Popper/popper.min.js"></script>
+    <script src="/lib/bootstrap/dist/js/bootstrap.min.js"></script>
+
+</head>
+<body class="gray-bg align-center">
+    <div class="middle-box text-center animated fadeInDown">
+        <div>
+            <div>
+                <img class="logo-image" src="/images/logo.png" />
+            </div>
+            <h3>Escolha um módulo</h3>
+
+            <div class="alert alert-danger validation-summary-valid" role="alert" data-valmsg-summary="true"><ul><li style="display:none"></li>
+</ul></div>
+
+
+            <form role="form" class="m-t" method="post" action="/Identity/Account/EscolheModulo?returnUrl=%2F">
+                <div class="form-group" style="display: flex; justify-content: space-evenly; ">
+                  
+                        <div>
+                            <button class="btn btn-info dim btn-large-dim btn-outline" style="margin-right:0;" type="submit" formaction="/Identity/Account/EscolheModulo?handler=Precificacao"><i class="fas fa-dollar-sign"></i></button>
+                            <p style="color: #23c6c8; font-weight: 600; font-size: 20px;">Precificação</p>
+                        </div>
+
+                        <div>
+                            <button class="btn btn-info dim btn-large-dim btn-outline" style="margin-right:0;" type="submit" formaction="/Identity/Account/EscolheModulo?handler=ControleFinanceiro"><i class="fas fa-money-bill-alt"></i></button>
+                            <p style="color: #23c6c8; font-weight: 600; font-size: 20px;">Controle <br/>Financeiro</p>
+                        </div>                  
+
+                </div>
+
+                <a class="btn btn-sm btn-outline btn-info btn-block" href="/Account/Logout">Voltar para o login</a>
+
+            <input name="__RequestVerificationToken" type="hidden" value="CfDJ8GWxpzx8ArRBkvRxXrbGhyh2ZtCY4RbVCadyxQSN9QjaB4mqzR13-lVad3RicmT9zGAvKk7gah3K6PXjajfkJzuOvwN7B1R0ww9r-iMcq_nbaLpC8NKh6PQyPS5KvGU_fxMPJXqOyvHjI9dS_TsuvbWcRLyDpBTu9U6sfaebrKZmtZhHJOlB3RvjHN3L9xOCtA" /></form>
+        </div>
+    </div>
+
+<script defer src="https://static.cloudflareinsights.com/beacon.min.js/vcd15cbe7772f49c399c6a5babf22c1241717689176015" integrity="sha512-ZpsOmlRQV6y907TI0dKBHq9Md29nnaEIPlkf84rnaERnq6zvWvPUqr2ft8M1aS28oN72PdrCzSjY4U6VaAw1EQ==" data-cf-beacon='{"version":"2024.11.0","token":"13c9e44ae951471c9895c3524a487ca5","r":1,"server_timing":{"name":{"cfCacheStatus":true,"cfEdge":true,"cfExtPri":true,"cfL4":true,"cfOrigin":true,"cfSpeedBrain":true},"location_startswith":null}}' crossorigin="anonymous"></script>
+</body>
+</html>

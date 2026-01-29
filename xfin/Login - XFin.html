@@ -1,0 +1,73 @@
+
+
+
+<!DOCTYPE html>
+<html>
+<head>
+    <script>
+        !function(f,b,e,v,n,t,s){
+          if(f.fbq)return; n=f.fbq=function(){ n.callMethod ?
+            n.callMethod.apply(n,arguments) : n.queue.push(arguments) };
+          if(!f._fbq)f._fbq=n; n.push=n; n.loaded=!0; n.version='2.0';
+          n.queue=[]; t=b.createElement(e); t.async=!0;
+          t.src=v; s=b.getElementsByTagName(e)[0];
+          s.parentNode.insertBefore(t,s);
+        }(window, document,'script',
+          'https://connect.facebook.net/en_US/fbevents.js');
+
+        /* ---------- CONFIGURAÇÃO ---------- */
+        fbq('init', '1349602685801591');   // ID do seu pixel
+        fbq('track', 'PageView');          // Evento padrão de visualização de página
+        fbq('trackCustom', 'XFIN_Page_Inicial');  // SEU evento de conversão
+    </script>
+
+    <noscript>
+        <img height="1" width="1" style="display:none"
+             src="https://www.facebook.com/tr?id=1349602685801591&ev=PageView&noscript=1" />
+    </noscript>
+
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Login - XFin</title>
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+
+    
+    
+        <link rel="stylesheet" href="/lib/bootstrap/dist/css/bootstrap.min.css" />
+        <link rel="stylesheet" href="/css/animate.css" />
+        <link rel="stylesheet" href="/css/style.css?v=0ou5JTO17SBUodKm_IFL7diIQFdmdZvpP1AW8ZEGEXg" />
+    
+</head>
+<body class="gray-bg align-center">
+    <div class="middle-box text-center animated fadeInDown">
+        <div>
+            <div>
+                <img class="logo-image" src="/images/logo.png" />
+            </div>
+            <h3>Bem vindo ao <strong>XFIN - Sistema Financeiro</strong></h3>
+
+            <div class="alert alert-danger validation-summary-valid" role="alert" data-valmsg-summary="true"><ul><li style="display:none"></li>
+</ul></div>
+
+
+            <form role="form" class="m-t" method="post" action="/Identity/Account/Login?returnUrl=%2FContaPagar">
+                <div class="form-group">
+                    <input type="email" class="form-control" placeholder="Usuário" required="" data-val="true" data-val-email="The Email field is not a valid e-mail address." data-val-required="The Email field is required." id="Input_Email" name="Input.Email" value="">
+                </div>
+                <div class="form-group">
+                    <input type="password" class="form-control" placeholder="Senha" required="" data-val="true" data-val-required="The Password field is required." id="Input_Password" name="Input.Password">
+                </div>
+                <button type="submit" class="btn btn-primary block full-width m-b">Entrar</button>
+
+                <a href="/Identity/Account/ForgotPassword"><small>Esqueci minha senha</small></a>
+
+                <p class="text-muted text-center"><small>Ainda não possui uma conta?</small></p>
+                <a class="btn btn-sm btn-outline btn-info btn-block"  href="https://www.sistemaxfin.com.br/">Adquira seu acesso agora mesmo</a>
+
+            <input name="__RequestVerificationToken" type="hidden" value="CfDJ8GWxpzx8ArRBkvRxXrbGhyhd7eOEgUAizdQCUUxalDKv4Jw3p9r5OQVVnXy5KIvoAk8UItVfIhE4zaxFKR0mwKstyMPBUrkZIhsbeZPhuycNEzW-eJows5F7TnXK8yDkLeMuMc-XnUh_2_GLBdK383I" /></form>
+        </div>
+    </div>
+
+<script defer src="https://static.cloudflareinsights.com/beacon.min.js/vcd15cbe7772f49c399c6a5babf22c1241717689176015" integrity="sha512-ZpsOmlRQV6y907TI0dKBHq9Md29nnaEIPlkf84rnaERnq6zvWvPUqr2ft8M1aS28oN72PdrCzSjY4U6VaAw1EQ==" data-cf-beacon='{"version":"2024.11.0","token":"13c9e44ae951471c9895c3524a487ca5","r":1,"server_timing":{"name":{"cfCacheStatus":true,"cfEdge":true,"cfExtPri":true,"cfL4":true,"cfOrigin":true,"cfSpeedBrain":true},"location_startswith":null}}' crossorigin="anonymous"></script>
+<script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'9c594c048ab4627e',t:'MTc2OTY5NTY1Nw=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
+</html>

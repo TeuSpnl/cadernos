@@ -1,5 +1,7 @@
 import os
+import sqlite3
 import firebirdsql
+import email_alert
 import pandas as pd
 from dotenv import load_dotenv
 from datetime import date, datetime
@@ -8,6 +10,41 @@ from datetime import date, datetime
 # 1. FUNÇÃO DE CONEXÃO (INALTERADA)
 # ==============================================================================
 load_dotenv()
+
+DB_CONTROLE = "controle_exportacao.db"
+
+def inicializar_db_controle():
+    """Cria a tabela de histórico se não existir."""
+    conn = sqlite3.connect(DB_CONTROLE)
+    cursor = conn.cursor()
+    # Chave única: NumDoc + Fornecedor + Parcela (para evitar duplicidade de boleto)
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS historico_pagar (
+            id_unico TEXT PRIMARY KEY,
+            data_exportacao TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )
+    """)
+    conn.commit()
+    conn.close()
+
+def ja_foi_exportado(id_unico):
+    conn = sqlite3.connect(DB_CONTROLE)
+    cursor = conn.cursor()
+    cursor.execute("SELECT 1 FROM historico_pagar WHERE id_unico = ?", (id_unico,))
+    existe = cursor.fetchone() is not None
+    conn.close()
+    return existe
+
+def marcar_como_exportado(lista_ids):
+    conn = sqlite3.connect(DB_CONTROLE)
+    cursor = conn.cursor()
+    for id_unico in lista_ids:
+        try:
+            cursor.execute("INSERT INTO historico_pagar (id_unico) VALUES (?)", (id_unico,))
+        except sqlite3.IntegrityError:
+            pass # Já existe, segue o baile
+    conn.commit()
+    conn.close()
 
 
 def get_firebird_connection():
@@ -228,6 +265,14 @@ def main():
         for reg in registros:
             # Cria um dicionário da linha para facilitar acesso
             row = dict(zip(colunas, reg))
+            
+            # Gera ID Único para evitar duplicidade na exportação
+            doc_limpo = str(row['NUMDOCUMENTO']).split('/')[0].strip() if row['NUMDOCUMENTO'] else "S_DOC"
+            id_unico = f"DOC_{doc_limpo}_FORN_{row['CDFORNECEDOR']}_PARC_{row['NUMPARCELA']}"
+            
+            # Verifica no SQLite se já enviamos
+            if ja_foi_exportado(id_unico):
+                continue
 
             # --- Processamento Lógico ---
 

@@ -59,6 +59,18 @@ def fazer_login(driver):
     except Exception as e:
         print(f"Erro ao encontrar campo de email: {e}")
         return False
+    
+    # 1.1 Verificar se já estamos na tela de escolha de módulo (pode acontecer se o cookie estiver meio vivo)
+    try:
+        if "EscolheModulo" in driver.current_url:
+            print("Tela de escolha de módulo detectada. Selecionando Controle Financeiro...")
+            btn_financeiro = WebDriverWait(driver, 10).until(
+                EC.element_to_be_clickable((By.CSS_SELECTOR, "button[formaction*='ControleFinanceiro']"))
+            )
+            btn_financeiro.click()
+            time.sleep(2) # Espera redirecionar
+    except Exception:
+        pass
 
     # 2. Preencher Senha
     # Usa ID específico encontrado no HTML: id="Input_Password"
@@ -85,6 +97,16 @@ def fazer_login(driver):
         WebDriverWait(driver, 20).until(
             lambda d: URL_LOGIN_PARTIAL.lower() not in d.current_url.lower()
         )
+        
+        # 5. Verificar se caiu na tela de Escolha de Módulo PÓS-LOGIN
+        if "EscolheModulo" in driver.current_url:
+            print("Redirecionado para escolha de módulo. Selecionando Controle Financeiro...")
+            btn_financeiro = WebDriverWait(driver, 10).until(
+                EC.element_to_be_clickable((By.CSS_SELECTOR, "button[formaction*='ControleFinanceiro']"))
+            )
+            btn_financeiro.click()
+            time.sleep(2)
+            
         print("Login realizado com sucesso. Tela inicial carregada.")
         return True
     except Exception:
@@ -96,7 +118,7 @@ def obter_filiais(driver):
     """Vai para a tela de escolha e retorna uma lista de dicts {id, nome} das filiais."""
     print("Obtendo lista de filiais...")
     try:
-        driver.get(URL_ESCOLHA_FILIAL)
+        driver.get(URL_IMPORTACAO)
 
         # Se cair no login, loga e volta
         if URL_LOGIN_PARTIAL.lower() in driver.current_url.lower():
@@ -174,6 +196,38 @@ def realizar_upload(driver, caminho_arquivo):
         file_input.send_keys(abs_path)
         print(f"Arquivo anexado: {abs_path}")
 
+        # --- NOVO: Mapeamento de Colunas e Configuração ---
+        print("Aguardando processamento do arquivo e tabela de mapeamento...")
+        
+        # Espera o primeiro select aparecer (indicando que o JS processou o arquivo)
+        WebDriverWait(driver, 15).until(
+            EC.presence_of_element_located((By.ID, "selColuna_0"))
+        )
+        
+        # Mapear as 12 colunas conforme ordem do CSV e IDs do sistema
+        # CSV: Pessoa(0), Emissao(1), Vencimento(2), Valor(3), Plano(4), TipoDoc(5), 
+        #      ValorPago(6), DataPag(7), Banco(8), Parcela(9), NumDoc(10), Desc(11)
+        for i in range(12):
+            select_elem = driver.find_element(By.ID, f"selColuna_{i}")
+            select = Select(select_elem)
+            # O value no HTML corresponde exatamente ao índice da coluna esperada pelo sistema
+            select.select_by_value(str(i))
+        
+        print("Colunas mapeadas com sucesso.")
+
+        # Desmarcar opções indesejadas (clicando no label do switch)
+        # 1. Verificar existencia
+        chk_existencia = driver.find_element(By.ID, "chkVerificarTituloExistente")
+        if chk_existencia.is_selected():
+            driver.find_element(By.CSS_SELECTOR, "label[for='chkVerificarTituloExistente']").click()
+            print("Opção 'Verificar existência' desmarcada.")
+
+        # 2. Cadastrar tipo documento
+        chk_tipo_doc = driver.find_element(By.ID, "chkCadastrarTipoDocumento")
+        if chk_tipo_doc.is_selected():
+            driver.find_element(By.CSS_SELECTOR, "label[for='chkCadastrarTipoDocumento']").click()
+            print("Opção 'Cadastrar tipo documento' desmarcada.")
+
         # Botão Importar
         # O botão pode estar desabilitado inicialmente ou demorar para aparecer
         btn_importar = WebDriverWait(driver, 10).until(
@@ -188,15 +242,16 @@ def realizar_upload(driver, caminho_arquivo):
         # O sistema usa toastr.success ou exibe um alerta
         try:
             # Espera genérica para processamento (ajustar conforme velocidade do sistema)
-            # Procura por toast-success ou alerta de erro
-            WebDriverWait(driver, 20).until(
-                EC.presence_of_element_located((By.CLASS_NAME, "toast-success"))
+            # Procura por toast-success ou banner de erro
+            WebDriverWait(driver, 30).until(
+                lambda d: d.find_elements(By.CLASS_NAME, "toast-success") or d.find_element(By.ID, "bannerErros").is_displayed()
             )
-            print("Sucesso: Mensagem de confirmação detectada.")
-            return True
-        except:
-            # Se não apareceu toast de sucesso, verifica se apareceu erro
-            print("Aviso: Não detectou toast de sucesso. Verificando erros...")
+            
+            # Verifica qual apareceu
+            if driver.find_elements(By.CLASS_NAME, "toast-success"):
+                print("Sucesso: Mensagem de confirmação detectada.")
+                return True
+            
             try:
                 erro = driver.find_element(By.ID, "bannerErros")
                 if erro.is_displayed():
@@ -204,10 +259,11 @@ def realizar_upload(driver, caminho_arquivo):
                     return False
             except:
                 pass
-
-            # Se não deu erro explícito, assume sucesso ou timeout
-            print("Upload finalizado (sem confirmação visual explícita capturada).")
-            return True
+                
+            return True # Fallback se passou pelo wait
+        except Exception as e:
+            print(f"Timeout aguardando resposta da importação: {e}")
+            return False
 
     except Exception as e:
         print(f"Erro durante o upload: {e}")

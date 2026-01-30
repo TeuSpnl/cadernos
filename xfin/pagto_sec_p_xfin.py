@@ -222,6 +222,19 @@ def main():
     mapa_contas = carregar_mapa_contas()
     print("Mapa de contas carregado com sucesso.")
 
+    # 1. Identificar Filiais (Centros de Custo) com movimentos pendentes
+    cursor_filiais = conn.cursor()
+    sql_filiais = """
+    SELECT DISTINCT A.CDCENTRODECUSTO
+    FROM APAGAR A
+    WHERE A.DTVENCIMENTO >= '2026-01-01'
+    """
+    cursor_filiais.execute(sql_filiais)
+    filiais_encontradas = [row[0] for row in cursor_filiais.fetchall()]
+    
+    print(f"Filiais encontradas com movimentos: {filiais_encontradas}")
+    
+    arquivos_gerados_prontos = []
     cursor = conn.cursor()
 
     # Query SQL otimizada com JOINs
@@ -245,15 +258,15 @@ def main():
     LEFT JOIN FORNECEDOR F ON A.CDFORNECEDOR = F.CDFORNECEDOR
     LEFT JOIN SUBSUBCONTA S ON A.SUBSUBNUMCONTA = S.SUBSUBNUMCONTA
     LEFT JOIN NOTACOMPRA N ON A.CDNOTACOMPRA = N.CDNOTACOMPRA
-    WHERE A.DTVENCIMENTO >= '2026-01-01' AND A.CDCENTRODECUSTO = 2
+    WHERE A.DTVENCIMENTO >= '2026-01-01' AND A.CDCENTRODECUSTO = ?
     ORDER BY A.DTVENCIMENTO ASC
     """
 
-    try:
-        cursor.execute(sql)
+    for cd_filial in filiais_encontradas:
+        print(f"\n--- Processando Filial {cd_filial} ---")
+        
+        cursor.execute(sql, (cd_filial,))
         registros = cursor.fetchall()
-
-        colunas = [desc[0] for desc in cursor.description]
 
         # Listas separadas
         dados_sucesso = []
@@ -350,34 +363,30 @@ def main():
             "Parcela", "Número Documento", "Descrição"
         ]
 
-        arquivo_gerado = None
-
         # 1. Arquivo PRONTO (Sucesso) - Separador Ponto e Vírgula
         if dados_sucesso:
             df_sucesso = pd.DataFrame(dados_sucesso)
             df_sucesso = df_sucesso.reindex(columns=colunas_finais)
-            nome_arq_sucesso = "arquivos/importacao_xfin_oficina_PRONTO.csv"
+            nome_arq_sucesso = f"arquivos/importacao_xfin_filial_{cd_filial}_PRONTO.csv"
             df_sucesso.to_csv(nome_arq_sucesso, index=False, sep=';', encoding='utf-8-sig')
-            arquivo_gerado = nome_arq_sucesso
+            
             marcar_como_exportado(ids_para_salvar) # Persiste no SQLite
+            arquivos_gerados_prontos.append(nome_arq_sucesso)
             print(f"SUCESSO: '{nome_arq_sucesso}' gerado com {len(dados_sucesso)} registros.")
 
         # 2. Arquivo PARA ANÁLISE (Erros/Faltantes) - Separador Ponto e Vírgula
         if dados_analise:
             df_analise = pd.DataFrame(dados_analise)
             df_analise = df_analise.reindex(columns=colunas_finais)
-            nome_arq_analise = "arquivos/importacao_xfin_oficina_PARA_ANALISE.csv"
+            nome_arq_analise = f"arquivos/importacao_xfin_filial_{cd_filial}_PARA_ANALISE.csv"
             df_analise.to_csv(nome_arq_analise, index=False, sep=';', encoding='utf-8-sig')
+            
+            # Envia e-mail de alerta IMEDIATAMENTE para esta filial
+            email_alert.enviar_email_erro(nome_arq_analise, len(dados_analise))
             print(f"ATENÇÃO: '{nome_arq_analise}' gerado com {len(dados_analise)} registros para revisão.")
-            print("Verifique a coluna 'Plano Contas*' neste arquivo.")
 
-        return arquivo_gerado
-
-    except Exception as e:
-        print(f"Erro ao processar dados: {e}")
-        return None
-    finally:
-        conn.close()
+    conn.close()
+    return arquivos_gerados_prontos
 
 
 if __name__ == "__main__":

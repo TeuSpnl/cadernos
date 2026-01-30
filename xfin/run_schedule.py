@@ -13,17 +13,18 @@ def executar_sincronizacao():
     pagto_sec_p_xfin.inicializar_db_controle()
     
     # 2. Gera o arquivo CSV e salva IDs no SQLite
-    arquivo_csv = pagto_sec_p_xfin.main()
+    arquivos_csv = pagto_sec_p_xfin.main()
     
     # 3. Se gerou arquivo, faz o upload
-    if arquivo_csv:
-        print(f"Arquivo gerado: {arquivo_csv}. Iniciando upload...")
-        sucesso_upload = xfin_uploader.upload_arquivo_xfin(arquivo_csv)
-        
-        if sucesso_upload:
-            print("Ciclo concluído: Arquivo gerado e enviado com sucesso.")
-        else:
-            print("ERRO: Arquivo gerado, mas falha no upload.")
+    if arquivos_csv:
+        for arquivo in arquivos_csv:
+            print(f"Arquivo gerado: {arquivo}. Iniciando upload...")
+            sucesso_upload = xfin_uploader.upload_arquivo_xfin(arquivo)
+            
+            if sucesso_upload:
+                print(f"Ciclo concluído para {arquivo}: Enviado com sucesso.")
+            else:
+                print(f"ERRO: Falha no upload de {arquivo}.")
     else:
         print("Nenhum arquivo gerado (sem dados novos ou erro no processamento).")
 

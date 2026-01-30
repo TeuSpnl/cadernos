@@ -1,13 +1,16 @@
 # email_alert.py
-import smtplib
 from email.mime.multipart import MIMEMultipart
+from email.message import EmailMessage
+from email.mime.image import MIMEImage
 from email.mime.base import MIMEBase
 from email.mime.text import MIMEText
-from email import encoders
-import msal
-import base64
-import os
 from dotenv import load_dotenv
+from email import encoders
+import smtplib
+import ssl
+import base64
+import msal
+import os
 
 load_dotenv()
 
@@ -28,13 +31,27 @@ def encode_oauth2_string(username, access_token):
     return auth_string
 
 
-def get_oauth_token():
+def get_oauth2_token():
+    # URL de token do Azure Entra
+    url = f"https://login.microsoftonline.com/{tenant_id}"
+
+    # Escopo para enviar email
+    scope = ['https://graph.microsoft.com/.default']
+
+    # Autenticação usando MSAL
     app = msal.ConfidentialClientApplication(
-        client_id, authority=f"https://login.microsoftonline.com/{tenant_id}",
+        client_id=client_id,
+        authority=url,
         client_credential=client_secret
     )
-    result = app.acquire_token_for_client(scopes=["https://outlook.office365.com/.default"])
-    return result.get('access_token')
+
+    # Obtém o token de acesso
+    token_response = app.acquire_token_for_client(scopes=scope)
+
+    if 'access_token' in token_response:
+        return token_response['access_token']
+    else:
+        return None
 
 
 def enviar_email_erro(arquivo_csv_erro, qtd_erros):
@@ -75,14 +92,30 @@ def enviar_email_erro(arquivo_csv_erro, qtd_erros):
 
     # Envio via SMTP com OAuth2
     try:
-        token = get_oauth_token()
-        auth_string = encode_oauth2_string(EMAIL_ADDRESS, token)
+        access_token = get_oauth2_token()
 
-        with smtplib.SMTP('smtp.office365.com', 587) as smtp:
-            smtp.ehlo()
-            smtp.starttls()
+        if access_token is None:
+            print("Não foi possível obter o token de acesso OAuth2.")
+            return False
+        
+        smtp = smtplib.SMTP('smtp.office365.com', 587)
+        smtp.ehlo()
+        smtp.starttls(context=ssl.create_default_context())  # Inicia a conexão TLS
+        smtp.ehlo()
+        smtp.login(EMAIL_ADDRESS, EMAIL_PASS)
+        
+        auth_string = encode_oauth2_string(EMAIL_ADDRESS, access_token)
+        
+        try:
             smtp.docmd('AUTH XOAUTH2', auth_string)
+        except smtplib.SMTPException as e:
+            print("Erro de Autenticação! " + f"[Erro]: {str(e)}\nNão foi possível autenticar usando OAuth2.")
+        
+        try:             
             smtp.sendmail(EMAIL_ADDRESS, DESTINATARIO_ERRO, msg.as_string())
+        except Exception as e:
+            print(f"Erro ao enviar e-mail: {e}")
+            return
 
         print("E-mail de erro enviado com sucesso!")
     except Exception as e:

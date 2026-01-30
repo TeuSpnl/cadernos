@@ -28,7 +28,7 @@ class RenomeadorComprovantes:
         self.log_text.pack(pady=10, padx=10)
 
     def carregar_configuracao(self):
-        arquivo_json = "regras_renomeador.json"
+        arquivo_json = "\\\\Servidor\\Users\\Pichau\\Documents\\Drive Comagro\\regras_renomeador.json"
         config_padrao = {
             "regras": [],
             "recorrentes": [],

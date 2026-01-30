@@ -72,8 +72,8 @@ def get_firebird_connection():
 
 def carregar_mapa_contas():
     # Ajuste o nome do arquivo se necessário
-    arquivo_cod = "arquivos/[XFIN] Plano de contas para o xfin.xlsx"
-    arquivo_desc = "arquivos/[XFIN] Descrição contas xfin.xlsx"
+    arquivo_cod = "arquivos\\[XFIN] Plano de contas para o xfin.xlsx"
+    arquivo_desc = "arquivos\\[XFIN] Descrição contas xfin.xlsx"
 
     try:
         # Lê como string para preservar códigos como "5.10"
@@ -105,7 +105,7 @@ def carregar_mapa_contas():
         return mapa_final
 
     except FileNotFoundError as e:
-        print(f"ERRO: Arquivo não encontrado - {e}")
+        print(f"ERRO: Arquivos não encontrados - {e}")
         return {}
     except Exception as e:
         print(f"Erro ao processar mapeamento: {e}")
@@ -231,6 +231,7 @@ def main():
     """
     cursor_filiais.execute(sql_filiais)
     filiais_encontradas = [row[0] for row in cursor_filiais.fetchall()]
+    filiais_encontradas.pop(0)  # Remove a filial 0 (Contas sem filial)
     
     print(f"Filiais encontradas com movimentos: {filiais_encontradas}")
     

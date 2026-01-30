@@ -294,10 +294,21 @@ def upload_arquivo_xfin(caminho_arquivo):
             print("Nenhuma filial encontrada ou erro ao listar.")
             driver.quit()
             return False
+        
+        
 
         # 3. Itera sobre cada filial
         for filial in filiais:
             print(f"\n--- Processando Filial: {filial['nome']} (ID: {filial['id']}) ---")
+            
+            # Associa cada filial xfin com filial Seculos
+            # 1 - Loja (14.255.350/0001-03),
+            # 2 - Oficina (14.255.350/0004-56),
+            # 3 - Divisa (59.185.879/0001-36),
+            # 4 - Serviços (62.188.494/0001-37)
+            if filial['nome'].lower().find("loja") != -1:
+                filial_seculos = "1"
+            
 
             # Seleciona a filial
             if selecionar_filial(driver, filial['id']):

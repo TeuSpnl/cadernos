@@ -57,9 +57,7 @@ def carregar_titulos_firebird():
         val_str = f"{float(valor):.2f}"
         parc_str = str(num_parc).strip()
         
-        # Chave composta: (Documento, Parcela, Valor)
-        lookup[key] = id_unico
-        
+        # Chave composta: (Documento, Parcela, Valor)        
         key = (doc_limpo, parc_str, val_str)
         lookup[key] = id_unico
         
@@ -100,11 +98,11 @@ def processar_arquivos_xfin():
     for arquivo in lista_arquivos:
         print(f"\nProcessando arquivo: {arquivo}")
         try:
-            df = pd.read_csv(arquivo, sep=None, engine='python', dtype=str)
+            df = pd.read_csv(arquivo, sep=None, engine='python', dtype=str, encoding='latin1')
             df.columns = [c.lower().strip() for c in df.columns]
             
-            col_doc = next((c for c in df.columns if 'doc' in c or 'nº' in c), None)
-            col_parc = next((c for c in df.columns if 'parc' in c), None)
+            col_doc = next((c for c in df.columns if 'número documento' in c), None)
+            col_parc = next((c for c in df.columns if 'parcela' in c), None)
             col_valor = next((c for c in df.columns if 'valor' in c and 'pago' not in c), None)
             
             if not (col_doc and col_parc and col_valor):
@@ -115,6 +113,8 @@ def processar_arquivos_xfin():
                 doc_limpo = str(row[col_doc]).split('/')[0].strip()
                 parc_limpa = str(row[col_parc]).split('/')[0].strip()
                 val_csv = normalizar_valor(row[col_valor])
+                
+                print(f"  Verificando: Doc='{doc_limpo}', Parc='{parc_limpa}', Valor='{val_csv}'")
                 
                 if (doc_limpo, parc_limpa, val_csv) in mapa_fb:
                     id_unico = mapa_fb[(doc_limpo, parc_limpa, val_csv)]

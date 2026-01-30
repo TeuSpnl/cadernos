@@ -1,5 +1,6 @@
 import os
 import time
+import re
 from selenium import webdriver
 from selenium.webdriver.common.by import By
 from selenium.webdriver.chrome.service import Service
@@ -270,13 +271,44 @@ def realizar_upload(driver, caminho_arquivo):
         return False
 
 
+def extrair_id_filial_arquivo(caminho_arquivo):
+    """Extrai o ID da filial do nome do arquivo (ex: ...filial_2_PRONTO.csv -> '2')"""
+    match = re.search(r'filial_(\d+)_', caminho_arquivo)
+    if match:
+        return match.group(1)
+    return None
+
+
 def upload_arquivo_xfin(caminho_arquivo):
     if not caminho_arquivo or not os.path.exists(caminho_arquivo):
         print(f"Arquivo não encontrado para upload: {caminho_arquivo}")
         return False
 
+    # Identifica qual filial do Seculos gerou este arquivo
+    id_filial_seculos = extrair_id_filial_arquivo(caminho_arquivo)
+    if not id_filial_seculos:
+        print(f"Não foi possível identificar a filial no nome do arquivo: {caminho_arquivo}")
+        return False
+
+    # Mapeamento ID Seculos -> Trecho do CNPJ/Nome no XFIN
+    # 1 - Loja (14.255.350/0001-03)
+    # 2 - Oficina (14.255.350/0004-56)
+    # 3 - Divisa (59.185.879/0001-36)
+    # 4 - Serviços (62.188.494/0001-37)
+    mapa_filiais = {
+        "1": "14.255.350/0001-03",
+        "2": "14.255.350/0004-56",
+        "3": "59.185.879/0001-36",
+        "4": "62.188.494/0001-37"
+    }
+    
+    cnpj_alvo = mapa_filiais.get(id_filial_seculos)
+    if not cnpj_alvo:
+        print(f"ID de filial {id_filial_seculos} não mapeado para CNPJ do XFIN.")
+        return False
+
     driver = get_driver()
-    sucesso = False
+    sucesso_geral = False # Inicializa como False
 
     try:
         # 1. Tenta acessar direto a escolha de filial para ver se pede login
@@ -295,32 +327,28 @@ def upload_arquivo_xfin(caminho_arquivo):
             driver.quit()
             return False
         
-        
-
         # 3. Itera sobre cada filial
         for filial in filiais:
-            print(f"\n--- Processando Filial: {filial['nome']} (ID: {filial['id']}) ---")
+            # Verifica se esta é a filial correta para o arquivo
+            if cnpj_alvo not in filial['nome']:
+                continue # Pula se não for a filial alvo
             
-            # Associa cada filial xfin com filial Seculos
-            # 1 - Loja (14.255.350/0001-03),
-            # 2 - Oficina (14.255.350/0004-56),
-            # 3 - Divisa (59.185.879/0001-36),
-            # 4 - Serviços (62.188.494/0001-37)
-            if filial['nome'].lower().find("loja") != -1:
-                filial_seculos = "1"
+            print(f"\n--- Processando Filial Alvo: {filial['nome']} (ID: {filial['id']}) ---")
             
-
             # Seleciona a filial
             if selecionar_filial(driver, filial['id']):
                 # Faz o upload
                 if realizar_upload(driver, caminho_arquivo):
                     print(f"Upload concluído para {filial['nome']}")
+                    sucesso_geral = True
                 else:
                     print(f"Falha no upload para {filial['nome']}")
                     sucesso_geral = False
             else:
                 print(f"Falha ao selecionar filial {filial['nome']}")
                 sucesso_geral = False
+            
+            break # Se já processou a filial correta, pode sair do loop
 
             # Pequena pausa antes da próxima
             time.sleep(2)
@@ -330,7 +358,7 @@ def upload_arquivo_xfin(caminho_arquivo):
     finally:
         driver.quit()
 
-    return sucesso
+    return sucesso_geral
 
 
 if __name__ == "__main__":

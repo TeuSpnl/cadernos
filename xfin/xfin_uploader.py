@@ -220,13 +220,15 @@ def realizar_upload(driver, caminho_arquivo):
         # 1. Verificar existencia
         chk_existencia = driver.find_element(By.ID, "chkVerificarTituloExistente")
         if chk_existencia.is_selected():
-            driver.find_element(By.CSS_SELECTOR, "label[for='chkVerificarTituloExistente']").click()
+            label_existencia = driver.find_element(By.CSS_SELECTOR, "label[for='chkVerificarTituloExistente']")
+            driver.execute_script("arguments[0].click();", label_existencia)
             print("Opção 'Verificar existência' desmarcada.")
 
         # 2. Cadastrar tipo documento
         chk_tipo_doc = driver.find_element(By.ID, "chkCadastrarTipoDocumento")
         if chk_tipo_doc.is_selected():
-            driver.find_element(By.CSS_SELECTOR, "label[for='chkCadastrarTipoDocumento']").click()
+            label_tipo_doc = driver.find_element(By.CSS_SELECTOR, "label[for='chkCadastrarTipoDocumento']")
+            driver.execute_script("arguments[0].click();", label_tipo_doc)
             print("Opção 'Cadastrar tipo documento' desmarcada.")
 
         # Botão Importar

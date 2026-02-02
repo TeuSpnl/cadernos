@@ -233,12 +233,12 @@ def realizar_upload(driver, caminho_arquivo):
 
         # Botão Importar
         # O botão pode estar desabilitado inicialmente ou demorar para aparecer
-        # btn_importar = WebDriverWait(driver, 10).until(
-        #     EC.element_to_be_clickable((By.ID, "btnImportar"))
-        # )
+        btn_importar = WebDriverWait(driver, 10).until(
+            EC.element_to_be_clickable((By.ID, "btnImportar"))
+        )
 
         # Clica no botão (usando JS as vezes é mais seguro se tiver sobreposição)
-        # driver.execute_script("arguments[0].click();", btn_importar)
+        driver.execute_script("arguments[0].click();", btn_importar)
         print("Botão 'Importar títulos' clicado.")
 
         # Aguardar feedback de sucesso

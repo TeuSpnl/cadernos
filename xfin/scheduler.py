@@ -4,10 +4,13 @@ import time
 import pagto_sec_p_xfin
 import xfin_uploader
 import email_alert
+from datetime import datetime
 import os
 
 def executar_sincronizacao():
-    print("\n--- Iniciando Sincronização Automática ---")
+    hoje = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    
+    print(f"\n--- Iniciando Sincronização Automática: {hoje} ---")
     
     arquivo_cod = "arquivos\\[XFIN] Plano de contas para o xfin.xlsx"
     arquivo_desc = "arquivos\\[XFIN] Descrição contas xfin.xlsx"

@@ -272,7 +272,8 @@ def main():
         # Listas separadas
         dados_sucesso = []
         dados_analise = []
-        ids_para_salvar = [] # Lista temporária de IDs processados com sucesso
+        ids_sucesso_para_salvar = [] # Lista temporária de IDs processados com sucesso
+        ids_analise_para_salvar = [] # Lista temporária de IDs enviados para análise
 
         # Obter nomes das colunas para mapear no dict
         colunas = [desc[0] for desc in cursor.description]
@@ -351,9 +352,10 @@ def main():
             # Inserção direta na lista correta (sem variável 'destino')
             if encontrado:
                 dados_sucesso.append(item)
-                ids_para_salvar.append(id_unico)
+                ids_sucesso_para_salvar.append(id_unico)
             else:
                 dados_analise.append(item)
+                ids_analise_para_salvar.append(id_unico)
 
         # --- Geração do CSV ---
 
@@ -371,7 +373,7 @@ def main():
             nome_arq_sucesso = f"arquivos/importacao_xfin_filial_{cd_filial}_PRONTO.csv"
             df_sucesso.to_csv(nome_arq_sucesso, index=False, sep=';', encoding='utf-8-sig')
             
-            marcar_como_exportado(ids_para_salvar) # Persiste no SQLite
+            marcar_como_exportado(ids_sucesso_para_salvar) # Persiste no SQLite
             arquivos_gerados_prontos.append(nome_arq_sucesso)
             print(f"SUCESSO: '{nome_arq_sucesso}' gerado com {len(dados_sucesso)} registros.")
 
@@ -382,6 +384,7 @@ def main():
             nome_arq_analise = f"arquivos/importacao_xfin_filial_{cd_filial}_PARA_ANALISE.csv"
             df_analise.to_csv(nome_arq_analise, index=False, sep=';', encoding='utf-8-sig')
             
+            marcar_como_exportado(ids_analise_para_salvar) # Persiste no SQLite também os enviados para análise
             # Envia e-mail de alerta IMEDIATAMENTE para esta filial
             email_alert.enviar_email_erro(nome_arq_analise, len(dados_analise))
             print(f"ATENÇÃO: '{nome_arq_analise}' gerado com {len(dados_analise)} registros para revisão.")

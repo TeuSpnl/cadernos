@@ -243,73 +243,110 @@ def download_xfin_report(status_callback):
         if not login_xfin(driver, status_callback):
             raise Exception("Falha ao realizar login.")
 
-        branches = get_branches(driver)
+        # Navegar diretamente para o Relatório
+        URL_RELATORIO = f"{XFIN_URL}/Relatorio/ContasAPagar"
+        driver.get(URL_RELATORIO)
+
+        # Obter lista de filiais diretamente do Select da página (mais eficiente)
+        status_callback("Mapeando filiais...")
+        try:
+            select_elem = WebDriverWait(driver, 15).until(
+                EC.presence_of_element_located((By.ID, "selFilial"))
+            )
+            select_obj = Select(select_elem)
+            # Extrai ID e Nome, ignorando valor '0' ou vazio se houver
+            branches = [{"id": opt.get_attribute("value"), "nome": opt.text} 
+                        for opt in select_obj.options 
+                        if opt.get_attribute("value") and opt.get_attribute("value") != "0"]
+        except Exception as e:
+            raise Exception(f"Erro ao identificar seletor de filiais na página: {e}")
+
         if not branches:
-            raise Exception("Nenhuma filial encontrada.")
+            raise Exception("Nenhuma filial encontrada no seletor do relatório.")
+
+        # Datas para filtro
+        dt_ini = date.today().strftime("%d/%m/%Y")
+        dt_fim = (date.today() + timedelta(days=15)).strftime("%d/%m/%Y")
 
         for branch in branches:
-            status_callback(f"Extraindo: {branch['nome']}...")
-            
-            if not select_branch(driver, branch['id']):
-                print(f"Pulo filial {branch['nome']} por erro de seleção.")
-                continue
-
-            # Navegar para Relatório de Contas a Pagar
-            URL_RELATORIO = f"{XFIN_URL}/Relatorio/ContasAPagar" 
-            driver.get(URL_RELATORIO)
-            
-            # Filtros
-            dt_ini = date.today().strftime("%d/%m/%Y")
-            dt_fim = (date.today() + timedelta(days=15)).strftime("%d/%m/%Y")
+            status_callback(f"Processando: {branch['nome']}...")
             
             try:
-                inp_ini = WebDriverWait(driver, 10).until(EC.presence_of_element_located((By.NAME, "DataInicial")))
-                inp_fim = driver.find_element(By.NAME, "DataFinal")
-                
-                inp_ini.clear()
-                inp_ini.send_keys(dt_ini)
-                inp_fim.clear()
-                inp_fim.send_keys(dt_fim)
-                
-                btn_filtrar = driver.find_element(By.CSS_SELECTOR, "button[type='submit'], .btn-primary")
-                btn_filtrar.click()
-                time.sleep(3)
-            except Exception as e:
-                print(f"Erro filtros filial {branch['nome']}: {e}")
+                # 1. Selecionar Filial via JS (Select2 é chato com Selenium puro, JS é mais seguro)
+                # O HTML mostra que usa jQuery ($), então usamos .val().trigger('change')
+                driver.execute_script(f"$('#selFilial').val('{branch['id']}').trigger('change');")
+                time.sleep(1) # Pequena pausa para o JS processar
 
-            # Exportar CSV
-            try:
-                btn_export = driver.find_element(By.XPATH, "//button[contains(text(), 'Exportar')] | //a[contains(text(), 'Exportar')] | //a[contains(@href, 'Exportar')]")
-                btn_export.click()
+                # 2. Preencher Datas (Usando os IDs corretos fornecidos)
+                # Limpa e preenche via JS para garantir que não haja máscara de input atrapalhando
+                driver.execute_script(f"$('#txtDataInicialVencimento').val('{dt_ini}');")
+                driver.execute_script(f"$('#txtDataFinalVencimento').val('{dt_fim}');")
+                
+                # 3. Clicar em Buscar
+                # O HTML mostra: onclick="BuscarTitulos(true)"
+                btn_buscar = driver.find_element(By.XPATH, "//button[contains(text(), 'Buscar')]")
+                driver.execute_script("arguments[0].click();", btn_buscar)
+                
+                # Aguarda o loading (geralmente o Xfin mostra um spinner ou bloqueia a tela)
+                time.sleep(3) 
+
+                # 4. Limpar pasta temporária de arquivos antigos (ContasAPagar.csv) para evitar conflito
+                for f in os.listdir(TEMP_DIR):
+                    if f.startswith("ContasAPagar") and f.endswith(".csv"):
+                        try:
+                            os.remove(os.path.join(TEMP_DIR, f))
+                        except: pass
+
+                # 5. Clicar em Exportar
+                # O HTML mostra: onclick="ExportarTitulos()"
+                btn_export = driver.find_element(By.XPATH, "//button[contains(text(), 'Exportar')]")
+                driver.execute_script("arguments[0].click();", btn_export)
+                
+                # Tenta clicar na opção CSV se abrir um dropdown
                 try:
-                    link_csv = WebDriverWait(driver, 3).until(EC.element_to_be_clickable((By.XPATH, "//a[contains(text(), 'CSV')]")))
+                    link_csv = WebDriverWait(driver, 2).until(EC.element_to_be_clickable((By.XPATH, "//a[contains(text(), 'CSV')]")))
                     link_csv.click()
                 except:
-                    pass
-            except Exception as e:
-                print(f"Erro exportar filial {branch['nome']}: {e}")
-                continue
+                    pass # As vezes o botão exportar já baixa direto
 
-            # Esperar download
-            time.sleep(5)
-            
-            # Verificar se baixou e renomear
-            files = os.listdir(TEMP_DIR)
-            # Procura arquivos CSV que não comecem com 'branch_' (para pegar o novo download)
-            new_files = [f for f in files if f.endswith('.csv') and not f.startswith('branch_')]
-            
-            if new_files:
-                original_path = os.path.join(TEMP_DIR, new_files[0])
-                new_name = f"branch_{branch['id']}_{new_files[0]}"
-                new_path = os.path.join(TEMP_DIR, new_name)
+                # 6. Loop de Espera pelo Download
+                # Espera até aparecer um arquivo novo que não seja .crdownload
+                timeout = 20
+                elapsed = 0
+                downloaded_file = None
                 
-                if os.path.exists(new_path):
-                    os.remove(new_path)
+                while elapsed < timeout:
+                    files = os.listdir(TEMP_DIR)
+                    # Procura o arquivo padrão do Xfin (geralmente ContasAPagar.csv)
+                    candidates = [f for f in files if f.endswith('.csv') and not f.startswith('branch_')]
                     
-                os.rename(original_path, new_path)
-                downloaded_files.append(new_path)
-            else:
-                print(f"Nenhum arquivo baixado para filial {branch['nome']}")
+                    if candidates:
+                        downloaded_file = candidates[0]
+                        # Verifica se terminou de baixar (não tem .crdownload associado)
+                        if not any(f.endswith('.crdownload') for f in files):
+                            break
+                    
+                    time.sleep(1)
+                    elapsed += 1
+                
+                if downloaded_file:
+                    original_path = os.path.join(TEMP_DIR, downloaded_file)
+                    new_name = f"branch_{branch['id']}_{downloaded_file}"
+                    new_path = os.path.join(TEMP_DIR, new_name)
+                    
+                    # Remove se já existir (reprocessamento)
+                    if os.path.exists(new_path):
+                        os.remove(new_path)
+                        
+                    os.rename(original_path, new_path)
+                    downloaded_files.append(new_path)
+                    print(f"Arquivo salvo: {new_name}")
+                else:
+                    print(f"Timeout ou erro ao baixar arquivo da filial {branch['nome']}")
+
+            except Exception as e:
+                print(f"Erro ao processar filial {branch['nome']}: {e}")
+                continue
 
         return downloaded_files
 

@@ -688,6 +688,8 @@ class PaymentBotApp:
 
             # Etapa A: Selenium
             csv_files = download_xfin_report(self.update_status)
+            
+            print(f"Arquivos CSV baixados: {csv_files}")
 
             # Etapa B: Processamento
             dict_dfs, missing, dt_start, dt_end, cols_map = process_data(csv_files, self.update_status)
@@ -720,10 +722,12 @@ class PaymentBotApp:
 
             generated_files = []
             
+            print(dict_dfs.keys())
+            
             print("Iniciando geração dos arquivos...")
             for group_name, df_group in dict_dfs.items():
-                print(f"Processando grupo: {group_name} com {len(df_group)} registros...")
-                print(df_group.head())
+                print(f"Processando grupo {group_name} com {len(df_group)} registros...")
+                print(df_group.columns.tolist())
                 
                 if df_group.empty:
                     continue

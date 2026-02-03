@@ -14,6 +14,7 @@ from selenium.webdriver.common.by import By
 from selenium.webdriver.chrome.service import Service
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
+from selenium.webdriver.support.select import Select
 from webdriver_manager.chrome import ChromeDriverManager
 from openpyxl.styles import Font, PatternFill, Border, Side, Alignment
 from openpyxl.utils import get_column_letter
@@ -35,6 +36,7 @@ CONFIG_FILE = os.path.join(DRIVE_PATH, "TI compartilhado", "Financeiro", "[CONFI
 XFIN_URL = "https://app.xfin.com.br"
 XFIN_USER = os.getenv('XFIN_USER')
 XFIN_PASS = os.getenv('XFIN_PASS')
+URL_ESCOLHA_FILIAL = f"{XFIN_URL}/Identity/Account/EscolheFilial"
 
 # Configurações do Banco de Dados (Firebird)
 FB_HOST = os.getenv('HOST')
@@ -129,7 +131,95 @@ def create_default_config(path):
     except Exception as e:
         raise Exception(f"Erro ao criar arquivo de configuração padrão: {e}")
 
+def identify_branch_group(val):
+    """Identifica o grupo da filial baseado no CNPJ ou Nome."""
+    val = str(val).upper()
+    # CNPJs conhecidos
+    if "14.255.350" in val: return "Comagro" # Loja (0001) e Oficina (0004)
+    if "59.185.879" in val: return "Divisa"
+    if "62.188.494" in val: return "Servicos"
+    
+    # Fallback por nome
+    if "DIVISA" in val: return "Divisa"
+    if "SERVI" in val and "COMAGRO" in val: return "Servicos"
+    if "COMAGRO" in val: return "Comagro"
+    
+    return "Geral"
+
 # --- AUTOMATIZAÇÃO WEB (SELENIUM) ---
+
+def login_xfin(driver, status_callback):
+    status_callback("Realizando login...")
+    if "Login" not in driver.current_url:
+        driver.get(XFIN_URL)
+    
+    try:
+        # Check if already logged in
+        if "Login" not in driver.current_url and "EscolheModulo" not in driver.current_url and "EscolheFilial" not in driver.current_url:
+             # Tenta verificar se tem algum elemento de login, se não tiver, assume logado
+             if not driver.find_elements(By.ID, "Input_Email"):
+                 return True
+
+        if driver.find_elements(By.ID, "Input_Email"):
+            WebDriverWait(driver, 10).until(EC.presence_of_element_located((By.ID, "Input_Email")))
+            driver.find_element(By.ID, "Input_Email").send_keys(XFIN_USER)
+            driver.find_element(By.ID, "Input_Password").send_keys(XFIN_PASS)
+            
+            btn_login = driver.find_element(By.CSS_SELECTOR, "button[type='submit'], input[type='submit']")
+            btn_login.click()
+
+            WebDriverWait(driver, 20).until(lambda d: "Login" not in d.current_url)
+        
+        if "EscolheModulo" in driver.current_url:
+            status_callback("Selecionando módulo Financeiro...")
+            btn_financeiro = WebDriverWait(driver, 10).until(
+                EC.element_to_be_clickable((By.CSS_SELECTOR, "button[formaction*='ControleFinanceiro']"))
+            )
+            btn_financeiro.click()
+            time.sleep(2)
+            
+        return True
+    except Exception as e:
+        print(f"Erro no login: {e}")
+        return False
+
+def get_branches(driver):
+    try:
+        driver.get(URL_ESCOLHA_FILIAL)
+        select_elem = WebDriverWait(driver, 10).until(
+            EC.presence_of_element_located((By.ID, "Input_IdFilial"))
+        )
+        select = Select(select_elem)
+        branches = []
+        for option in select.options:
+            val = option.get_attribute("value")
+            text = option.text
+            if val:
+                branches.append({"id": val, "nome": text})
+        return branches
+    except Exception as e:
+        print(f"Erro ao obter filiais: {e}")
+        return []
+
+def select_branch(driver, branch_id):
+    try:
+        if "EscolheFilial" not in driver.current_url:
+            driver.get(URL_ESCOLHA_FILIAL)
+        
+        select_elem = WebDriverWait(driver, 10).until(
+            EC.presence_of_element_located((By.ID, "Input_IdFilial"))
+        )
+        select = Select(select_elem)
+        select.select_by_value(branch_id)
+        
+        btn_escolher = driver.find_element(By.CSS_SELECTOR, "button[type='submit']")
+        btn_escolher.click()
+        
+        WebDriverWait(driver, 10).until(lambda d: "EscolheFilial" not in d.current_url)
+        return True
+    except Exception as e:
+        print(f"Erro ao selecionar filial {branch_id}: {e}")
+        return False
 
 def download_xfin_report(status_callback):
     status_callback("Iniciando navegador...")
@@ -146,107 +236,109 @@ def download_xfin_report(status_callback):
 
     service = Service(ChromeDriverManager().install())
     driver = webdriver.Chrome(service=service, options=options)
+    
+    downloaded_files = []
 
     try:
-        # 1. Login
-        status_callback("Acessando Xfin...")
-        driver.get(XFIN_URL)
-        
-        WebDriverWait(driver, 20).until(EC.presence_of_element_located((By.ID, "Input_Email")))
-        driver.find_element(By.ID, "Input_Email").send_keys(XFIN_USER)
-        driver.find_element(By.ID, "Input_Password").send_keys(XFIN_PASS)
-        
-        btn_login = driver.find_element(By.CSS_SELECTOR, "button[type='submit'], input[type='submit']")
-        btn_login.click()
+        if not login_xfin(driver, status_callback):
+            raise Exception("Falha ao realizar login.")
 
-        # Esperar login e redirecionamento (pode ter tela de escolha de módulo)
-        WebDriverWait(driver, 20).until(lambda d: "Login" not in d.current_url)
-        
-        if "EscolheModulo" in driver.current_url:
-            status_callback("Selecionando módulo Financeiro...")
-            btn_financeiro = WebDriverWait(driver, 10).until(
-                EC.element_to_be_clickable((By.CSS_SELECTOR, "button[formaction*='ControleFinanceiro']"))
-            )
-            btn_financeiro.click()
+        branches = get_branches(driver)
+        if not branches:
+            raise Exception("Nenhuma filial encontrada.")
 
-        # 2. Navegar para Relatório de Contas a Pagar
-        status_callback("Navegando para Contas a Pagar...")
-        # URL direta para o relatório de contas a pagar (Ajuste se necessário)
-        URL_RELATORIO = f"{XFIN_URL}/Relatorio/ContasAPagar" 
-        driver.get(URL_RELATORIO)
-        
-        # 3. Filtros
-        status_callback("Aplicando filtros de data...")
-        
-        # Datas: Hoje até Hoje + 15 dias
-        dt_ini = date.today().strftime("%d/%m/%Y")
-        dt_fim = (date.today() + timedelta(days=15)).strftime("%d/%m/%Y")
-        
-        # Tenta encontrar campos de data (IDs hipotéticos, ajustar conforme HTML real do Xfin)
-        # Geralmente inputs do tipo date ou text com classe datepicker
-        try:
-            # Exemplo genérico, precisa inspecionar o Xfin real para IDs corretos
-            # Supondo IDs 'dtInicial' e 'dtFinal'
-            inp_ini = WebDriverWait(driver, 10).until(EC.presence_of_element_located((By.NAME, "DataInicial")))
-            inp_fim = driver.find_element(By.NAME, "DataFinal")
+        for branch in branches:
+            status_callback(f"Extraindo: {branch['nome']}...")
             
-            inp_ini.clear()
-            inp_ini.send_keys(dt_ini)
-            inp_fim.clear()
-            inp_fim.send_keys(dt_fim)
-            
-            # Botão Filtrar/Pesquisar
-            btn_filtrar = driver.find_element(By.CSS_SELECTOR, "button[type='submit'], .btn-primary")
-            btn_filtrar.click()
-            
-            time.sleep(3) # Espera carregar grid
-        except Exception as e:
-            print(f"Erro ao preencher filtros (pode ser necessário ajustar seletores): {e}")
+            if not select_branch(driver, branch['id']):
+                print(f"Pulo filial {branch['nome']} por erro de seleção.")
+                continue
 
-        # 4. Exportar CSV
-        status_callback("Baixando CSV...")
-        # Procurar botão de exportar (Excel ou CSV)
-        try:
-            # Tenta achar botão com texto "Exportar" ou ícone
-            btn_export = driver.find_element(By.XPATH, "//button[contains(text(), 'Exportar')] | //a[contains(text(), 'Exportar')] | //a[contains(@href, 'Exportar')]")
-            btn_export.click()
+            # Navegar para Relatório de Contas a Pagar
+            URL_RELATORIO = f"{XFIN_URL}/Relatorio/ContasAPagar" 
+            driver.get(URL_RELATORIO)
             
-            # Se abrir menu dropdown, selecionar CSV
+            # Filtros
+            dt_ini = date.today().strftime("%d/%m/%Y")
+            dt_fim = (date.today() + timedelta(days=15)).strftime("%d/%m/%Y")
+            
             try:
-                link_csv = WebDriverWait(driver, 3).until(EC.element_to_be_clickable((By.XPATH, "//a[contains(text(), 'CSV')]")))
-                link_csv.click()
-            except:
-                pass # Talvez o botão já baixe direto
+                inp_ini = WebDriverWait(driver, 10).until(EC.presence_of_element_located((By.NAME, "DataInicial")))
+                inp_fim = driver.find_element(By.NAME, "DataFinal")
                 
-        except Exception as e:
-            raise Exception(f"Botão de exportar não encontrado: {e}")
+                inp_ini.clear()
+                inp_ini.send_keys(dt_ini)
+                inp_fim.clear()
+                inp_fim.send_keys(dt_fim)
+                
+                btn_filtrar = driver.find_element(By.CSS_SELECTOR, "button[type='submit'], .btn-primary")
+                btn_filtrar.click()
+                time.sleep(3)
+            except Exception as e:
+                print(f"Erro filtros filial {branch['nome']}: {e}")
 
-        # Esperar download
-        time.sleep(5)
-        
-        # Verificar se baixou
-        files = os.listdir(TEMP_DIR)
-        csv_files = [f for f in files if f.endswith('.csv')]
-        
-        if not csv_files:
-            raise Exception("Download do CSV falhou ou timeout.")
+            # Exportar CSV
+            try:
+                btn_export = driver.find_element(By.XPATH, "//button[contains(text(), 'Exportar')] | //a[contains(text(), 'Exportar')] | //a[contains(@href, 'Exportar')]")
+                btn_export.click()
+                try:
+                    link_csv = WebDriverWait(driver, 3).until(EC.element_to_be_clickable((By.XPATH, "//a[contains(text(), 'CSV')]")))
+                    link_csv.click()
+                except:
+                    pass
+            except Exception as e:
+                print(f"Erro exportar filial {branch['nome']}: {e}")
+                continue
+
+            # Esperar download
+            time.sleep(5)
             
-        return os.path.join(TEMP_DIR, csv_files[0])
+            # Verificar se baixou e renomear
+            files = os.listdir(TEMP_DIR)
+            # Procura arquivos CSV que não comecem com 'branch_' (para pegar o novo download)
+            new_files = [f for f in files if f.endswith('.csv') and not f.startswith('branch_')]
+            
+            if new_files:
+                original_path = os.path.join(TEMP_DIR, new_files[0])
+                new_name = f"branch_{branch['id']}_{new_files[0]}"
+                new_path = os.path.join(TEMP_DIR, new_name)
+                
+                if os.path.exists(new_path):
+                    os.remove(new_path)
+                    
+                os.rename(original_path, new_path)
+                downloaded_files.append(new_path)
+            else:
+                print(f"Nenhum arquivo baixado para filial {branch['nome']}")
+
+        return downloaded_files
 
     finally:
         driver.quit()
 
 # --- PROCESSAMENTO DE DADOS ---
 
-def process_data(csv_path, status_callback):
+def process_data(csv_paths, status_callback):
     status_callback("Lendo dados...")
     
-    # 1. Ler CSV do Xfin
-    # Tenta diferentes encodings e separadores
-    try:
-        df_xfin = pd.read_csv(csv_path, sep=';', encoding='utf-8-sig', dtype=str)
-    except:
-        df_xfin = pd.read_csv(csv_path, sep=',', encoding='latin1', dtype=str)
+    if not csv_paths:
+        return None, [], date.today(), date.today(), None
+
+    dfs = []
+    for csv_path in csv_paths:
+        try:
+            try:
+                df = pd.read_csv(csv_path, sep=';', encoding='utf-8-sig', dtype=str)
+            except:
+                df = pd.read_csv(csv_path, sep=',', encoding='latin1', dtype=str)
+            dfs.append(df)
+        except Exception as e:
+            print(f"Erro ao ler {csv_path}: {e}")
+    
+    if not dfs:
+        raise Exception("Nenhum CSV válido lido.")
+        
+    df_xfin = pd.concat(dfs, ignore_index=True)
     
     # Normalizar colunas
     df_xfin.columns = [c.strip() for c in df_xfin.columns]
@@ -266,6 +358,7 @@ def process_data(csv_path, status_callback):
     col_obs = find_col(['descri', 'obs'])
     col_forma = find_col(['forma', 'tipo doc']) # Ex: "5 - PIX"
     col_banco = find_col(['conta', 'banco'])    # Ex: "Banco do Brasil Peças"
+    col_filial = find_col(['empresa', 'filial', 'unidade']) # Coluna para separar filiais
 
     if not (col_fornecedor and col_vencimento and col_valor):
         raise Exception("Colunas essenciais não encontradas no CSV do Xfin.")
@@ -322,7 +415,16 @@ def process_data(csv_path, status_callback):
     # Converter valor para float
     df_merged[col_valor] = df_merged[col_valor].astype(str).str.replace('R$', '').str.replace('.', '').str.replace(',', '.').astype(float)
     
-    return df_merged, missing_suppliers, start_date, end_date, (col_fornecedor, col_doc, col_vencimento, col_obs, col_forma, col_banco)
+    # 5. Separar por Filial (Agrupamento)
+    dict_dfs = {}
+    if col_filial:
+        df_merged['Filial_Group'] = df_merged[col_filial].apply(identify_branch_group)
+        for group in df_merged['Filial_Group'].unique():
+            dict_dfs[group] = df_merged[df_merged['Filial_Group'] == group].copy()
+    else:
+        dict_dfs['Geral'] = df_merged
+
+    return dict_dfs, missing_suppliers, start_date, end_date, (col_fornecedor, col_vencimento, col_valor, col_doc, col_obs, col_forma, col_banco)
 
 # --- GERAÇÃO DE EXCEL ---
 
@@ -474,12 +576,12 @@ class PaymentBotApp:
             check_drive_access()
             
             # Etapa A: Selenium
-            csv_file = download_xfin_report(self.update_status)
+            csv_files = download_xfin_report(self.update_status)
             
             # Etapa B: Processamento
-            df_final, missing, dt_start, dt_end, cols_map = process_data(csv_file, self.update_status)
+            dict_dfs, missing, dt_start, dt_end, cols_map = process_data(csv_files, self.update_status)
             
-            if df_final is None:
+            if not dict_dfs:
                 self.finish("Nenhum pagamento encontrado para o período.")
                 return
 
@@ -501,15 +603,21 @@ class PaymentBotApp:
             if not os.path.exists(base_path):
                 os.makedirs(base_path)
                 
-            # Nome do arquivo
-            if dt_start == dt_end:
-                fname = f"Contas_A_Pagar-{dt_start.strftime('%d_%m_%Y')}-teste.xlsx"
-            else:
-                fname = f"Contas_A_Pagar-{dt_start.strftime('%d_%m')}-{dt_end.strftime('%d_%m_%Y')}-teste.xlsx"
+            generated_files = []
+            for group_name, df_group in dict_dfs.items():
+                if df_group.empty: continue
                 
-            full_path = os.path.join(base_path, fname)
-            
-            create_excel(df_final, full_path, cols_map)
+                # Nome do arquivo com sufixo da filial
+                suffix = f"_{group_name}" if group_name != "Geral" else ""
+                
+                if dt_start == dt_end:
+                    fname = f"Contas_A_Pagar{suffix}-{dt_start.strftime('%d_%m_%Y')}.xlsx"
+                else:
+                    fname = f"Contas_A_Pagar{suffix}-{dt_start.strftime('%d_%m')}-{dt_end.strftime('%d_%m_%Y')}.xlsx"
+                    
+                full_path = os.path.join(base_path, fname)
+                create_excel(df_group, full_path, cols_map)
+                generated_files.append(fname)
             
             # Alerta de Faltantes
             if len(missing) > 0 and email_alert:
@@ -520,7 +628,7 @@ class PaymentBotApp:
                 missing_df.to_csv(missing_csv, index=False)
                 email_alert.enviar_email_erro(missing_csv, len(missing))
 
-            self.finish(f"Sucesso!\nAtualizado contas dos dias {dt_start.strftime('%d/%m')} a {dt_end.strftime('%d/%m')}\nSalvo em: {day_folder}")
+            self.finish(f"Sucesso!\nGerados: {len(generated_files)} arquivos\nSalvo em: {day_folder}")
 
         except Exception as e:
             self.finish(f"Erro: {str(e)}", error=True)

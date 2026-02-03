@@ -449,6 +449,9 @@ def process_data(csv_paths, status_callback):
         create_default_config(CONFIG_FILE)
 
     df_config = pd.read_excel(CONFIG_FILE, dtype=str)
+    # Renomear colunas do config para evitar colisão com o CSV do Xfin
+    df_config.columns = [f"Config_{c}" if c != "Fornecedor" else c for c in df_config.columns]
+
     # Normalizar nomes para merge (uppercase, strip)
     df_config['Fornecedor_Norm'] = df_config['Fornecedor'].str.upper().str.strip()
     df_filtered['Fornecedor_Norm'] = df_filtered[col_fornecedor].str.upper().str.strip()
@@ -475,7 +478,7 @@ def process_data(csv_paths, status_callback):
     df_merged = pd.merge(df_filtered, df_config, on='Fornecedor_Norm', how='left')
 
     # Identificar faltantes
-    missing_suppliers = df_merged[df_merged['Chave PIX'].isna() & df_merged['Banco'].isna()]['Fornecedor_Norm'].unique()
+    missing_suppliers = df_merged[df_merged['Config_Chave PIX'].isna() & df_merged['Config_Banco'].isna()]['Fornecedor_Norm'].unique()
 
     # Preparar dados para Excel
     # Converter valor para float
@@ -520,7 +523,7 @@ def create_excel(df, output_path, cols_map):
     # --- ABA PIX ---
     # Filtrar onde forma de pagamento contém "PIX" ou a preferência do config é PIX
     mask_pix = (df[col_forma].str.contains('PIX', case=False, na=False)) | (
-        df['Forma Preferencial'].str.contains('PIX', case=False, na=False))
+        df['Config_Forma Preferencial'].str.contains('PIX', case=False, na=False))
     df_pix = df[mask_pix].copy()
 
     if not df_pix.empty:
@@ -567,12 +570,12 @@ def create_excel(df, output_path, cols_map):
             group_total += val
 
             # Preenche linha
-            ws_pix.cell(row=current_row, column=1, value=row.get('Nome Titular', ''))  # Do config
+            ws_pix.cell(row=current_row, column=1, value=row.get('Config_Nome Titular', ''))  # Do config
             ws_pix.cell(row=current_row, column=2, value=row[col_doc])
             ws_pix.cell(row=current_row, column=3, value=row[col_venc].strftime('%d/%m/%Y'))
             ws_pix.cell(row=current_row, column=4, value=supplier)
             ws_pix.cell(row=current_row, column=5, value=row[col_obs])
-            ws_pix.cell(row=current_row, column=6, value=row.get('Chave PIX', ''))
+            ws_pix.cell(row=current_row, column=6, value=row.get('Config_Chave PIX', ''))
             c_val = ws_pix.cell(row=current_row, column=7, value=val)
             c_val.number_format = '#,##0.00'
 
@@ -592,7 +595,7 @@ def create_excel(df, output_path, cols_map):
 
     # Agrupar por Banco de Pagamento (coluna do Xfin) e Tipo Doc
     # Se a coluna de banco estiver vazia, usa "Indefinido"
-    df_others['GroupKey'] = df_others[col_banco].fillna('Geral') + " - " + df_others[col_forma].fillna('Outros')
+    df_others['GroupKey'] = (df_others[col_banco].fillna('Geral') if col_banco else 'Geral') + " - " + (df_others[col_forma].fillna('Outros') if col_forma else 'Outros')
 
     groups = df_others.groupby('GroupKey')
 
@@ -601,7 +604,7 @@ def create_excel(df, output_path, cols_map):
         sheet_name = name.replace('/', '-').replace('*', '')[:30]
         ws = wb.create_sheet(sheet_name)
 
-        headers = ["Banco Recebedor", "Nº Doc", "Vencimento", "Fornecedor", "Observação", "CNPJ", "Valor"]
+        headers = ["Banco/Conta", "Nº Doc", "Vencimento", "Fornecedor", "Observação", "CNPJ", "Valor"]
         for col_num, header in enumerate(headers, 1):
             cell = ws.cell(row=1, column=col_num, value=header)
             cell.font = header_font
@@ -609,7 +612,9 @@ def create_excel(df, output_path, cols_map):
 
         r = 2
         for idx, row in group.iterrows():
-            ws.cell(row=r, column=1, value=row.get('Banco', ''))  # Do config
+            # Usa a conta do Xfin (col_banco) se disponível, senão tenta do config
+            banco_val = row[col_banco] if col_banco and pd.notna(row[col_banco]) else row.get('Config_Banco', '')
+            ws.cell(row=r, column=1, value=banco_val)
             ws.cell(row=r, column=2, value=row[col_doc])
             ws.cell(row=r, column=3, value=row[col_venc].strftime('%d/%m/%Y'))
             ws.cell(row=r, column=4, value=row[col_forn])

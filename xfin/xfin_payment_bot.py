@@ -171,33 +171,11 @@ def login_xfin(driver, status_callback):
             WebDriverWait(driver, 20).until(lambda d: "Login" not in d.current_url)
         
         if "EscolheFilial" in driver.current_url:
+            # 2. Obtém lista de filiais
+            filiais = get_branches(driver)
+            
             status_callback("Selecionando filial padrão...")
-            try:
-                select_elem = WebDriverWait(driver, 10).until(
-                    EC.presence_of_element_located((By.ID, "Input_IdFilial"))
-                )
-                select = Select(select_elem)
-                
-                found = False
-                for option in select.options:
-                    txt = option.text
-                    if "14.255.350/0001-03" in txt or "Comagro Peças e Serviços" in txt:
-                        select.select_by_value(option.get_attribute("value"))
-                        found = True
-                        break
-                
-                if not found:
-                    for option in select.options:
-                        if option.get_attribute("value") and option.get_attribute("value") != "0":
-                            select.select_by_value(option.get_attribute("value"))
-                            break
-
-                btn_escolher = driver.find_element(By.CSS_SELECTOR, "button[type='submit']")
-                btn_escolher.click()
-                
-                WebDriverWait(driver, 10).until(lambda d: "EscolheFilial" not in d.current_url)
-            except Exception as e:
-                print(f"Erro ao selecionar filial no login: {e}")
+            select_branch(driver, filiais[0]['id']) # Seleciona a primeira filial como padrão
 
         if "EscolheModulo" in driver.current_url:
             status_callback("Selecionando módulo Financeiro...")

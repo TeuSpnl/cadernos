@@ -532,6 +532,14 @@ def process_data(csv_paths, status_callback):
     return df_merged, missing_suppliers, start_date, end_date, (
         col_fornecedor, col_vencimento, col_valor, col_doc, col_obs, col_forma, col_banco)
 
+def clean_sheet_name(name):
+    """Remove caracteres inválidos para nome de aba do Excel."""
+    invalid_chars = ['\\', '/', '*', '[', ']', ':', '?']
+    for char in invalid_chars:
+        name = name.replace(char, '')
+    # Excel limita a 31 caracteres
+    return name[:31]
+
 # --- GERAÇÃO DE EXCEL ---
 
 
@@ -553,131 +561,171 @@ def create_excel(df, output_path, cols_map):
         top=Side(style='thin'),
         bottom=Side(style='thin'))
 
-    # --- ABA PIX ---
-    # Filtrar onde forma de pagamento contém "PIX" ou a preferência do config é PIX
+    # Preparar dados para o Resumo
+    summary_data = []  # Lista de tuplas (Nome da Aba, Valor Total)
+
+    # Garantir colunas de agrupamento
     if col_forma and col_forma in df.columns:
-        is_pix_xfin = df[col_forma].str.contains('PIX', case=False, na=False)
+        df[col_forma] = df[col_forma].fillna('Indefinido')
     else:
-        is_pix_xfin = pd.Series(False, index=df.index)
+        df['__Forma_Temp'] = 'Indefinido'
+        col_forma = '__Forma_Temp'
 
-    is_pix_config = df['Config_Forma Preferencial'].str.contains('PIX', case=False, na=False)
-
-    mask_pix = is_pix_xfin | is_pix_config
-    df_pix = df[mask_pix].copy()
-
-    if not df_pix.empty:
-        ws_pix = wb.create_sheet("PAGAMENTOS PIX")
-        headers = ["Nome Recebedor", "Nº Doc", "Vencimento", "Fornecedor",
-                   "Observação", "Chave PIX", "Valor", "Valor Total"]
-
-        # Cabeçalho
-        for col_num, header in enumerate(headers, 1):
-            cell = ws_pix.cell(row=1, column=col_num, value=header)
-            cell.font = header_font
-            cell.fill = header_fill
-            cell.border = border
-            ws_pix.column_dimensions[get_column_letter(col_num)].width = 20
-
-        # Dados
-        df_pix = df_pix.sort_values(by=[col_forn])  # Ordenar para agrupar
-
-        current_row = 2
-        start_merge_row = 2
-        current_supplier = None
-        group_total = 0.0
-
-        for idx, row in df_pix.iterrows():
-            supplier = row[col_forn]
-            val = row[col_valor]
-
-            # Se mudou de fornecedor, finaliza o grupo anterior
-            if supplier != current_supplier:
-                if current_supplier is not None:
-                    # Escreve total e mescla
-                    if start_merge_row < current_row - 1:
-                        ws_pix.merge_cells(start_row=start_merge_row, start_column=8,
-                                           end_row=current_row-1, end_column=8)
-
-                    cell_total = ws_pix.cell(row=start_merge_row, column=8, value=group_total)
-                    cell_total.number_format = '#,##0.00'
-                    cell_total.alignment = Alignment(vertical='center')
-
-                current_supplier = supplier
-                start_merge_row = current_row
-                group_total = 0.0
-
-            group_total += val
-
-            # Preenche linha
-            ws_pix.cell(row=current_row, column=1, value=row.get('Config_Nome Titular', ''))  # Do config
-            val_doc = row[col_doc] if col_doc and col_doc in row else ""
-            ws_pix.cell(row=current_row, column=2, value=val_doc)
-            ws_pix.cell(row=current_row, column=3, value=row[col_venc].strftime('%d/%m/%Y'))
-            ws_pix.cell(row=current_row, column=4, value=supplier)
-            val_obs = row[col_obs] if col_obs and col_obs in row else ""
-            ws_pix.cell(row=current_row, column=5, value=val_obs)
-            ws_pix.cell(row=current_row, column=6, value=row.get('Config_Chave PIX', ''))
-            c_val = ws_pix.cell(row=current_row, column=7, value=val)
-            c_val.number_format = '#,##0.00'
-
-            current_row += 1
-
-        # Finaliza último grupo
-        if current_supplier is not None:
-            if start_merge_row < current_row - 1:
-                ws_pix.merge_cells(start_row=start_merge_row, start_column=8, end_row=current_row-1, end_column=8)
-            cell_total = ws_pix.cell(row=start_merge_row, column=8, value=group_total)
-            cell_total.number_format = '#,##0.00'
-            cell_total.alignment = Alignment(vertical='center')
-
-    # --- ABAS POR BANCO/TIPO ---
-    # Restante dos dados (não PIX)
-    df_others = df[~mask_pix].copy()
-
-    # Agrupar por Banco de Pagamento (coluna do Xfin) e Tipo Doc
-    # Se a coluna de banco estiver vazia, usa "Indefinido"
-    if col_banco and col_banco in df_others.columns:
-        s_banco = df_others[col_banco].fillna('Geral')
+    if col_banco and col_banco in df.columns:
+        df[col_banco] = df[col_banco].fillna('')
     else:
-        s_banco = pd.Series('Geral', index=df_others.index)
+        df['__Banco_Temp'] = ''
+        col_banco = '__Banco_Temp'
 
-    if col_forma and col_forma in df_others.columns:
-        s_forma = df_others[col_forma].fillna('Outros')
-    else:
-        s_forma = pd.Series('Outros', index=df_others.index)
+    # Agrupar por Tipo de Documento (col_forma)
+    doc_types = df[col_forma].unique()
 
-    df_others['GroupKey'] = s_banco + " - " + s_forma
+    for doc_type in doc_types:
+        df_doc = df[df[col_forma] == doc_type].copy()
+        
+        # Verificar se há múltiplos bancos para este tipo de documento
+        unique_banks = df_doc[col_banco].unique()
+        # Remove bancos vazios da contagem se houver outros
+        real_banks = [b for b in unique_banks if b.strip()]
+        
+        # Lógica de separação de abas
+        sub_groups = []
+        if len(real_banks) > 1:
+            # Separa por banco
+            for bank in unique_banks:
+                sub_df = df_doc[df_doc[col_banco] == bank]
+                if sub_df.empty: continue
+                
+                s_name = f"{doc_type}"
+                if bank.strip():
+                    s_name += f" - {bank}"
+                sub_groups.append((s_name, sub_df))
+        else:
+            # Aba única
+            sub_groups.append((doc_type, df_doc))
 
-    groups = df_others.groupby('GroupKey')
-
-    for name, group in groups:
-        # Limpar nome da aba (max 31 chars, sem caracteres inválidos)
-        sheet_name = name.replace('/', '-').replace('*', '')[:30]
-        ws = wb.create_sheet(sheet_name)
-
-        headers = ["Banco/Conta", "Nº Doc", "Vencimento", "Fornecedor", "Observação", "CNPJ", "Valor"]
-        for col_num, header in enumerate(headers, 1):
-            cell = ws.cell(row=1, column=col_num, value=header)
-            cell.font = header_font
-            cell.fill = header_fill
-
-        r = 2
-        for idx, row in group.iterrows():
-            # Usa a conta do Xfin (col_banco) se disponível, senão tenta do config
-            banco_val = ""
-            if col_banco and col_banco in row and pd.notna(row[col_banco]):
-                banco_val = row[col_banco]
+        # Criar abas
+        for sheet_name, group_df in sub_groups:
+            safe_name = clean_sheet_name(sheet_name)
+            ws = wb.create_sheet(safe_name)
+            
+            # Determinar Layout (PIX ou Padrão)
+            is_pix_layout = "PIX" in doc_type.upper()
+            
+            if is_pix_layout:
+                headers = ["Nome Recebedor", "Nº Doc", "Vencimento", "Fornecedor",
+                           "Observação", "Chave PIX", "Valor", "Valor Total"]
+                val_col_idx = 7
             else:
-                banco_val = row.get('Config_Banco', '')
-            ws.cell(row=r, column=1, value=banco_val)
-            ws.cell(row=r, column=2, value=row[col_doc] if col_doc and col_doc in row else "")
-            ws.cell(row=r, column=3, value=row[col_venc].strftime('%d/%m/%Y'))
-            ws.cell(row=r, column=4, value=row[col_forn])
-            ws.cell(row=r, column=5, value=row[col_obs] if col_obs and col_obs in row else "")
-            ws.cell(row=r, column=6, value=row.get('CNPJ_FB', ''))  # Do Firebird
-            c_val = ws.cell(row=r, column=7, value=row[col_valor])
+                headers = ["Banco/Conta", "Nº Doc", "Vencimento", "Fornecedor", "Observação", "CNPJ", "Valor"]
+                val_col_idx = 7
+
+            # Cabeçalho
+            for col_num, header in enumerate(headers, 1):
+                cell = ws.cell(row=1, column=col_num, value=header)
+                cell.font = header_font
+                cell.fill = header_fill
+                cell.border = border
+                ws.column_dimensions[get_column_letter(col_num)].width = 20
+
+            # Dados
+            group_df = group_df.sort_values(by=[col_forn])
+            current_row = 2
+            sheet_total = 0.0
+            
+            # Variáveis para agrupamento PIX
+            start_merge_row = 2
+            current_supplier = None
+            supplier_total = 0.0
+
+            for idx, row in group_df.iterrows():
+                val = row[col_valor]
+                sheet_total += val
+                
+                if is_pix_layout:
+                    supplier = row[col_forn]
+                    if supplier != current_supplier:
+                        if current_supplier is not None:
+                            if start_merge_row < current_row - 1:
+                                ws.merge_cells(start_row=start_merge_row, start_column=8, end_row=current_row-1, end_column=8)
+                            ws.cell(row=start_merge_row, column=8, value=supplier_total).number_format = '#,##0.00'
+                            ws.cell(row=start_merge_row, column=8).alignment = Alignment(vertical='center')
+                        current_supplier = supplier
+                        start_merge_row = current_row
+                        supplier_total = 0.0
+                    supplier_total += val
+
+                    ws.cell(row=current_row, column=1, value=row.get('Config_Nome Titular', ''))
+                    ws.cell(row=current_row, column=2, value=row[col_doc] if col_doc and col_doc in row else "")
+                    ws.cell(row=current_row, column=3, value=row[col_venc].strftime('%d/%m/%Y'))
+                    ws.cell(row=current_row, column=4, value=supplier)
+                    ws.cell(row=current_row, column=5, value=row[col_obs] if col_obs and col_obs in row else "")
+                    ws.cell(row=current_row, column=6, value=row.get('Config_Chave PIX', ''))
+                    ws.cell(row=current_row, column=7, value=val).number_format = '#,##0.00'
+                else:
+                    # Layout Padrão
+                    banco_val = row.get('Config_Banco', '')
+                    ws.cell(row=current_row, column=1, value=banco_val)
+                    ws.cell(row=current_row, column=2, value=row[col_doc] if col_doc and col_doc in row else "")
+                    ws.cell(row=current_row, column=3, value=row[col_venc].strftime('%d/%m/%Y'))
+                    ws.cell(row=current_row, column=4, value=row[col_forn])
+                    ws.cell(row=current_row, column=5, value=row[col_obs] if col_obs and col_obs in row else "")
+                    ws.cell(row=current_row, column=6, value=row.get('CNPJ_FB', ''))
+                    ws.cell(row=current_row, column=7, value=val).number_format = '#,##0.00'
+
+                current_row += 1
+
+            # Finalizar último grupo PIX
+            if is_pix_layout and current_supplier is not None:
+                if start_merge_row < current_row - 1:
+                    ws.merge_cells(start_row=start_merge_row, start_column=8, end_row=current_row-1, end_column=8)
+                ws.cell(row=start_merge_row, column=8, value=supplier_total).number_format = '#,##0.00'
+                ws.cell(row=start_merge_row, column=8).alignment = Alignment(vertical='center')
+
+            # Linha de Total da Aba
+            total_row = current_row + 1
+            ws.cell(row=total_row, column=val_col_idx-1, value="TOTAL:").font = Font(bold=True)
+            c_total = ws.cell(row=total_row, column=val_col_idx, value=sheet_total)
+            c_total.number_format = '#,##0.00'
+            c_total.font = Font(bold=True)
+            
+            summary_data.append((safe_name, sheet_total))
+
+    # --- ABA RESUMO ---
+    if summary_data:
+        ws = wb.create_sheet(sheet_name)
+        ws.column_dimensions['A'].width = 30
+        ws.column_dimensions['B'].width = 20
+        
+        # Cabeçalho
+        cell_h1 = ws.cell(row=1, column=1, value="Tipo de Pagamento")
+        cell_h2 = ws.cell(row=1, column=2, value="Valor Total")
+        for c in [cell_h1, cell_h2]:
+            c.font = header_font
+            c.fill = header_fill
+            c.border = border
+            
+        r = 2
+        grand_total = 0.0
+        for name, total in summary_data:
+            ws.cell(row=r, column=1, value=name)
+            c_val = ws.cell(row=r, column=2, value=total)
             c_val.number_format = '#,##0.00'
+            grand_total += total
             r += 1
+            
+        # Total Geral
+        r += 1
+        cell_gt_lbl = ws.cell(row=r, column=1, value="TOTAL GERAL")
+        cell_gt_val = ws.cell(row=r, column=2, value=grand_total)
+        
+        for c in [cell_gt_lbl, cell_gt_val]:
+            c.font = Font(bold=True, size=12)
+            c.border = border
+        cell_gt_val.number_format = '#,##0.00'
+
+        # Mover Resumo para o início
+        wb.move_sheet(ws, offset=-(len(wb.sheetnames)-1))
 
     # Salvar
     wb.save(output_path)

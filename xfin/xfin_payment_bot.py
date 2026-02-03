@@ -297,7 +297,7 @@ def download_xfin_report(status_callback):
                 # 2. Navegar para o Relatório
                 URL_RELATORIO = f"{XFIN_URL}/ContaPagar"
                 driver.get(URL_RELATORIO)
-                
+
                 # 3. Preencher Datas (JS)
                 driver.execute_script(f"$('#txtDataInicialVencimento').val('{dt_ini}');")
                 driver.execute_script(f"$('#txtDataFinalVencimento').val('{dt_fim}');")
@@ -384,7 +384,8 @@ def process_data(csv_paths, status_callback):
             try:
                 with open(csv_path, 'r', encoding='latin1') as f:
                     for i, line in enumerate(f):
-                        if i > 20: break
+                        if i > 20:
+                            break
                         if 'Vencimento' in line or 'Pessoa' in line:
                             header_row = i
                             break
@@ -392,9 +393,11 @@ def process_data(csv_paths, status_callback):
                 pass
 
             try:
-                df = pd.read_csv(csv_path, sep=';', encoding='latin1', dtype=str, header=header_row, on_bad_lines='skip', engine='python')
+                df = pd.read_csv(csv_path, sep=';', encoding='latin1', dtype=str,
+                                 header=header_row, on_bad_lines='skip', engine='python')
             except:
-                df = pd.read_csv(csv_path, sep=',', encoding='latin1', dtype=str, header=header_row, on_bad_lines='skip', engine='python')
+                df = pd.read_csv(csv_path, sep=',', encoding='latin1', dtype=str,
+                                 header=header_row, on_bad_lines='skip', engine='python')
             dfs.append(df)
         except Exception as e:
             print(f"Erro ao ler {csv_path}: {e}")
@@ -478,7 +481,8 @@ def process_data(csv_paths, status_callback):
     df_merged = pd.merge(df_filtered, df_config, on='Fornecedor_Norm', how='left')
 
     # Identificar faltantes
-    missing_suppliers = df_merged[df_merged['Config_Chave PIX'].isna() & df_merged['Config_Banco'].isna()]['Fornecedor_Norm'].unique()
+    missing_suppliers = df_merged[df_merged['Config_Chave PIX'].isna(
+    ) & df_merged['Config_Banco'].isna()]['Fornecedor_Norm'].unique()
 
     # Preparar dados para Excel
     # Converter valor para float
@@ -595,7 +599,8 @@ def create_excel(df, output_path, cols_map):
 
     # Agrupar por Banco de Pagamento (coluna do Xfin) e Tipo Doc
     # Se a coluna de banco estiver vazia, usa "Indefinido"
-    df_others['GroupKey'] = (df_others[col_banco].fillna('Geral') if col_banco else 'Geral') + " - " + (df_others[col_forma].fillna('Outros') if col_forma else 'Outros')
+    df_others['GroupKey'] = (df_others[col_banco].fillna(
+        'Geral') if col_banco else 'Geral') + " - " + (df_others[col_forma].fillna('Outros') if col_forma else 'Outros')
 
     groups = df_others.groupby('GroupKey')
 
@@ -672,6 +677,7 @@ class PaymentBotApp:
 
             # Etapa C: Salvar Arquivo
             self.update_status("Gerando planilha Excel...")
+            print("Gerando planilha Excel...")
 
             # Estrutura de pastas: CONTAS A PAGAR\{ANO}\{Nº MÊS}. {NOME MÊS}\{DD-MM-AA}
             # Usando a data de INÍCIO do range (data operacional)
@@ -686,11 +692,18 @@ class PaymentBotApp:
 
             base_path = os.path.join(DRIVE_PATH, "CONTAS A PAGAR", year, folder_month, day_folder)
 
+            print(f"Salvando arquivos em: {base_path}")
+            
             if not os.path.exists(base_path):
                 os.makedirs(base_path)
 
             generated_files = []
+            
+            print("Iniciando geração dos arquivos...")
             for group_name, df_group in dict_dfs.items():
+                print(f"Processando grupo: {group_name} com {len(df_group)} registros...")
+                print(df_group.head())
+                
                 if df_group.empty:
                     continue
 
@@ -706,6 +719,8 @@ class PaymentBotApp:
                 create_excel(df_group, full_path, cols_map)
                 generated_files.append(fname)
 
+            print("Arquivos gerados com sucesso.")
+            
             # Alerta de Faltantes
             if len(missing) > 0 and email_alert:
                 self.update_status("Enviando alerta de fornecedores...")

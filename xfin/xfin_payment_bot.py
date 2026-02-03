@@ -419,7 +419,7 @@ def process_data(csv_paths, status_callback):
     start_date, end_date = get_date_range()
 
     # Converter vencimento para datetime
-    df_xfin[col_vencimento] = pd.to_datetime(df_xfin[col_vencimento], dayfirst=True, errors='coerce')
+    df_xfin[col_vencimento] = pd.to_datetime(df_xfin[col_vencimento], dayfirst=True, errors='coerce', format='%d/%m/%Y')
 
     # Filtro de data
     mask = (df_xfin[col_vencimento].dt.date >= start_date) & (df_xfin[col_vencimento].dt.date <= end_date)

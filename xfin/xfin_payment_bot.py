@@ -412,9 +412,12 @@ def process_data(csv_paths, status_callback):
 
     # Mapeamento de colunas (Ajuste fino necessário com CSV real)
     # Procura colunas que contenham palavras chave se os nomes exatos não baterem
-    def find_col(keywords):
+    def find_col(keywords, exclude=None):
         for col in df_xfin.columns:
-            if any(k.lower() in col.lower() for k in keywords):
+            col_lower = col.lower()
+            if any(k.lower() in col_lower for k in keywords):
+                if exclude and any(e.lower() in col_lower for e in exclude):
+                    continue
                 return col
         return None
 
@@ -424,23 +427,26 @@ def process_data(csv_paths, status_callback):
     col_doc = find_col(['documento', 'doc', 'nota'])
     col_obs = find_col(['descri', 'obs'])
     col_forma = find_col(['forma', 'tipo doc'])  # Ex: "5 - PIX"
-    col_banco = find_col(['conta', 'banco'])    # Ex: "Banco do Brasil Peças"
+    col_banco = find_col(['conta', 'banco'], exclude=['plano'])    # Ex: "Banco do Brasil Peças"
     col_filial = find_col(['empresa', 'filial', 'unidade'])  # Coluna para separar filiais
 
     if not (col_fornecedor and col_vencimento and col_valor):
         raise Exception("Colunas essenciais não encontradas no CSV do Xfin.")
 
-    # Filtrar pelo range de datas desejado (Operacional)
-    start_date, end_date = get_date_range()
-
     # Converter vencimento para datetime
     df_xfin[col_vencimento] = pd.to_datetime(df_xfin[col_vencimento], dayfirst=True, errors='coerce')
 
-    # Filtro de data
-    ts_start = pd.Timestamp(start_date)
-    ts_end = pd.Timestamp(end_date)
-    mask = (df_xfin[col_vencimento] >= ts_start) & (df_xfin[col_vencimento] <= ts_end)
-    df_filtered = df_xfin.loc[mask].copy()
+    # NÃO Filtrar por data (solicitação do usuário: pegar todos os dias disponíveis no arquivo)
+    # O filtro de data já foi feito no download do Xfin (15 dias)
+    df_filtered = df_xfin.copy()
+
+    # Determinar range de datas baseado nos dados para nomear o arquivo
+    if not df_filtered.empty:
+        start_date = df_filtered[col_vencimento].min().date()
+        end_date = df_filtered[col_vencimento].max().date()
+    else:
+        start_date = date.today()
+        end_date = date.today()
 
     if df_filtered.empty:
         return None, [], start_date, end_date
@@ -471,6 +477,7 @@ def process_data(csv_paths, status_callback):
             nome = row[0].strip().upper() if row[0] else ""
             cnpj = row[1].strip() if row[1] else ""
             fb_data[nome] = cnpj
+        print(f"Carregados {len(fb_data)} fornecedores do Firebird.")
         conn_fb.close()
 
     # Aplicar CNPJ do Firebird no DataFrame

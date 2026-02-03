@@ -379,10 +379,22 @@ def process_data(csv_paths, status_callback):
     dfs = []
     for csv_path in csv_paths:
         try:
+            # Tenta detectar a linha de cabeçalho (procura por 'Vencimento' ou 'Pessoa')
+            header_row = 0
             try:
-                df = pd.read_csv(csv_path, sep=';', encoding='utf-8-sig', dtype=str)
+                with open(csv_path, 'r', encoding='latin1') as f:
+                    for i, line in enumerate(f):
+                        if i > 20: break
+                        if 'Vencimento' in line or 'Pessoa' in line:
+                            header_row = i
+                            break
             except:
-                df = pd.read_csv(csv_path, sep=',', encoding='latin1', dtype=str)
+                pass
+
+            try:
+                df = pd.read_csv(csv_path, sep=';', encoding='latin1', dtype=str, header=header_row, on_bad_lines='skip', engine='python')
+            except:
+                df = pd.read_csv(csv_path, sep=',', encoding='latin1', dtype=str, header=header_row, on_bad_lines='skip', engine='python')
             dfs.append(df)
         except Exception as e:
             print(f"Erro ao ler {csv_path}: {e}")
@@ -419,10 +431,12 @@ def process_data(csv_paths, status_callback):
     start_date, end_date = get_date_range()
 
     # Converter vencimento para datetime
-    df_xfin[col_vencimento] = pd.to_datetime(df_xfin[col_vencimento], dayfirst=True, errors='coerce', format='%d/%m/%Y')
+    df_xfin[col_vencimento] = pd.to_datetime(df_xfin[col_vencimento], dayfirst=True, errors='coerce')
 
     # Filtro de data
-    mask = (df_xfin[col_vencimento].dt.date >= start_date) & (df_xfin[col_vencimento].dt.date <= end_date)
+    ts_start = pd.Timestamp(start_date)
+    ts_end = pd.Timestamp(end_date)
+    mask = (df_xfin[col_vencimento] >= ts_start) & (df_xfin[col_vencimento] <= ts_end)
     df_filtered = df_xfin.loc[mask].copy()
 
     if df_filtered.empty:

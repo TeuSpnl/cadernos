@@ -274,48 +274,35 @@ def download_xfin_report(status_callback):
         if not login_xfin(driver, status_callback):
             raise Exception("Falha ao realizar login.")
 
-        # Navegar diretamente para o Relatório
-        URL_RELATORIO = f"{XFIN_URL}/ContaPagar"
-        driver.get(URL_RELATORIO)
-
-        # Obter lista de filiais diretamente do Select da página (mais eficiente)
+        # Obter lista de filiais via tela de escolha (mais robusto que o filtro da página)
         status_callback("Mapeando filiais...")
-        try:
-            select_elem = WebDriverWait(driver, 15).until(
-                EC.presence_of_element_located((By.ID, "selFilial"))
-            )
-            select_obj = Select(select_elem)
-
-            # Extrai ID e Nome, ignorando valor '0' ou vazio se houver
-            branches = [{"id": opt.get_attribute("value"), "nome": opt.text}
-                        for opt in select_obj.options
-                        if opt.get_attribute("value") and opt.get_attribute("value") != "0"]
-
-            print(f"Filiais encontradas: {branches}")
-        except Exception as e:
-            raise Exception(f"Erro ao identificar seletor de filiais na página: {e}")
+        branches = get_branches(driver)
 
         if not branches:
-            raise Exception("Nenhuma filial encontrada no seletor do relatório.")
+            raise Exception("Nenhuma filial encontrada.")
 
         # Datas para filtro
         dt_ini = date.today().strftime("%d/%m/%Y")
         dt_fim = (date.today() + timedelta(days=15)).strftime("%d/%m/%Y")
 
-        # Preenche as datas antes do loop
-        driver.execute_script(f"$('#txtDataInicialVencimento').val('{dt_ini}');")
-        driver.execute_script(f"$('#txtDataFinalVencimento').val('{dt_fim}');")
-
         for branch in branches:
             status_callback(f"Processando: {branch['nome']}...")
 
             try:
-                # 1. Selecionar Filial via JS (Select2 é chato com Selenium puro, JS é mais seguro)
-                # O HTML mostra que usa jQuery ($), então usamos .val().trigger('change')
-                driver.execute_script(f"$('#selFilial').val('{branch['id']}').trigger('change');")
-                time.sleep(1)  # Pequena pausa para o JS processar
+                # 1. Mudar contexto da filial (Garante que o relatório abra na filial certa)
+                if not select_branch(driver, branch['id']):
+                    print(f"Pulo filial {branch['nome']} por erro de seleção.")
+                    continue
 
-                # 3. Clicar em Buscar
+                # 2. Navegar para o Relatório
+                URL_RELATORIO = f"{XFIN_URL}/ContaPagar"
+                driver.get(URL_RELATORIO)
+                
+                # 3. Preencher Datas (JS)
+                driver.execute_script(f"$('#txtDataInicialVencimento').val('{dt_ini}');")
+                driver.execute_script(f"$('#txtDataFinalVencimento').val('{dt_fim}');")
+
+                # 4. Clicar em Buscar
                 # O HTML mostra: onclick="BuscarTitulos(true)"
                 btn_buscar = driver.find_element(By.XPATH, "//button[contains(text(), 'Buscar')]")
                 driver.execute_script("arguments[0].click();", btn_buscar)
@@ -323,7 +310,7 @@ def download_xfin_report(status_callback):
                 # Aguarda o loading (geralmente o Xfin mostra um spinner ou bloqueia a tela)
                 time.sleep(3)
 
-                # 4. Limpar pasta temporária de arquivos antigos (ContasAPagar.csv) para evitar conflito
+                # 5. Limpar pasta temporária de arquivos antigos (ContasAPagar.csv) para evitar conflito
                 for f in os.listdir(TEMP_DIR):
                     if f.startswith("ContasAPagar") and f.endswith(".csv"):
                         try:
@@ -331,12 +318,12 @@ def download_xfin_report(status_callback):
                         except:
                             pass
 
-                # 5. Clicar em Exportar
+                # 6. Clicar em Exportar
                 # O HTML mostra: onclick="ExportarTitulos()"
                 btn_export = driver.find_element(By.XPATH, "//button[contains(text(), 'Exportar')]")
                 driver.execute_script("arguments[0].click();", btn_export)
 
-                # 6. Loop de Espera pelo Download
+                # 7. Loop de Espera pelo Download
                 # Espera até aparecer um arquivo novo que não seja .crdownload
                 timeout = 5
                 elapsed = 0

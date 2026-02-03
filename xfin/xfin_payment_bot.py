@@ -141,13 +141,13 @@ def create_default_config(path):
 def identify_branch_group(val):
     """Identifica o grupo da filial baseado no CNPJ ou Nome."""
     val = str(val).upper()
-    # CNPJs conhecidos
+    # Prioridade para Servicos e Divisa para evitar falso positivo com "Comagro"
+    if "62.188.494" in val or "SERVI" in val:
+        return "Servicos"
+    if "59.185.879" in val or "DIVISA" in val:
+        return "Divisa"
     if "14.255.350" in val:
         return "Comagro"  # Loja (0001) e Oficina (0004)
-    if "59.185.879" in val:
-        return "Divisa"
-    if "62.188.494" in val:
-        return "Servicos"
 
     # Fallback por nome
     if "DIVISA" in val:
@@ -158,6 +158,20 @@ def identify_branch_group(val):
         return "Comagro"
 
     return "Geral"
+
+def get_file_date(dt):
+    """Agrupa datas de fim de semana para a segunda-feira."""
+    if pd.isna(dt):
+        return date.today()
+    if isinstance(dt, pd.Timestamp):
+        dt = dt.date()
+    
+    weekday = dt.weekday()
+    if weekday == 5: # Sábado -> Segunda
+        return dt + timedelta(days=2)
+    if weekday == 6: # Domingo -> Segunda
+        return dt + timedelta(days=1)
+    return dt
 
 # --- AUTOMATIZAÇÃO WEB (SELENIUM) ---
 
@@ -426,8 +440,8 @@ def process_data(csv_paths, status_callback):
     col_valor = find_col(['valor', 'valor liquido'])
     col_doc = find_col(['documento', 'doc', 'nota'])
     col_obs = find_col(['descri', 'obs'])
-    col_forma = find_col(['forma', 'tipo doc'])  # Ex: "5 - PIX"
-    col_banco = find_col(['conta', 'banco'], exclude=['plano'])    # Ex: "Banco do Brasil Peças"
+    col_forma = find_col(['forma', 'tipo de doc'])  # Ex: "5 - PIX"
+    col_banco = find_col(['banco'], exclude=['plano'])    # Ex: "Banco do Brasil Peças"
     col_filial = find_col(['empresa', 'filial', 'unidade'])  # Coluna para separar filiais
 
     if not (col_fornecedor and col_vencimento and col_valor):
@@ -463,7 +477,18 @@ def process_data(csv_paths, status_callback):
 
     # Normalizar nomes para merge (uppercase, strip)
     df_config['Fornecedor_Norm'] = df_config['Fornecedor'].str.upper().str.strip()
-    df_filtered['Fornecedor_Norm'] = df_filtered[col_fornecedor].str.upper().str.strip()
+    
+    def clean_supplier_name(name):
+        if pd.isna(name): return ""
+        name = str(name).upper().strip()
+        # Remove "[CODE] - " prefix if present (e.g. "123 - FORNECEDOR")
+        if " - " in name:
+            parts = name.split(" - ", 1)
+            if parts[0].isdigit():
+                return parts[1].strip()
+        return name
+
+    df_filtered['Fornecedor_Norm'] = df_filtered[col_fornecedor].apply(clean_supplier_name)
 
     # 3. Buscar CNPJ no Firebird (Enriquecimento)
     status_callback("Consultando Firebird...")
@@ -498,16 +523,13 @@ def process_data(csv_paths, status_callback):
         '.', '').str.replace(
         ',', '.').astype(float)
 
-    # 5. Separar por Filial (Agrupamento)
-    dict_dfs = {}
+    # Identificar grupo da filial
     if col_filial:
         df_merged['Filial_Group'] = df_merged[col_filial].apply(identify_branch_group)
-        for group in df_merged['Filial_Group'].unique():
-            dict_dfs[group] = df_merged[df_merged['Filial_Group'] == group].copy()
     else:
-        dict_dfs['Geral'] = df_merged
+        df_merged['Filial_Group'] = 'Geral'
 
-    return dict_dfs, missing_suppliers, start_date, end_date, (
+    return df_merged, missing_suppliers, start_date, end_date, (
         col_fornecedor, col_vencimento, col_valor, col_doc, col_obs, col_forma, col_banco)
 
 # --- GERAÇÃO DE EXCEL ---
@@ -539,7 +561,7 @@ def create_excel(df, output_path, cols_map):
         is_pix_xfin = pd.Series(False, index=df.index)
 
     is_pix_config = df['Config_Forma Preferencial'].str.contains('PIX', case=False, na=False)
-    
+
     mask_pix = is_pix_xfin | is_pix_config
     df_pix = df[mask_pix].copy()
 
@@ -695,17 +717,17 @@ class PaymentBotApp:
 
             # Etapa A: Selenium
             csv_files = download_xfin_report(self.update_status)
-            
+
             print(f"Arquivos CSV baixados: {csv_files}")
 
             # Etapa B: Processamento
-            dict_dfs, missing, dt_start, dt_end, cols_map = process_data(csv_files, self.update_status)
+            df_merged, missing, dt_start, dt_end, cols_map = process_data(csv_files, self.update_status)
 
-            if not dict_dfs:
+            if df_merged is None or df_merged.empty:
                 self.finish("Nenhum pagamento encontrado para o período.")
                 return
 
-            # Etapa C: Salvar Arquivo
+            # Etapa C: Salvar Arquivos
             self.update_status("Gerando planilha Excel...")
             print("Gerando planilha Excel...")
 
@@ -723,36 +745,39 @@ class PaymentBotApp:
             base_path = os.path.join(DRIVE_PATH, "CONTAS A PAGAR", year, folder_month, day_folder)
 
             print(f"Salvando arquivos em: {base_path}")
-            
+
             if not os.path.exists(base_path):
                 os.makedirs(base_path)
 
             generated_files = []
+
+            # Agrupar por Data de Arquivo (juntando FDS na Segunda)
+            col_venc = cols_map[1]
+            df_merged['File_Date'] = df_merged[col_venc].apply(get_file_date)
             
-            print(dict_dfs.keys())
+            print("Iniciando geração dos arquivos por data e filial...")
             
-            print("Iniciando geração dos arquivos...")
-            for group_name, df_group in dict_dfs.items():
-                print(f"Processando grupo {group_name} com {len(df_group)} registros...")
-                print(df_group.columns.tolist())
+            # Loop por Data
+            for file_date, df_date in df_merged.groupby('File_Date'):
+                date_str = file_date.strftime('%d_%m_%Y')
                 
-                if df_group.empty:
-                    continue
+                # Loop por Filial dentro da Data
+                for group_name, df_group in df_date.groupby('Filial_Group'):
+                    print(f"Processando: Data {date_str} - Filial {group_name} ({len(df_group)} registros)")
+                    
+                    if df_group.empty:
+                        continue
 
-                # Nome do arquivo com sufixo da filial
-                suffix = f"_{group_name}" if group_name != "Geral" else ""
+                    # Nome do arquivo: Contas_A_Pagar_FILIAL-DD_MM_AAAA.xlsx
+                    suffix = f"_{group_name}" if group_name != "Geral" else ""
+                    fname = f"Contas_A_Pagar{suffix}-{date_str}.xlsx"
 
-                if dt_start == dt_end:
-                    fname = f"Contas_A_Pagar{suffix}-{dt_start.strftime('%d_%m_%Y')}.xlsx"
-                else:
-                    fname = f"Contas_A_Pagar{suffix}-{dt_start.strftime('%d_%m')}-{dt_end.strftime('%d_%m_%Y')}.xlsx"
-
-                full_path = os.path.join(base_path, fname)
-                create_excel(df_group, full_path, cols_map)
-                generated_files.append(fname)
+                    full_path = os.path.join(base_path, fname)
+                    create_excel(df_group, full_path, cols_map)
+                    generated_files.append(fname)
 
             print("Arquivos gerados com sucesso.")
-            
+
             # Alerta de Faltantes
             if len(missing) > 0 and email_alert:
                 self.update_status("Enviando alerta de fornecedores...")

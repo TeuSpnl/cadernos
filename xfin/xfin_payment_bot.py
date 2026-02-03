@@ -526,8 +526,14 @@ def create_excel(df, output_path, cols_map):
 
     # --- ABA PIX ---
     # Filtrar onde forma de pagamento contém "PIX" ou a preferência do config é PIX
-    mask_pix = (df[col_forma].str.contains('PIX', case=False, na=False)) | (
-        df['Config_Forma Preferencial'].str.contains('PIX', case=False, na=False))
+    if col_forma and col_forma in df.columns:
+        is_pix_xfin = df[col_forma].str.contains('PIX', case=False, na=False)
+    else:
+        is_pix_xfin = pd.Series(False, index=df.index)
+
+    is_pix_config = df['Config_Forma Preferencial'].str.contains('PIX', case=False, na=False)
+    
+    mask_pix = is_pix_xfin | is_pix_config
     df_pix = df[mask_pix].copy()
 
     if not df_pix.empty:
@@ -575,10 +581,12 @@ def create_excel(df, output_path, cols_map):
 
             # Preenche linha
             ws_pix.cell(row=current_row, column=1, value=row.get('Config_Nome Titular', ''))  # Do config
-            ws_pix.cell(row=current_row, column=2, value=row[col_doc])
+            val_doc = row[col_doc] if col_doc and col_doc in row else ""
+            ws_pix.cell(row=current_row, column=2, value=val_doc)
             ws_pix.cell(row=current_row, column=3, value=row[col_venc].strftime('%d/%m/%Y'))
             ws_pix.cell(row=current_row, column=4, value=supplier)
-            ws_pix.cell(row=current_row, column=5, value=row[col_obs])
+            val_obs = row[col_obs] if col_obs and col_obs in row else ""
+            ws_pix.cell(row=current_row, column=5, value=val_obs)
             ws_pix.cell(row=current_row, column=6, value=row.get('Config_Chave PIX', ''))
             c_val = ws_pix.cell(row=current_row, column=7, value=val)
             c_val.number_format = '#,##0.00'
@@ -599,8 +607,17 @@ def create_excel(df, output_path, cols_map):
 
     # Agrupar por Banco de Pagamento (coluna do Xfin) e Tipo Doc
     # Se a coluna de banco estiver vazia, usa "Indefinido"
-    df_others['GroupKey'] = (df_others[col_banco].fillna(
-        'Geral') if col_banco else 'Geral') + " - " + (df_others[col_forma].fillna('Outros') if col_forma else 'Outros')
+    if col_banco and col_banco in df_others.columns:
+        s_banco = df_others[col_banco].fillna('Geral')
+    else:
+        s_banco = pd.Series('Geral', index=df_others.index)
+
+    if col_forma and col_forma in df_others.columns:
+        s_forma = df_others[col_forma].fillna('Outros')
+    else:
+        s_forma = pd.Series('Outros', index=df_others.index)
+
+    df_others['GroupKey'] = s_banco + " - " + s_forma
 
     groups = df_others.groupby('GroupKey')
 
@@ -618,12 +635,16 @@ def create_excel(df, output_path, cols_map):
         r = 2
         for idx, row in group.iterrows():
             # Usa a conta do Xfin (col_banco) se disponível, senão tenta do config
-            banco_val = row[col_banco] if col_banco and pd.notna(row[col_banco]) else row.get('Config_Banco', '')
+            banco_val = ""
+            if col_banco and col_banco in row and pd.notna(row[col_banco]):
+                banco_val = row[col_banco]
+            else:
+                banco_val = row.get('Config_Banco', '')
             ws.cell(row=r, column=1, value=banco_val)
-            ws.cell(row=r, column=2, value=row[col_doc])
+            ws.cell(row=r, column=2, value=row[col_doc] if col_doc and col_doc in row else "")
             ws.cell(row=r, column=3, value=row[col_venc].strftime('%d/%m/%Y'))
             ws.cell(row=r, column=4, value=row[col_forn])
-            ws.cell(row=r, column=5, value=row[col_obs])
+            ws.cell(row=r, column=5, value=row[col_obs] if col_obs and col_obs in row else "")
             ws.cell(row=r, column=6, value=row.get('CNPJ_FB', ''))  # Do Firebird
             c_val = ws.cell(row=r, column=7, value=row[col_valor])
             c_val.number_format = '#,##0.00'

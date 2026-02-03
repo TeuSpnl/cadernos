@@ -255,7 +255,7 @@ def download_xfin_report(status_callback):
                 continue
 
             # Navegar para Relatório de Contas a Pagar
-            URL_RELATORIO = f"{XFIN_URL}/Relatorio/ContasAPagar" 
+            URL_RELATORIO = f"{XFIN_URL}/ContaPagar" 
             driver.get(URL_RELATORIO)
             
             # Filtros

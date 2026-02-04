@@ -620,6 +620,9 @@ def create_excel(df, output_path, cols_map):
             elif "DÉBITO" in dt_upper or "DEBITO" in dt_upper:
                 fill_color = "FF0000" # Vermelho
                 font_color = "FFFFFF"
+            elif "PIX" in dt_upper:
+                fill_color = "e56700" # Laranja
+                font_color = "FFFFFF"
             else:
                 fill_color = "000000" # Preto (Outros)
                 font_color = "FFFFFF"
@@ -684,7 +687,7 @@ def create_excel(df, output_path, cols_map):
                     ws.cell(row=current_row, column=7, value=val).number_format = '#,##0.00'
                 else:
                     # Layout Padrão
-                    banco_val = row.get('Config_Banco', '')
+                    banco_val = row[col_banco] if col_banco and col_banco in row else row.get('Config_Banco', '')
                     ws.cell(row=current_row, column=1, value=banco_val)
                     ws.cell(row=current_row, column=2, value=row[col_doc] if col_doc and col_doc in row else "")
                     ws.cell(row=current_row, column=3, value=row[col_venc].strftime('%d/%m/%Y'))

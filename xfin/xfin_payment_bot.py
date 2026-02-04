@@ -32,7 +32,7 @@ load_dotenv()
 # --- CONFIGURAÇÕES ---
 DRIVE_PATH = r"\\100.64.1.10\Users\pichau\Documents\Drive Comagro"
 TEMP_DIR = os.path.join(os.getcwd(), "temp_xfin")
-CONFIG_FILE = os.path.join(DRIVE_PATH, "TI compartilhado", "Financeiro", "[CONFIG] Dados Bancários Fornecedores.xlsx")
+CONFIG_FILE = os.path.join(DRIVE_PATH, "CONTAS A PAGAR", "0 Extras", "[CONFIG] Dados Bancários Fornecedores.xlsx")
 XFIN_URL = "https://app.xfin.com.br"
 XFIN_USER = os.getenv('XFIN_USER')
 XFIN_PASS = os.getenv('XFIN_PASS')
@@ -123,6 +123,7 @@ def create_default_config(path):
         # Colunas necessárias para o funcionamento do robô
         columns = [
             "Fornecedor",
+            "CNPJ",
             "Chave PIX",
             "Banco",
             "Agência",
@@ -533,6 +534,12 @@ def process_data(csv_paths, status_callback):
     else:
         df_merged['Filial_Group'] = 'Geral'
 
+    # 5. Definir CNPJ Final (Prioridade: Excel > Firebird)
+    if 'Config_CNPJ' in df_merged.columns:
+        df_merged['CNPJ_Final'] = df_merged['Config_CNPJ'].fillna(df_merged['CNPJ_FB'])
+    else:
+        df_merged['CNPJ_Final'] = df_merged['CNPJ_FB']
+
     return df_merged, missing_suppliers, start_date, end_date, (
         col_fornecedor, col_vencimento, col_valor, col_doc, col_obs, col_forma, col_banco)
 
@@ -699,13 +706,13 @@ def create_excel(df, output_path, cols_map):
                     ws.cell(row=current_row, column=7, value=val).number_format = currency_fmt
                 else:
                     # Layout Padrão
-                    banco_val = row[col_banco] if col_banco and col_banco in row else row.get('Config_Banco', '')
+                    banco_val = row.get('Config_Banco', '')
                     ws.cell(row=current_row, column=1, value=banco_val)
                     ws.cell(row=current_row, column=2, value=row[col_doc] if col_doc and col_doc in row else "")
                     ws.cell(row=current_row, column=3, value=row[col_venc].strftime('%d/%m/%Y'))
                     ws.cell(row=current_row, column=4, value=row[col_forn])
                     ws.cell(row=current_row, column=5, value=row[col_obs] if col_obs and col_obs in row else "")
-                    ws.cell(row=current_row, column=6, value=row.get('CNPJ_FB', ''))
+                    ws.cell(row=current_row, column=6, value=row.get('CNPJ_Final', ''))
                     ws.cell(row=current_row, column=7, value=val).number_format = currency_fmt
 
                 current_row += 1

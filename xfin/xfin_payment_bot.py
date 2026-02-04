@@ -141,7 +141,7 @@ def create_default_config(path):
 def identify_branch_group(val):
     """Identifica o grupo da filial baseado no CNPJ ou Nome."""
     val = str(val).upper()
-    
+
     # 1. Verificação por CNPJ (Mais preciso)
     if "62.188.494" in val:
         return "Servicos"
@@ -153,11 +153,11 @@ def identify_branch_group(val):
     # 2. Verificação por Nome
     if "DIVISA" in val:
         return "Divisa"
-    
+
     # Verificar PEÇAS ou OFICINA antes de SERVIÇOS para evitar ambiguidade
     if "PEÇAS" in val or "PECAS" in val or "OFICINA" in val:
         return "Comagro"
-        
+
     if "SERVI" in val and "COMAGRO" in val:
         return "Servicos"
     if "COMAGRO" in val:
@@ -165,17 +165,18 @@ def identify_branch_group(val):
 
     return "Geral"
 
+
 def get_file_date(dt):
     """Agrupa datas de fim de semana para a segunda-feira."""
     if pd.isna(dt):
         return date.today()
     if isinstance(dt, pd.Timestamp):
         dt = dt.date()
-    
+
     weekday = dt.weekday()
-    if weekday == 5: # Sábado -> Segunda
+    if weekday == 5:  # Sábado -> Segunda
         return dt + timedelta(days=2)
-    if weekday == 6: # Domingo -> Segunda
+    if weekday == 6:  # Domingo -> Segunda
         return dt + timedelta(days=1)
     return dt
 
@@ -272,7 +273,7 @@ def select_branch(driver, branch_id):
         return False
 
 
-def download_xfin_report(status_callback):
+def download_xfin_report(status_callback, dt_ini, dt_fim):
     status_callback("Iniciando navegador...")
 
     if os.path.exists(TEMP_DIR):
@@ -300,10 +301,6 @@ def download_xfin_report(status_callback):
 
         if not branches:
             raise Exception("Nenhuma filial encontrada.")
-
-        # Datas para filtro
-        dt_ini = date.today().strftime("%d/%m/%Y")
-        dt_fim = (date.today() + timedelta(days=15)).strftime("%d/%m/%Y")
 
         for branch in branches:
             status_callback(f"Processando: {branch['nome']}...")
@@ -483,9 +480,10 @@ def process_data(csv_paths, status_callback):
 
     # Normalizar nomes para merge (uppercase, strip)
     df_config['Fornecedor_Norm'] = df_config['Fornecedor'].str.upper().str.strip()
-    
+
     def clean_supplier_name(name):
-        if pd.isna(name): return ""
+        if pd.isna(name):
+            return ""
         name = str(name).upper().strip()
         # Remove "[CODE] - " prefix if present (e.g. "123 - FORNECEDOR")
         if " - " in name:
@@ -538,6 +536,7 @@ def process_data(csv_paths, status_callback):
     return df_merged, missing_suppliers, start_date, end_date, (
         col_fornecedor, col_vencimento, col_valor, col_doc, col_obs, col_forma, col_banco)
 
+
 def clean_sheet_name(name):
     """Remove caracteres inválidos para nome de aba do Excel."""
     invalid_chars = ['\\', '/', '*', '[', ']', ':', '?']
@@ -579,20 +578,21 @@ def create_excel(df, output_path, cols_map):
 
     for doc_type in doc_types:
         df_doc = df[df[col_forma] == doc_type].copy()
-        
+
         # Verificar se há múltiplos bancos para este tipo de documento
         unique_banks = df_doc[col_banco].unique()
         # Remove bancos vazios da contagem se houver outros
         real_banks = [b for b in unique_banks if b.strip()]
-        
+
         # Lógica de separação de abas
         sub_groups = []
         if len(real_banks) > 1:
             # Separa por banco
             for bank in unique_banks:
                 sub_df = df_doc[df_doc[col_banco] == bank]
-                if sub_df.empty: continue
-                
+                if sub_df.empty:
+                    continue
+
                 s_name = f"{doc_type}"
                 if bank.strip():
                     s_name += f" - {bank}"
@@ -606,35 +606,38 @@ def create_excel(df, output_path, cols_map):
             safe_name = clean_sheet_name(sheet_name)
             ws = wb.create_sheet(safe_name)
 
+            # Formato de Moeda Brasileiro
+            currency_fmt = '_-R$* #,##0.00_-;-R$* #,##0.00_-;_-R$* \"-\"??_-;_-@_-'
+
             # Definir Cores do Cabeçalho
             dt_upper = doc_type.upper()
             if "NF" in dt_upper or "NOTA" in dt_upper:
-                fill_color = "FFFF00" # Amarelo
-                font_color = "000000" # Preto
+                fill_color = "FFFF00"  # Amarelo
+                font_color = "000000"  # Preto
             elif "BOLETO" in dt_upper:
-                fill_color = "366092" # Azul (Padrão anterior)
-                font_color = "FFFFFF" # Branco
+                fill_color = "366092"  # Azul (Padrão anterior)
+                font_color = "FFFFFF"  # Branco
             elif "CRÉDITO" in dt_upper or "CREDITO" in dt_upper or "ESTORNO" in dt_upper:
-                fill_color = "00B050" # Verde
+                fill_color = "00B050"  # Verde
                 font_color = "FFFFFF"
             elif "DÉBITO" in dt_upper or "DEBITO" in dt_upper:
-                fill_color = "FF0000" # Vermelho
+                fill_color = "FF0000"  # Vermelho
                 font_color = "FFFFFF"
             elif "PIX" in dt_upper:
-                fill_color = "e56700" # Laranja
+                fill_color = "e56700"  # Laranja
                 font_color = "FFFFFF"
             else:
-                fill_color = "000000" # Preto (Outros)
+                fill_color = "000000"  # Preto (Outros)
                 font_color = "FFFFFF"
 
             header_font = Font(bold=True, color=font_color)
             header_fill = PatternFill(start_color=fill_color, end_color=fill_color, fill_type="solid")
             border = Border(left=Side(style='thin'), right=Side(style='thin'),
                             top=Side(style='thin'), bottom=Side(style='thin'))
-            
+
             # Determinar Layout (PIX ou Padrão)
             is_pix_layout = "PIX" in doc_type.upper()
-            
+
             if is_pix_layout:
                 headers = ["Nome Recebedor", "Nº Doc", "Vencimento", "Fornecedor",
                            "Observação", "Chave PIX", "Valor", "Valor Total"]
@@ -652,10 +655,18 @@ def create_excel(df, output_path, cols_map):
                 ws.column_dimensions[get_column_letter(col_num)].width = 20
 
             # Dados
-            group_df = group_df.sort_values(by=[col_forn])
+            if is_pix_layout:
+                # Calcular total por fornecedor para ordenação (mantendo agrupamento)
+                group_df['__Total_Supplier'] = group_df.groupby(col_forn)[col_valor].transform('sum')
+                group_df = group_df.sort_values(
+                    by=['__Total_Supplier', col_forn, col_valor],
+                    ascending=[True, True, True])
+            else:
+                group_df = group_df.sort_values(by=[col_valor], ascending=True)
+
             current_row = 2
             sheet_total = 0.0
-            
+
             # Variáveis para agrupamento PIX
             start_merge_row = 2
             current_supplier = None
@@ -664,14 +675,15 @@ def create_excel(df, output_path, cols_map):
             for idx, row in group_df.iterrows():
                 val = row[col_valor]
                 sheet_total += val
-                
+
                 if is_pix_layout:
                     supplier = row[col_forn]
                     if supplier != current_supplier:
                         if current_supplier is not None:
                             if start_merge_row < current_row - 1:
-                                ws.merge_cells(start_row=start_merge_row, start_column=8, end_row=current_row-1, end_column=8)
-                            ws.cell(row=start_merge_row, column=8, value=supplier_total).number_format = '#,##0.00'
+                                ws.merge_cells(start_row=start_merge_row, start_column=8,
+                                               end_row=current_row-1, end_column=8)
+                            ws.cell(row=start_merge_row, column=8, value=supplier_total).number_format = currency_fmt
                             ws.cell(row=start_merge_row, column=8).alignment = Alignment(vertical='center')
                         current_supplier = supplier
                         start_merge_row = current_row
@@ -684,7 +696,7 @@ def create_excel(df, output_path, cols_map):
                     ws.cell(row=current_row, column=4, value=supplier)
                     ws.cell(row=current_row, column=5, value=row[col_obs] if col_obs and col_obs in row else "")
                     ws.cell(row=current_row, column=6, value=row.get('Config_Chave PIX', ''))
-                    ws.cell(row=current_row, column=7, value=val).number_format = '#,##0.00'
+                    ws.cell(row=current_row, column=7, value=val).number_format = currency_fmt
                 else:
                     # Layout Padrão
                     banco_val = row[col_banco] if col_banco and col_banco in row else row.get('Config_Banco', '')
@@ -694,7 +706,7 @@ def create_excel(df, output_path, cols_map):
                     ws.cell(row=current_row, column=4, value=row[col_forn])
                     ws.cell(row=current_row, column=5, value=row[col_obs] if col_obs and col_obs in row else "")
                     ws.cell(row=current_row, column=6, value=row.get('CNPJ_FB', ''))
-                    ws.cell(row=current_row, column=7, value=val).number_format = '#,##0.00'
+                    ws.cell(row=current_row, column=7, value=val).number_format = currency_fmt
 
                 current_row += 1
 
@@ -702,24 +714,27 @@ def create_excel(df, output_path, cols_map):
             if is_pix_layout and current_supplier is not None:
                 if start_merge_row < current_row - 1:
                     ws.merge_cells(start_row=start_merge_row, start_column=8, end_row=current_row-1, end_column=8)
-                ws.cell(row=start_merge_row, column=8, value=supplier_total).number_format = '#,##0.00'
+                ws.cell(row=start_merge_row, column=8, value=supplier_total).number_format = currency_fmt
                 ws.cell(row=start_merge_row, column=8).alignment = Alignment(vertical='center')
 
             # Linha de Total da Aba
             total_row = current_row + 1
             ws.cell(row=total_row, column=val_col_idx-1, value="TOTAL:").font = Font(bold=True)
             c_total = ws.cell(row=total_row, column=val_col_idx, value=sheet_total)
-            c_total.number_format = '#,##0.00'
+            c_total.number_format = currency_fmt
             c_total.font = Font(bold=True)
-            
+
             summary_data.append((safe_name, sheet_total))
 
     # --- ABA TOTAIS ---
     if summary_data:
-        ws = wb.create_sheet("Totais") # Cria no final por padrão
+        ws = wb.create_sheet("Totais")  # Cria no final por padrão
         ws.column_dimensions['A'].width = 30
         ws.column_dimensions['B'].width = 20
-        
+
+        # Formato de Moeda
+        currency_fmt = '_-R$* #,##0.00_-;-R$* #,##0.00_-;_-R$* \"-\"??_-;_-@_-'
+
         # Estilo Padrão para Totais
         header_font_tot = Font(bold=True, color="FFFFFF")
         header_fill_tot = PatternFill(start_color="366092", end_color="366092", fill_type="solid")
@@ -731,25 +746,25 @@ def create_excel(df, output_path, cols_map):
             c.font = header_font_tot
             c.fill = header_fill_tot
             c.border = border
-            
+
         r = 2
         grand_total = 0.0
         for name, total in summary_data:
             ws.cell(row=r, column=1, value=name)
             c_val = ws.cell(row=r, column=2, value=total)
-            c_val.number_format = '#,##0.00'
+            c_val.number_format = currency_fmt
             grand_total += total
             r += 1
-            
+
         # Total Geral
         r += 1
         cell_gt_lbl = ws.cell(row=r, column=1, value="TOTAL GERAL")
         cell_gt_val = ws.cell(row=r, column=2, value=grand_total)
-        
+
         for c in [cell_gt_lbl, cell_gt_val]:
             c.font = Font(bold=True, size=12)
             c.border = border
-        cell_gt_val.number_format = '#,##0.00'
+        cell_gt_val.number_format = currency_fmt
 
     # Salvar
     wb.save(output_path)
@@ -761,10 +776,22 @@ class PaymentBotApp:
     def __init__(self, root):
         self.root = root
         self.root.title("Robô de Pagamentos Xfin")
-        self.root.geometry("400x250")
+        self.root.geometry("400x300")
 
         self.lbl_status = tk.Label(root, text="Pronto para iniciar", wraplength=350)
         self.lbl_status.pack(pady=20)
+
+        # Inputs de Data
+        frame_dates = tk.Frame(root)
+        frame_dates.pack(pady=5)
+        tk.Label(frame_dates, text="Início:").pack(side=tk.LEFT)
+        self.entry_start = tk.Entry(frame_dates, width=12)
+        self.entry_start.pack(side=tk.LEFT, padx=5)
+        self.entry_start.insert(0, date.today().strftime("%d/%m/%Y"))
+        tk.Label(frame_dates, text="Fim:").pack(side=tk.LEFT)
+        self.entry_end = tk.Entry(frame_dates, width=12)
+        self.entry_end.pack(side=tk.LEFT, padx=5)
+        self.entry_end.insert(0, (date.today() + timedelta(days=15)).strftime("%d/%m/%Y"))
 
         self.progress = ttk.Progressbar(root, orient="horizontal", length=300, mode="indeterminate")
         self.progress.pack(pady=10)
@@ -784,11 +811,14 @@ class PaymentBotApp:
 
     def run_pipeline(self):
         try:
+            dt_ini = self.entry_start.get()
+            dt_fim = self.entry_end.get()
+
             self.update_status("Verificando ambiente...")
             check_drive_access()
 
             # Etapa A: Selenium
-            csv_files = download_xfin_report(self.update_status)
+            csv_files = download_xfin_report(self.update_status, dt_ini, dt_fim)
 
             print(f"Arquivos CSV baixados: {csv_files}")
 
@@ -826,17 +856,17 @@ class PaymentBotApp:
             # Agrupar por Data de Arquivo (juntando FDS na Segunda)
             col_venc = cols_map[1]
             df_merged['File_Date'] = df_merged[col_venc].apply(get_file_date)
-            
+
             print("Iniciando geração dos arquivos por data e filial...")
-            
+
             # Loop por Data
             for file_date, df_date in df_merged.groupby('File_Date'):
                 date_str = file_date.strftime('%d_%m_%Y')
-                
+
                 # Loop por Filial dentro da Data
                 for group_name, df_group in df_date.groupby('Filial_Group'):
                     print(f"Processando: Data {date_str} - Filial {group_name} ({len(df_group)} registros)")
-                    
+
                     if df_group.empty:
                         continue
 

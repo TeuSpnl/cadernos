@@ -141,17 +141,23 @@ def create_default_config(path):
 def identify_branch_group(val):
     """Identifica o grupo da filial baseado no CNPJ ou Nome."""
     val = str(val).upper()
-    # Prioridade para Servicos e Divisa para evitar falso positivo com "Comagro"
-    if "62.188.494" in val or "SERVI" in val:
+    
+    # 1. Verificação por CNPJ (Mais preciso)
+    if "62.188.494" in val:
         return "Servicos"
-    if "59.185.879" in val or "DIVISA" in val:
+    if "59.185.879" in val:
         return "Divisa"
     if "14.255.350" in val:
         return "Comagro"  # Loja (0001) e Oficina (0004)
 
-    # Fallback por nome
+    # 2. Verificação por Nome
     if "DIVISA" in val:
         return "Divisa"
+    
+    # Verificar PEÇAS ou OFICINA antes de SERVIÇOS para evitar ambiguidade
+    if "PEÇAS" in val or "PECAS" in val or "OFICINA" in val:
+        return "Comagro"
+        
     if "SERVI" in val and "COMAGRO" in val:
         return "Servicos"
     if "COMAGRO" in val:
@@ -552,15 +558,6 @@ def create_excel(df, output_path, cols_map):
     if 'Sheet' in wb.sheetnames:
         wb.remove(wb['Sheet'])
 
-    # Estilos
-    header_font = Font(bold=True, color="FFFFFF")
-    header_fill = PatternFill(start_color="366092", end_color="366092", fill_type="solid")
-    border = Border(
-        left=Side(style='thin'),
-        right=Side(style='thin'),
-        top=Side(style='thin'),
-        bottom=Side(style='thin'))
-
     # Preparar dados para o Resumo
     summary_data = []  # Lista de tuplas (Nome da Aba, Valor Total)
 
@@ -608,6 +605,29 @@ def create_excel(df, output_path, cols_map):
         for sheet_name, group_df in sub_groups:
             safe_name = clean_sheet_name(sheet_name)
             ws = wb.create_sheet(safe_name)
+
+            # Definir Cores do Cabeçalho
+            dt_upper = doc_type.upper()
+            if "NF" in dt_upper or "NOTA" in dt_upper:
+                fill_color = "FFFF00" # Amarelo
+                font_color = "000000" # Preto
+            elif "BOLETO" in dt_upper:
+                fill_color = "366092" # Azul (Padrão anterior)
+                font_color = "FFFFFF" # Branco
+            elif "CRÉDITO" in dt_upper or "CREDITO" in dt_upper or "ESTORNO" in dt_upper:
+                fill_color = "00B050" # Verde
+                font_color = "FFFFFF"
+            elif "DÉBITO" in dt_upper or "DEBITO" in dt_upper:
+                fill_color = "FF0000" # Vermelho
+                font_color = "FFFFFF"
+            else:
+                fill_color = "000000" # Preto (Outros)
+                font_color = "FFFFFF"
+
+            header_font = Font(bold=True, color=font_color)
+            header_fill = PatternFill(start_color=fill_color, end_color=fill_color, fill_type="solid")
+            border = Border(left=Side(style='thin'), right=Side(style='thin'),
+                            top=Side(style='thin'), bottom=Side(style='thin'))
             
             # Determinar Layout (PIX ou Padrão)
             is_pix_layout = "PIX" in doc_type.upper()
@@ -691,18 +711,22 @@ def create_excel(df, output_path, cols_map):
             
             summary_data.append((safe_name, sheet_total))
 
-    # --- ABA RESUMO ---
+    # --- ABA TOTAIS ---
     if summary_data:
-        ws = wb.create_sheet(sheet_name)
+        ws = wb.create_sheet("Totais") # Cria no final por padrão
         ws.column_dimensions['A'].width = 30
         ws.column_dimensions['B'].width = 20
         
+        # Estilo Padrão para Totais
+        header_font_tot = Font(bold=True, color="FFFFFF")
+        header_fill_tot = PatternFill(start_color="366092", end_color="366092", fill_type="solid")
+
         # Cabeçalho
         cell_h1 = ws.cell(row=1, column=1, value="Tipo de Pagamento")
         cell_h2 = ws.cell(row=1, column=2, value="Valor Total")
         for c in [cell_h1, cell_h2]:
-            c.font = header_font
-            c.fill = header_fill
+            c.font = header_font_tot
+            c.fill = header_fill_tot
             c.border = border
             
         r = 2
@@ -723,9 +747,6 @@ def create_excel(df, output_path, cols_map):
             c.font = Font(bold=True, size=12)
             c.border = border
         cell_gt_val.number_format = '#,##0.00'
-
-        # Mover Resumo para o início
-        wb.move_sheet(ws, offset=-(len(wb.sheetnames)-1))
 
     # Salvar
     wb.save(output_path)

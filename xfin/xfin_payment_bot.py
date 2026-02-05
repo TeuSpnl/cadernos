@@ -840,23 +840,9 @@ class PaymentBotApp:
             self.update_status("Gerando planilha Excel...")
             print("Gerando planilha Excel...")
 
-            # Estrutura de pastas: CONTAS A PAGAR\{ANO}\{Nº MÊS}. {NOME MÊS}\{DD-MM-AA}
-            # Usando a data de INÍCIO do range (data operacional)
-            year = dt_start.strftime("%Y")
-            month_num = dt_start.strftime("%m")
             # Nome do mês em PT-BR (simples)
             months = ["Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho",
                       "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"]
-            month_name = months[int(month_num)-1]
-            folder_month = f"{month_num}. {month_name.upper()}"
-            day_folder = dt_start.strftime("%d-%m-%y")
-
-            base_path = os.path.join(DRIVE_PATH, "CONTAS A PAGAR", year, folder_month, day_folder)
-
-            print(f"Salvando arquivos em: {base_path}")
-
-            if not os.path.exists(base_path):
-                os.makedirs(base_path)
 
             generated_files = []
 
@@ -868,6 +854,18 @@ class PaymentBotApp:
 
             # Loop por Data
             for file_date, df_date in df_merged.groupby('File_Date'):
+                # Estrutura de pastas: CONTAS A PAGAR\{ANO}\{Nº MÊS}. {NOME MÊS}\{DD-MM-AA}
+                year = file_date.strftime("%Y")
+                month_num = file_date.month  # Número sem zero à esquerda
+                month_name = months[month_num-1]
+                folder_month = f"{month_num}. {month_name.upper()}"
+                day_folder = file_date.strftime("%d-%m-%y")
+
+                current_base_path = os.path.join(DRIVE_PATH, "CONTAS A PAGAR", year, folder_month, day_folder)
+
+                if not os.path.exists(current_base_path):
+                    os.makedirs(current_base_path)
+
                 date_str = file_date.strftime('%d_%m_%Y')
 
                 # Loop por Filial dentro da Data
@@ -881,7 +879,7 @@ class PaymentBotApp:
                     suffix = f"_{group_name}" if group_name != "Geral" else ""
                     fname = f"Contas_A_Pagar{suffix}-{date_str}.xlsx"
 
-                    full_path = os.path.join(base_path, fname)
+                    full_path = os.path.join(current_base_path, fname)
                     create_excel(df_group, full_path, cols_map)
                     generated_files.append(fname)
 
@@ -896,7 +894,7 @@ class PaymentBotApp:
                 missing_df.to_csv(missing_csv, index=False)
                 email_alert.enviar_email_erro(missing_csv, len(missing))
 
-            self.finish(f"Sucesso!\nGerados: {len(generated_files)} arquivos\nSalvo em: {day_folder}")
+            self.finish(f"Sucesso!\nGerados: {len(generated_files)} arquivos\nSalvos nas pastas de data.")
 
         except Exception as e:
             self.finish(f"Erro: {str(e)}", error=True)

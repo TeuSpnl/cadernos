@@ -54,7 +54,7 @@ def get_oauth2_token():
         return None
 
 
-def enviar_email_erro(arquivo_csv_erro, qtd_erros):
+def enviar_email_erro(arquivo_csv_erro, qtd_erros, pag = False):
     """
     Envia um e-mail notificando erros de mapeamento, com o CSV em anexo.
     """
@@ -72,6 +72,16 @@ def enviar_email_erro(arquivo_csv_erro, qtd_erros):
     <p>Link para envio: app.xfin.com.br/Titulo/Importacao?tipo=1</p>
     <p><i>Atenciosamente,<br>Seu Robô Financeiro</i></p>
     """
+    
+    if pag:
+        msg['Subject'] = f"[CONFIG XFIN] {qtd_erros} Exportação de contas sem definições no config"
+        body = f"""
+        <h3>Alerta de Configuração</h3>
+        <p>O sistema identificou <b>{qtd_erros}</b> contas a pagar do XFin sem definições financeiras no arquivo de configuração.</p>
+        <p>No arquivo mostra quais contas não tem correspondência. Atualize o '[CONFIG] Dados Bancários Fornecedores.xlsx' e exporte novamente.</p>
+        <p><i>Atenciosamente,<br>Seu Robô Financeiro</i></p>
+        """
+    
     msg.attach(MIMEText(body, 'html'))
 
     # Anexa o arquivo CSV

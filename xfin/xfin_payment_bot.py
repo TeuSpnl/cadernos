@@ -554,15 +554,18 @@ def process_data(csv_paths, status_callback, stop_event):
     else:
         df_merged['CNPJ_Final'] = df_merged['CNPJ_FB']
 
-    # 6. Extrair Fatura da Descrição (Feature Nova)
-    def extract_invoice(row):
+    # 6. Extrair Fatura da Descrição (Feature Nova - Strict)
+    def extract_invoice_strict(row):
         desc = str(row[col_obs]) if col_obs and pd.notna(row[col_obs]) else ""
         if " - " in desc:
             # Pega a última parte após o último hífen
-            return desc.rsplit(" - ", 1)[-1].strip()
+            candidate = desc.rsplit(" - ", 1)[-1].strip()
+            # Validação estrita: aceita apenas se for numérico puro (sem /, letras, pontos)
+            if candidate.isdigit():
+                return candidate
         return ""
     
-    df_merged['Fatura'] = df_merged.apply(extract_invoice, axis=1)
+    df_merged['Fatura'] = df_merged.apply(extract_invoice_strict, axis=1)
 
     return df_merged, missing_suppliers, start_date, end_date, (
         col_fornecedor, col_vencimento, col_valor, col_doc, col_obs, col_forma, col_banco)

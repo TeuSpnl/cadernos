@@ -646,12 +646,12 @@ def create_excel(df, output_path, cols_map):
             is_pix_layout = "PIX" in doc_type.upper()
 
             if is_pix_layout:
-                headers = ["Nome Recebedor", "Nº Doc", "Vencimento", "Fornecedor",
-                           "Observação", "Chave PIX", "Valor", "Valor Total"]
+                headers = ["Vencimento", "Nome Recebedor", "Fornecedor",
+                           "Chave PIX", "Observação", "Valor", "Valor Total"]
                 val_col_idx = 7
             else:
-                headers = ["Banco/Conta", "Nº Doc", "Vencimento", "Fornecedor", "Observação", "CNPJ", "Valor"]
-                val_col_idx = 7
+                headers = ["Vencimento", "Banco/Conta", "Fornecedor", "CNPJ", "Observação", "Valor"]
+                val_col_idx = 6
 
             # Cabeçalho
             for col_num, header in enumerate(headers, 1):
@@ -697,23 +697,21 @@ def create_excel(df, output_path, cols_map):
                         supplier_total = 0.0
                     supplier_total += val
 
-                    ws.cell(row=current_row, column=1, value=row.get('Config_Nome Titular', ''))
-                    ws.cell(row=current_row, column=2, value=row[col_doc] if col_doc and col_doc in row else "")
-                    ws.cell(row=current_row, column=3, value=row[col_venc].strftime('%d/%m/%Y'))
-                    ws.cell(row=current_row, column=4, value=supplier)
+                    ws.cell(row=current_row, column=1, value=row[col_venc].strftime('%d/%m/%Y'))
+                    ws.cell(row=current_row, column=2, value=row.get('Config_Nome Titular', ''))
+                    ws.cell(row=current_row, column=3, value=supplier)
+                    ws.cell(row=current_row, column=4, value=row.get('Config_Chave PIX', ''))
                     ws.cell(row=current_row, column=5, value=row[col_obs] if col_obs and col_obs in row else "")
-                    ws.cell(row=current_row, column=6, value=row.get('Config_Chave PIX', ''))
-                    ws.cell(row=current_row, column=7, value=val).number_format = currency_fmt
+                    ws.cell(row=current_row, column=6, value=val).number_format = currency_fmt
                 else:
                     # Layout Padrão
                     banco_val = row.get('Config_Banco', '')
-                    ws.cell(row=current_row, column=1, value=banco_val)
-                    ws.cell(row=current_row, column=2, value=row[col_doc] if col_doc and col_doc in row else "")
-                    ws.cell(row=current_row, column=3, value=row[col_venc].strftime('%d/%m/%Y'))
-                    ws.cell(row=current_row, column=4, value=row[col_forn])
+                    ws.cell(row=current_row, column=1, value=row[col_venc].strftime('%d/%m/%Y'))
+                    ws.cell(row=current_row, column=2, value=banco_val)
+                    ws.cell(row=current_row, column=3, value=row[col_forn])
+                    ws.cell(row=current_row, column=4, value=row.get('CNPJ_Final', ''))
                     ws.cell(row=current_row, column=5, value=row[col_obs] if col_obs and col_obs in row else "")
-                    ws.cell(row=current_row, column=6, value=row.get('CNPJ_Final', ''))
-                    ws.cell(row=current_row, column=7, value=val).number_format = currency_fmt
+                    ws.cell(row=current_row, column=6, value=val).number_format = currency_fmt
 
                 current_row += 1
 

@@ -769,7 +769,7 @@ def create_excel(df, output_path, cols_map):
             # Finalizar último grupo PIX
             if is_pix_layout and current_supplier is not None:
                 if start_merge_row < current_row - 1:
-                    ws.merge_cells(start_row=start_merge_row, start_column=8, end_row=current_row-1, end_column=7)
+                    ws.merge_cells(start_row=start_merge_row, start_column=7, end_row=current_row-1, end_column=7)
                 ws.cell(row=start_merge_row, column=7, value=supplier_total).number_format = currency_fmt
                 ws.cell(row=start_merge_row, column=7).alignment = Alignment(vertical='center')
 

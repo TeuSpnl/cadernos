@@ -1,6 +1,7 @@
 import os
 import sys
 import time
+import re
 import shutil
 import pandas as pd
 import firebirdsql
@@ -18,6 +19,7 @@ from selenium.webdriver.support.select import Select
 from webdriver_manager.chrome import ChromeDriverManager
 from openpyxl.styles import Font, PatternFill, Border, Side, Alignment
 from openpyxl.utils import get_column_letter
+from tkcalendar import DateEntry
 from dotenv import load_dotenv
 
 # Import local modules (assuming they are in the same directory)
@@ -274,7 +276,7 @@ def select_branch(driver, branch_id):
         return False
 
 
-def download_xfin_report(status_callback, dt_ini, dt_fim):
+def download_xfin_report(status_callback, dt_ini, dt_fim, stop_event):
     status_callback("Iniciando navegador...")
 
     if os.path.exists(TEMP_DIR):
@@ -296,6 +298,9 @@ def download_xfin_report(status_callback, dt_ini, dt_fim):
         if not login_xfin(driver, status_callback):
             raise Exception("Falha ao realizar login.")
 
+        if stop_event.is_set():
+            return []
+
         # Obter lista de filiais via tela de escolha (mais robusto que o filtro da página)
         status_callback("Mapeando filiais...")
         branches = get_branches(driver)
@@ -304,6 +309,9 @@ def download_xfin_report(status_callback, dt_ini, dt_fim):
             raise Exception("Nenhuma filial encontrada.")
 
         for branch in branches:
+            if stop_event.is_set():
+                break
+
             status_callback(f"Processando: {branch['nome']}...")
 
             try:
@@ -348,6 +356,9 @@ def download_xfin_report(status_callback, dt_ini, dt_fim):
                 downloaded_file = None
 
                 while elapsed < timeout:
+                    if stop_event.is_set():
+                        break
+
                     files = os.listdir(TEMP_DIR)
                     # Procura o arquivo padrão do Xfin (geralmente ContasAPagar.csv)
                     candidates = [f for f in files if f.endswith('.csv') and not f.startswith('branch_')]
@@ -388,7 +399,7 @@ def download_xfin_report(status_callback, dt_ini, dt_fim):
 # --- PROCESSAMENTO DE DADOS ---
 
 
-def process_data(csv_paths, status_callback):
+def process_data(csv_paths, status_callback, stop_event):
     status_callback("Lendo dados...")
 
     if not csv_paths:
@@ -486,11 +497,10 @@ def process_data(csv_paths, status_callback):
         if pd.isna(name):
             return ""
         name = str(name).upper().strip()
-        # Remove "[CODE] - " prefix if present (e.g. "123 - FORNECEDOR")
-        if " - " in name:
-            parts = name.split(" - ", 1)
-            if parts[0].isdigit():
-                return parts[1].strip()
+        # Remove "[CODE] - " prefix using regex to handle hyphens in name correctly
+        match = re.match(r'^(\d+)\s*-\s*(.*)', name)
+        if match:
+            return match.group(2).strip()
         return name
 
     df_filtered['Fornecedor_Norm'] = df_filtered[col_fornecedor].apply(clean_supplier_name)
@@ -498,6 +508,10 @@ def process_data(csv_paths, status_callback):
     # 3. Buscar CNPJ no Firebird (Enriquecimento)
     status_callback("Consultando Firebird...")
     conn_fb = get_firebird_connection()
+    if stop_event.is_set():
+        if conn_fb: conn_fb.close()
+        return None, [], start_date, end_date, None
+
     fb_data = {}
     if conn_fb:
         cursor = conn_fb.cursor()
@@ -539,6 +553,16 @@ def process_data(csv_paths, status_callback):
         df_merged['CNPJ_Final'] = df_merged['Config_CNPJ'].fillna(df_merged['CNPJ_FB'])
     else:
         df_merged['CNPJ_Final'] = df_merged['CNPJ_FB']
+
+    # 6. Extrair Fatura da Descrição (Feature Nova)
+    def extract_invoice(row):
+        desc = str(row[col_obs]) if col_obs and pd.notna(row[col_obs]) else ""
+        if " - " in desc:
+            # Pega a última parte após o último hífen
+            return desc.rsplit(" - ", 1)[-1].strip()
+        return ""
+    
+    df_merged['Fatura'] = df_merged.apply(extract_invoice, axis=1)
 
     return df_merged, missing_suppliers, start_date, end_date, (
         col_fornecedor, col_vencimento, col_valor, col_doc, col_obs, col_forma, col_banco)
@@ -669,6 +693,30 @@ def create_excel(df, output_path, cols_map):
                     by=['__Total_Supplier', col_forn, col_valor],
                     ascending=[True, True, True])
             else:
+                # Agrupar Faturas (se houver)
+                if 'Fatura' in group_df.columns:
+                    group_df['Fatura'] = group_df['Fatura'].fillna('').astype(str).str.strip()
+                    mask_invoice = group_df['Fatura'] != ''
+                    df_invoice = group_df[mask_invoice].copy()
+                    df_no_invoice = group_df[~mask_invoice].copy()
+
+                    if not df_invoice.empty:
+                        grp_keys = ['Fatura', col_forn, col_venc]
+                        if 'CNPJ_Final' in df_invoice.columns:
+                            df_invoice['CNPJ_Final'] = df_invoice['CNPJ_Final'].fillna('')
+                            grp_keys.append('CNPJ_Final')
+                        if 'Config_Banco' in df_invoice.columns:
+                            df_invoice['Config_Banco'] = df_invoice['Config_Banco'].fillna('')
+                            grp_keys.append('Config_Banco')
+
+                        grouped_rows = []
+                        for key, block in df_invoice.groupby(grp_keys):
+                            row_data = block.iloc[0].copy()
+                            row_data[col_valor] = block[col_valor].sum()
+                            if col_obs: row_data[col_obs] = f"Fatura - {key[0]}"
+                            grouped_rows.append(row_data)
+                        group_df = pd.concat([df_no_invoice, pd.DataFrame(grouped_rows)], ignore_index=True)
+
                 group_df = group_df.sort_values(by=[col_valor], ascending=True)
 
             current_row = 2
@@ -781,7 +829,9 @@ class PaymentBotApp:
     def __init__(self, root):
         self.root = root
         self.root.title("Robô de Pagamentos Xfin")
-        self.root.geometry("400x300")
+        self.root.geometry("450x400")
+        
+        self.stop_event = threading.Event()
 
         self.lbl_status = tk.Label(root, text="Pronto para iniciar", wraplength=350)
         self.lbl_status.pack(pady=20)
@@ -790,29 +840,67 @@ class PaymentBotApp:
         frame_dates = tk.Frame(root)
         frame_dates.pack(pady=5)
         tk.Label(frame_dates, text="Início:").pack(side=tk.LEFT)
-        self.entry_start = tk.Entry(frame_dates, width=12)
+        self.entry_start = DateEntry(frame_dates, width=12, background='darkblue',
+                                     foreground='white', borderwidth=2, locale='pt_BR', date_pattern='dd/mm/yyyy')
         self.entry_start.pack(side=tk.LEFT, padx=5)
-        self.entry_start.insert(0, date.today().strftime("%d/%m/%Y"))
+        self.entry_start.set_date(date.today())
+        
         tk.Label(frame_dates, text="Fim:").pack(side=tk.LEFT)
-        self.entry_end = tk.Entry(frame_dates, width=12)
+        self.entry_end = DateEntry(frame_dates, width=12, background='darkblue',
+                                   foreground='white', borderwidth=2, locale='pt_BR', date_pattern='dd/mm/yyyy')
         self.entry_end.pack(side=tk.LEFT, padx=5)
-        self.entry_end.insert(0, (date.today() + timedelta(days=15)).strftime("%d/%m/%Y"))
+        self.entry_end.set_date(date.today() + timedelta(days=15))
+
+        # Botões de Data Rápida
+        frame_quick_dates = tk.Frame(root)
+        frame_quick_dates.pack(pady=5)
+        
+        tk.Button(frame_quick_dates, text="Hoje", command=lambda: self.set_dates(0)).pack(side=tk.LEFT, padx=2)
+        tk.Button(frame_quick_dates, text="Amanhã", command=lambda: self.set_dates(1, start_today=False)).pack(side=tk.LEFT, padx=2)
+        tk.Button(frame_quick_dates, text="3 Dias", command=lambda: self.set_dates(3)).pack(side=tk.LEFT, padx=2)
+        tk.Button(frame_quick_dates, text="7 Dias", command=lambda: self.set_dates(7)).pack(side=tk.LEFT, padx=2)
+        tk.Button(frame_quick_dates, text="15 Dias", command=lambda: self.set_dates(15)).pack(side=tk.LEFT, padx=2)
 
         self.progress = ttk.Progressbar(root, orient="horizontal", length=300, mode="indeterminate")
         self.progress.pack(pady=10)
 
-        self.btn_start = tk.Button(root, text="Iniciar Extração", command=self.start_thread,
-                                   height=2, width=20, bg="#4CAF50", fg="white")
-        self.btn_start.pack(pady=20)
+        frame_actions = tk.Frame(root)
+        frame_actions.pack(pady=20)
+
+        self.btn_start = tk.Button(frame_actions, text="Iniciar Extração", command=self.start_thread,
+                                   height=2, width=15, bg="#4CAF50", fg="black")
+        self.btn_start.pack(side=tk.LEFT, padx=10)
+        
+        self.btn_cancel = tk.Button(frame_actions, text="Cancelar", command=self.cancel_process,
+                                    height=2, width=15, bg="#f44336", fg="black", state="disabled")
+        self.btn_cancel.pack(side=tk.LEFT, padx=10)
+
+    def set_dates(self, days, start_today=True):
+        today = date.today()
+        if start_today:
+            self.entry_start.set_date(today)
+            self.entry_end.set_date(today + timedelta(days=days))
+        else:
+            # Case for "Amanhã" where start is also tomorrow
+            tomorrow = today + timedelta(days=1)
+            self.entry_start.set_date(tomorrow)
+            self.entry_end.set_date(tomorrow)
 
     def update_status(self, text):
         self.lbl_status.config(text=text)
         self.root.update_idletasks()
 
     def start_thread(self):
+        self.stop_event.clear()
         self.btn_start.config(state="disabled")
+        self.btn_cancel.config(state="normal")
         self.progress.start(10)
         threading.Thread(target=self.run_pipeline, daemon=True).start()
+        
+    def cancel_process(self):
+        if not self.stop_event.is_set():
+            self.update_status("Cancelando... Aguarde.")
+            self.stop_event.set()
 
     def run_pipeline(self):
         try:
@@ -823,12 +911,21 @@ class PaymentBotApp:
             check_drive_access()
 
             # Etapa A: Selenium
-            csv_files = download_xfin_report(self.update_status, dt_ini, dt_fim)
+            if self.stop_event.is_set(): return
+            csv_files = download_xfin_report(self.update_status, dt_ini, dt_fim, self.stop_event)
+            
+            if self.stop_event.is_set():
+                self.finish("Processo cancelado pelo usuário.")
+                return
 
             print(f"Arquivos CSV baixados: {csv_files}")
 
             # Etapa B: Processamento
-            df_merged, missing, dt_start, dt_end, cols_map = process_data(csv_files, self.update_status)
+            df_merged, missing, dt_start, dt_end, cols_map = process_data(csv_files, self.update_status, self.stop_event)
+            
+            if self.stop_event.is_set():
+                self.finish("Processo cancelado pelo usuário.")
+                return
 
             if df_merged is None or df_merged.empty:
                 self.finish("Nenhum pagamento encontrado para o período.")
@@ -852,6 +949,10 @@ class PaymentBotApp:
 
             # Loop por Data
             for file_date, df_date in df_merged.groupby('File_Date'):
+                if self.stop_event.is_set():
+                    self.finish("Processo cancelado pelo usuário.")
+                    return
+                    
                 # Estrutura de pastas: CONTAS A PAGAR\{ANO}\{Nº MÊS}. {NOME MÊS}\{DD-MM-AA}
                 year = file_date.strftime("%Y")
                 month_num = file_date.month  # Número sem zero à esquerda
@@ -885,6 +986,10 @@ class PaymentBotApp:
 
             # Alerta de Faltantes
             if len(missing) > 0 and email_alert:
+                if self.stop_event.is_set():
+                    self.finish("Processo cancelado pelo usuário.")
+                    return
+                    
                 self.update_status("Enviando alerta de fornecedores...")
                 # Cria um CSV temporário com os faltantes para anexar
                 missing_df = pd.DataFrame(missing, columns=['Fornecedor'])
@@ -907,6 +1012,7 @@ class PaymentBotApp:
     def finish(self, message, error=False):
         self.progress.stop()
         self.btn_start.config(state="normal")
+        self.btn_cancel.config(state="disabled")
         self.update_status(message)
         if error:
             messagebox.showerror("Erro", message)

@@ -128,9 +128,6 @@ def create_default_config(path):
             "CNPJ",
             "Chave PIX",
             "Banco",
-            "Agência",
-            "Conta",
-            "Forma Preferencial",
             "Nome Titular"
         ]
 

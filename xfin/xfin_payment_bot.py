@@ -1,35 +1,16 @@
 import os
 import sys
 import time
-import re
-import shutil
-import pandas as pd
-import firebirdsql
-import openpyxl
 import threading
 import tkinter as tk
 from tkinter import messagebox, ttk
 from datetime import date, datetime, timedelta
-from selenium import webdriver
-from selenium.webdriver.common.by import By
-from selenium.webdriver.chrome.service import Service
-from selenium.webdriver.support.ui import WebDriverWait
-from selenium.webdriver.support import expected_conditions as EC
-from selenium.webdriver.support.select import Select
-from webdriver_manager.chrome import ChromeDriverManager
-from openpyxl.styles import Font, PatternFill, Border, Side, Alignment
-from openpyxl.utils import get_column_letter
 from tkcalendar import DateEntry
 from dotenv import load_dotenv
 
-# Import local modules (assuming they are in the same directory)
-try:
-    import email_alert
-except ImportError:
-    print("Aviso: Módulo email_alert não encontrado. O envio de e-mails será desativado.")
-    email_alert = None
-
-load_dotenv()
+# Carrega variáveis de ambiente do caminho de rede especificado
+ENV_PATH = r"\\100.64.1.10\Ti Compartilhado\Financeiro\.env"
+load_dotenv(ENV_PATH)
 
 # --- CONFIGURAÇÕES ---
 DRIVE_PATH = r"\\100.64.1.10\Users\pichau\Documents\Drive Comagro"
@@ -63,6 +44,7 @@ COL_XFIN_BANCO_PAGAR = "Conta/Banco"     # Precisa verificar o nome exato no CSV
 
 
 def get_firebird_connection():
+    import firebirdsql
     try:
         return firebirdsql.connect(
             host=FB_HOST,
@@ -108,6 +90,7 @@ def get_date_range():
 
 
 def format_currency(value):
+    import pandas as pd
     if pd.isna(value):
         return "R$ 0,00"
     try:
@@ -117,6 +100,7 @@ def format_currency(value):
 
 
 def create_default_config(path):
+    import pandas as pd
     """Cria o arquivo de configuração padrão com as colunas necessárias."""
     try:
         # Garante que o diretório existe
@@ -167,6 +151,7 @@ def identify_branch_group(val):
 
 
 def get_file_date(dt):
+    import pandas as pd
     """Agrupa datas de fim de semana para a segunda-feira."""
     if pd.isna(dt):
         return date.today()
@@ -184,6 +169,9 @@ def get_file_date(dt):
 
 
 def login_xfin(driver, status_callback):
+    from selenium.webdriver.common.by import By
+    from selenium.webdriver.support.ui import WebDriverWait
+    from selenium.webdriver.support import expected_conditions as EC
     status_callback("Realizando login...")
     if "Login" not in driver.current_url:
         driver.get(XFIN_URL)
@@ -230,6 +218,10 @@ def login_xfin(driver, status_callback):
 
 
 def get_branches(driver):
+    from selenium.webdriver.common.by import By
+    from selenium.webdriver.support.ui import WebDriverWait
+    from selenium.webdriver.support import expected_conditions as EC
+    from selenium.webdriver.support.select import Select
     try:
         driver.get(URL_ESCOLHA_FILIAL)
 
@@ -253,6 +245,10 @@ def get_branches(driver):
 
 
 def select_branch(driver, branch_id):
+    from selenium.webdriver.common.by import By
+    from selenium.webdriver.support.ui import WebDriverWait
+    from selenium.webdriver.support import expected_conditions as EC
+    from selenium.webdriver.support.select import Select
     try:
         if "EscolheFilial" not in driver.current_url:
             driver.get(URL_ESCOLHA_FILIAL)
@@ -274,6 +270,12 @@ def select_branch(driver, branch_id):
 
 
 def download_xfin_report(status_callback, dt_ini, dt_fim, stop_event):
+    import shutil
+    from selenium import webdriver
+    from selenium.webdriver.common.by import By
+    from selenium.webdriver.chrome.service import Service
+    from webdriver_manager.chrome import ChromeDriverManager
+    
     status_callback("Iniciando navegador...")
 
     if os.path.exists(TEMP_DIR):
@@ -397,6 +399,8 @@ def download_xfin_report(status_callback, dt_ini, dt_fim, stop_event):
 
 
 def process_data(csv_paths, status_callback, stop_event):
+    import pandas as pd
+    import re
     status_callback("Lendo dados...")
 
     if not csv_paths:
@@ -580,6 +584,10 @@ def clean_sheet_name(name):
 
 
 def create_excel(df, output_path, cols_map):
+    import openpyxl
+    import pandas as pd
+    from openpyxl.styles import Font, PatternFill, Border, Side, Alignment
+    from openpyxl.utils import get_column_letter
     col_forn, col_venc, col_valor, col_doc, col_obs, col_forma, col_banco = cols_map
 
     wb = openpyxl.Workbook()
@@ -903,6 +911,12 @@ class PaymentBotApp:
             self.stop_event.set()
 
     def run_pipeline(self):
+        import shutil
+        try:
+            import email_alert
+        except ImportError:
+            email_alert = None
+
         try:
             dt_ini = self.entry_start.get()
             dt_fim = self.entry_end.get()

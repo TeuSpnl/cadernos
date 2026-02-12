@@ -278,7 +278,7 @@ def download_xfin_report(status_callback, dt_ini, dt_fim, stop_event):
     from selenium.webdriver.common.by import By
     from selenium.webdriver.chrome.service import Service
     from webdriver_manager.chrome import ChromeDriverManager
-    
+
     status_callback("Iniciando navegador...")
 
     if os.path.exists(TEMP_DIR):
@@ -513,7 +513,8 @@ def process_data(csv_paths, status_callback, stop_event):
     status_callback("Consultando Firebird...")
     conn_fb = get_firebird_connection()
     if stop_event.is_set():
-        if conn_fb: conn_fb.close()
+        if conn_fb:
+            conn_fb.close()
         return None, [], start_date, end_date, None
 
     fb_data = {}
@@ -568,7 +569,7 @@ def process_data(csv_paths, status_callback, stop_event):
             if candidate.isdigit():
                 return candidate
         return ""
-    
+
     df_merged['Fatura'] = df_merged.apply(extract_invoice_strict, axis=1)
 
     return df_merged, missing_suppliers, start_date, end_date, (
@@ -616,7 +617,8 @@ def create_excel(df, output_path, cols_map):
         col_banco = '__Banco_Temp'
 
     # Agrupar por Tipo de Documento (col_forma)
-    doc_types = df[col_forma].unique()
+    # Ordenar para que NF/NOTA venha primeiro
+    doc_types = sorted(df[col_forma].unique(), key=lambda x: (0 if "NF" in str(x).upper() else 1, str(x)))
 
     for doc_type in doc_types:
         df_doc = df[df[col_forma] == doc_type].copy()
@@ -724,7 +726,8 @@ def create_excel(df, output_path, cols_map):
                         for key, block in df_invoice.groupby(grp_keys):
                             row_data = block.iloc[0].copy()
                             row_data[col_valor] = block[col_valor].sum()
-                            if col_obs: row_data[col_obs] = f"Fatura - {key[0]}"
+                            if col_obs:
+                                row_data[col_obs] = f"Fatura - {key[0]}"
                             grouped_rows.append(row_data)
                         group_df = pd.concat([df_no_invoice, pd.DataFrame(grouped_rows)], ignore_index=True)
 
@@ -784,11 +787,14 @@ def create_excel(df, output_path, cols_map):
             # Linha de Total da Aba
             total_row = current_row + 1
             ws.cell(row=total_row, column=val_col_idx-1, value="TOTAL:").font = Font(bold=True)
-            c_total = ws.cell(row=total_row, column=val_col_idx, value=sheet_total)
+            
+            col_letter = get_column_letter(val_col_idx)
+            sum_formula = f"=SUM({col_letter}2:{col_letter}{current_row-1})"
+            c_total = ws.cell(row=total_row, column=val_col_idx, value=sum_formula)
             c_total.number_format = currency_fmt
             c_total.font = Font(bold=True)
 
-            summary_data.append((safe_name, sheet_total))
+            summary_data.append((ws.title, f"{col_letter}{total_row}"))
 
     # --- ABA TOTAIS ---
     if summary_data:
@@ -812,18 +818,16 @@ def create_excel(df, output_path, cols_map):
             c.border = border
 
         r = 2
-        grand_total = 0.0
-        for name, total in summary_data:
+        for name, cell_ref in summary_data:
             ws.cell(row=r, column=1, value=name)
-            c_val = ws.cell(row=r, column=2, value=total)
+            c_val = ws.cell(row=r, column=2, value=f"='{name}'!{cell_ref}")
             c_val.number_format = currency_fmt
-            grand_total += total
             r += 1
 
         # Total Geral
         r += 1
         cell_gt_lbl = ws.cell(row=r, column=1, value="TOTAL GERAL")
-        cell_gt_val = ws.cell(row=r, column=2, value=grand_total)
+        cell_gt_val = ws.cell(row=r, column=2, value=f"=SUM(B2:B{r-1})")
 
         for c in [cell_gt_lbl, cell_gt_val]:
             c.font = Font(bold=True, size=12)
@@ -841,7 +845,7 @@ class PaymentBotApp:
         self.root = root
         self.root.title("Robô de Pagamentos Xfin")
         self.root.geometry("450x300")
-        
+
         self.stop_event = threading.Event()
 
         self.lbl_status = tk.Label(root, text="Pronto para iniciar", wraplength=350)
@@ -855,7 +859,7 @@ class PaymentBotApp:
                                      foreground='white', borderwidth=2, locale='pt_BR', date_pattern='dd/mm/yyyy')
         self.entry_start.pack(side=tk.LEFT, padx=5)
         self.entry_start.set_date(date.today())
-        
+
         tk.Label(frame_dates, text="Fim:").pack(side=tk.LEFT)
         self.entry_end = DateEntry(frame_dates, width=12, background='darkblue',
                                    foreground='white', borderwidth=2, locale='pt_BR', date_pattern='dd/mm/yyyy')
@@ -865,9 +869,10 @@ class PaymentBotApp:
         # Botões de Data Rápida
         frame_quick_dates = tk.Frame(root)
         frame_quick_dates.pack(pady=5)
-        
+
         tk.Button(frame_quick_dates, text="Hoje", command=lambda: self.set_dates(0)).pack(side=tk.LEFT, padx=2)
-        tk.Button(frame_quick_dates, text="Amanhã", command=lambda: self.set_dates(1, start_today=False)).pack(side=tk.LEFT, padx=2)
+        tk.Button(frame_quick_dates, text="Amanhã", command=lambda: self.set_dates(
+            1, start_today=False)).pack(side=tk.LEFT, padx=2)
         tk.Button(frame_quick_dates, text="3 Dias", command=lambda: self.set_dates(3)).pack(side=tk.LEFT, padx=2)
         tk.Button(frame_quick_dates, text="7 Dias", command=lambda: self.set_dates(7)).pack(side=tk.LEFT, padx=2)
         tk.Button(frame_quick_dates, text="15 Dias", command=lambda: self.set_dates(15)).pack(side=tk.LEFT, padx=2)
@@ -881,7 +886,7 @@ class PaymentBotApp:
         self.btn_start = tk.Button(frame_actions, text="Iniciar Extração", command=self.start_thread,
                                    height=2, width=15, bg="#4CAF50", fg="black")
         self.btn_start.pack(side=tk.LEFT, padx=10)
-        
+
         self.btn_cancel = tk.Button(frame_actions, text="Cancelar", command=self.cancel_process,
                                     height=2, width=15, bg="#f44336", fg="black", state="disabled")
         self.btn_cancel.pack(side=tk.LEFT, padx=10)
@@ -907,7 +912,7 @@ class PaymentBotApp:
         self.btn_cancel.config(state="normal")
         self.progress.start(10)
         threading.Thread(target=self.run_pipeline, daemon=True).start()
-        
+
     def cancel_process(self):
         if not self.stop_event.is_set():
             self.update_status("Cancelando... Aguarde.")
@@ -929,9 +934,10 @@ class PaymentBotApp:
             check_drive_access()
 
             # Etapa A: Selenium
-            if self.stop_event.is_set(): return
+            if self.stop_event.is_set():
+                return
             csv_files = download_xfin_report(self.update_status, dt_ini, dt_fim, self.stop_event)
-            
+
             if self.stop_event.is_set():
                 self.finish("Processo cancelado pelo usuário.")
                 return
@@ -939,8 +945,9 @@ class PaymentBotApp:
             print(f"Arquivos CSV baixados: {csv_files}")
 
             # Etapa B: Processamento
-            df_merged, missing, dt_start, dt_end, cols_map = process_data(csv_files, self.update_status, self.stop_event)
-            
+            df_merged, missing, dt_start, dt_end, cols_map = process_data(
+                csv_files, self.update_status, self.stop_event)
+
             if self.stop_event.is_set():
                 self.finish("Processo cancelado pelo usuário.")
                 return
@@ -970,7 +977,7 @@ class PaymentBotApp:
                 if self.stop_event.is_set():
                     self.finish("Processo cancelado pelo usuário.")
                     return
-                    
+
                 # Estrutura de pastas: CONTAS A PAGAR\{ANO}\{Nº MÊS}. {NOME MÊS}\{DD-MM-AA}
                 year = file_date.strftime("%Y")
                 month_num = file_date.month  # Número sem zero à esquerda
@@ -1007,7 +1014,7 @@ class PaymentBotApp:
                 if self.stop_event.is_set():
                     self.finish("Processo cancelado pelo usuário.")
                     return
-                    
+
                 self.update_status("Enviando alerta de fornecedores...")
                 # Cria um CSV temporário com os faltantes para anexar
                 missing_df = pd.DataFrame(missing, columns=['Fornecedor'])

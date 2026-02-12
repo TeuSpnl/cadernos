@@ -8,12 +8,15 @@ from datetime import date, datetime, timedelta
 from tkcalendar import DateEntry
 from dotenv import load_dotenv
 
-# Carrega variáveis de ambiente do caminho de rede especificado
-ENV_PATH = r"\\100.64.1.10\Ti Compartilhado\Financeiro\.env"
-load_dotenv(ENV_PATH)
 
 # --- CONFIGURAÇÕES ---
 DRIVE_PATH = r"\\100.64.1.10\Users\pichau\Documents\Drive Comagro"
+
+# Carrega variáveis de ambiente do caminho de rede especificado
+# ENV_PATH = r"\\100.64.1.10\Ti Compartilhado\Financeiro\.env"
+ENV_PATH = os.path.join(DRIVE_PATH, "Ti Compartilhado", "Financeiro", ".env")
+load_dotenv(ENV_PATH)
+
 TEMP_DIR = os.path.join(os.getcwd(), "temp_xfin")
 CONFIG_FILE = os.path.join(DRIVE_PATH, "CONTAS A PAGAR", "0 Extras", "[CONFIG] Dados Bancários Fornecedores.xlsx")
 XFIN_URL = "https://app.xfin.com.br"
@@ -837,7 +840,7 @@ class PaymentBotApp:
     def __init__(self, root):
         self.root = root
         self.root.title("Robô de Pagamentos Xfin")
-        self.root.geometry("450x400")
+        self.root.geometry("450x300")
         
         self.stop_event = threading.Event()
 
@@ -912,6 +915,7 @@ class PaymentBotApp:
 
     def run_pipeline(self):
         import shutil
+        import pandas as pd
         try:
             import email_alert
         except ImportError:

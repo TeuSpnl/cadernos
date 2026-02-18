@@ -877,6 +877,10 @@ class PaymentBotApp:
         tk.Button(frame_quick_dates, text="7 Dias", command=lambda: self.set_dates(7)).pack(side=tk.LEFT, padx=2)
         tk.Button(frame_quick_dates, text="15 Dias", command=lambda: self.set_dates(15)).pack(side=tk.LEFT, padx=2)
 
+        self.var_merge_days = tk.BooleanVar()
+        self.chk_merge = tk.Checkbutton(root, text="Fundir dias em um único arquivo (Feriados)", variable=self.var_merge_days)
+        self.chk_merge.pack(pady=5)
+
         self.progress = ttk.Progressbar(root, orient="horizontal", length=300, mode="indeterminate")
         self.progress.pack(pady=10)
 
@@ -972,40 +976,73 @@ class PaymentBotApp:
 
             print("Iniciando geração dos arquivos por data e filial...")
 
-            # Loop por Data
-            for file_date, df_date in df_merged.groupby('File_Date'):
-                if self.stop_event.is_set():
-                    self.finish("Processo cancelado pelo usuário.")
-                    return
+            merge_days = self.var_merge_days.get()
 
-                # Estrutura de pastas: CONTAS A PAGAR\{ANO}\{Nº MÊS}. {NOME MÊS}\{DD-MM-AA}
-                year = file_date.strftime("%Y")
-                month_num = file_date.month  # Número sem zero à esquerda
+            if merge_days:
+                # Lógica de Fusão: Pega a data mais distante (max) para a pasta
+                max_file_date = df_merged['File_Date'].max()
+                min_file_date = df_merged['File_Date'].min()
+
+                year = max_file_date.strftime("%Y")
+                month_num = max_file_date.month
                 month_name = months[month_num-1]
                 folder_month = f"{month_num}. {month_name.upper()}"
-                day_folder = file_date.strftime("%d-%m-%y")
+                day_folder = max_file_date.strftime("%d-%m-%y")
 
                 current_base_path = os.path.join(DRIVE_PATH, "CONTAS A PAGAR", year, folder_month, day_folder)
-
                 if not os.path.exists(current_base_path):
                     os.makedirs(current_base_path)
 
-                date_str = file_date.strftime('%d_%m_%Y')
+                date_str_initial = min_file_date.strftime('%d_%m_%Y')
+                date_str_final = max_file_date.strftime('%d_%m_%Y')
 
-                # Loop por Filial dentro da Data
-                for group_name, df_group in df_date.groupby('Filial_Group'):
-                    print(f"Processando: Data {date_str} - Filial {group_name} ({len(df_group)} registros)")
-
-                    if df_group.empty:
-                        continue
-
-                    # Nome do arquivo: Contas_A_Pagar_FILIAL-DD_MM_AAAA.xlsx
+                for group_name, df_group in df_merged.groupby('Filial_Group'):
+                    print(f"Processando (Fundido): {date_str_initial} a {date_str_final} - Filial {group_name}")
+                    
                     suffix = f"_{group_name}" if group_name != "Geral" else ""
-                    fname = f"Contas_A_Pagar{suffix}-{date_str}.xlsx"
+                    if date_str_initial == date_str_final:
+                        fname = f"Contas_A_Pagar{suffix}-{date_str_final}.xlsx"
+                    else:
+                        fname = f"Contas_A_Pagar{suffix}-{date_str_initial}-{date_str_final}.xlsx"
 
                     full_path = os.path.join(current_base_path, fname)
                     create_excel(df_group, full_path, cols_map)
                     generated_files.append(fname)
+            else:
+                # Loop por Data (Comportamento Padrão)
+                for file_date, df_date in df_merged.groupby('File_Date'):
+                    if self.stop_event.is_set():
+                        self.finish("Processo cancelado pelo usuário.")
+                        return
+
+                    # Estrutura de pastas: CONTAS A PAGAR\{ANO}\{Nº MÊS}. {NOME MÊS}\{DD-MM-AA}
+                    year = file_date.strftime("%Y")
+                    month_num = file_date.month  # Número sem zero à esquerda
+                    month_name = months[month_num-1]
+                    folder_month = f"{month_num}. {month_name.upper()}"
+                    day_folder = file_date.strftime("%d-%m-%y")
+
+                    current_base_path = os.path.join(DRIVE_PATH, "CONTAS A PAGAR", year, folder_month, day_folder)
+
+                    if not os.path.exists(current_base_path):
+                        os.makedirs(current_base_path)
+
+                    date_str = file_date.strftime('%d_%m_%Y')
+
+                    # Loop por Filial dentro da Data
+                    for group_name, df_group in df_date.groupby('Filial_Group'):
+                        print(f"Processando: Data {date_str} - Filial {group_name} ({len(df_group)} registros)")
+
+                        if df_group.empty:
+                            continue
+
+                        # Nome do arquivo: Contas_A_Pagar_FILIAL-DD_MM_AAAA.xlsx
+                        suffix = f"_{group_name}" if group_name != "Geral" else ""
+                        fname = f"Contas_A_Pagar{suffix}-{date_str}.xlsx"
+
+                        full_path = os.path.join(current_base_path, fname)
+                        create_excel(df_group, full_path, cols_map)
+                        generated_files.append(fname)
 
             print("Arquivos gerados com sucesso.")
 

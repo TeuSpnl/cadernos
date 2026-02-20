@@ -23,3 +23,6 @@ clientes.xlsx
 remessa_cnab400.rem
 similaridades.xlsx
 arquivos.zip
+dist/
+build/
+*.spec

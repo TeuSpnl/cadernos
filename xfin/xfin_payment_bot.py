@@ -617,8 +617,20 @@ def create_excel(df, output_path, cols_map):
         col_banco = '__Banco_Temp'
 
     # Agrupar por Tipo de Documento (col_forma)
-    # Ordenar para que NF/NOTA venha primeiro
-    doc_types = sorted(df[col_forma].unique(), key=lambda x: (0 if "NF" in str(x).upper() else 1, str(x)))
+    # Ordenar para que NF/NOTA venha primeiro, BOLETO em seguida, depois o PIX e depois os demais em ordem alfabética
+    doc_vals = list(df[col_forma].astype(str).fillna('').unique())
+
+    def _doc_priority(x):
+        xu = x.upper()
+        if "NF" in xu:
+            return (0, xu)
+        if "BOLETO" in xu:
+            return (1, xu)
+        if "PIX" in xu:
+            return (2, xu)
+        return (3, xu)
+
+    doc_types = sorted(doc_vals, key=_doc_priority)
 
     for doc_type in doc_types:
         df_doc = df[df[col_forma] == doc_type].copy()
@@ -750,10 +762,10 @@ def create_excel(df, output_path, cols_map):
                     if supplier != current_supplier:
                         if current_supplier is not None:
                             if start_merge_row < current_row - 1:
-                                ws.merge_cells(start_row=start_merge_row, start_column=8,
-                                               end_row=current_row-1, end_column=8)
-                            ws.cell(row=start_merge_row, column=8, value=supplier_total).number_format = currency_fmt
-                            ws.cell(row=start_merge_row, column=8).alignment = Alignment(vertical='center')
+                                ws.merge_cells(start_row=start_merge_row, start_column=7,
+                                               end_row=current_row-1, end_column=7)
+                            ws.cell(row=start_merge_row, column=7, value=supplier_total).number_format = currency_fmt
+                            ws.cell(row=start_merge_row, column=7).alignment = Alignment(vertical='center')
                         current_supplier = supplier
                         start_merge_row = current_row
                         supplier_total = 0.0
@@ -787,7 +799,7 @@ def create_excel(df, output_path, cols_map):
             # Linha de Total da Aba
             total_row = current_row + 1
             ws.cell(row=total_row, column=val_col_idx-1, value="TOTAL:").font = Font(bold=True)
-            
+
             col_letter = get_column_letter(val_col_idx)
             sum_formula = f"=SUM({col_letter}2:{col_letter}{current_row-1})"
             c_total = ws.cell(row=total_row, column=val_col_idx, value=sum_formula)
@@ -835,6 +847,11 @@ def create_excel(df, output_path, cols_map):
         cell_gt_val.number_format = currency_fmt
 
     # Salvar
+    try:
+        wb.save(output_path)
+    except PermissionError:
+        output_path = output_path + ".error"
+
     wb.save(output_path)
 
 # --- CLASSE PRINCIPAL DA UI ---
@@ -878,7 +895,8 @@ class PaymentBotApp:
         tk.Button(frame_quick_dates, text="15 Dias", command=lambda: self.set_dates(15)).pack(side=tk.LEFT, padx=2)
 
         self.var_merge_days = tk.BooleanVar()
-        self.chk_merge = tk.Checkbutton(root, text="Fundir dias em um único arquivo (Feriados)", variable=self.var_merge_days)
+        self.chk_merge = tk.Checkbutton(
+            root, text="Fundir dias em um único arquivo (Feriados)", variable=self.var_merge_days)
         self.chk_merge.pack(pady=5)
 
         self.progress = ttk.Progressbar(root, orient="horizontal", length=300, mode="indeterminate")
@@ -998,7 +1016,7 @@ class PaymentBotApp:
 
                 for group_name, df_group in df_merged.groupby('Filial_Group'):
                     print(f"Processando (Fundido): {date_str_initial} a {date_str_final} - Filial {group_name}")
-                    
+
                     suffix = f"_{group_name}" if group_name != "Geral" else ""
                     if date_str_initial == date_str_final:
                         fname = f"Contas_A_Pagar{suffix}-{date_str_final}.xlsx"

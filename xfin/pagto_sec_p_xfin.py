@@ -12,6 +12,11 @@ from datetime import date, datetime
 load_dotenv()
 
 DB_CONTROLE = "controle_exportacao.db"
+# Data em que a nova lógica de ID foi implementada.
+# Contas com vencimento ANTES desta data serão verificadas com o ID antigo.
+# Contas com vencimento A PARTIR desta data serão verificadas APENAS com o ID novo.
+DATA_CORTE_LEGADO = date(2026, 3, 4) #Y,M,D - Data da implementação da nova lógica de ID (com vencimento)
+
 
 def inicializar_db_controle():
     """Cria a tabela de histórico se não existir."""
@@ -281,13 +286,26 @@ def main():
         for reg in registros:
             # Cria um dicionário da linha para facilitar acesso
             row = dict(zip(colunas, reg))
-            
-            # Gera ID Único para evitar duplicidade na exportação
+
+            # --- LÓGICA DE ID HÍBRIDA (COM DATA DE CORTE) ---
+
+            # 1. Gera ambos os formatos de ID
             doc_limpo = str(row['NUMDOCUMENTO']).split('/')[0].strip() if row['NUMDOCUMENTO'] else "S_DOC"
-            id_unico = f"DOC_{doc_limpo}_FORN_{row['CDFORNECEDOR']}_PARC_{row['NUMPARCELA']}"
-            
-            # Verifica no SQLite se já enviamos
-            if ja_foi_exportado(id_unico):
+            dt_vencimento_obj = row['DTVENCIMENTO']
+
+            # ID Antigo (Legado): Usado para verificar contas processadas antes da mudança
+            id_antigo = f"DOC_{doc_limpo}_FORN_{row['CDFORNECEDOR']}_PARC_{row['NUMPARCELA']}"
+
+            # ID Novo (Com Vencimento): Garante unicidade para pagamentos recorrentes
+            dt_venc_str = dt_vencimento_obj.strftime('%Y%m%d') if dt_vencimento_obj else "SEM_DATA"
+            id_novo = f"{id_antigo}_VENC_{dt_venc_str}"
+
+            # --- VERIFICAÇÃO DE DUPLICIDADE ---
+            # A. Sempre verifica se o ID novo (mais específico) já existe. Se sim, pula.
+            if ja_foi_exportado(id_novo):
+                continue
+            # B. Se a conta venceu ANTES da data de corte, também verifica o ID antigo para não reimportar o histórico.
+            if dt_vencimento_obj and dt_vencimento_obj.date() < DATA_CORTE_LEGADO and ja_foi_exportado(id_antigo):
                 continue
 
             # --- Processamento Lógico ---
@@ -297,7 +315,7 @@ def main():
 
             # 2. Datas
             dt_emissao = definir_data_emissao(row)
-            dt_vencimento = row['DTVENCIMENTO']
+            dt_vencimento = dt_vencimento_obj # Reutiliza o objeto já pego
 
             # --- Definição do Plano de Contas ---
             nome_conta_seculos = str(row['NOME_SUBSUBCONTA']).strip().upper()
@@ -352,10 +370,10 @@ def main():
             # Inserção direta na lista correta (sem variável 'destino')
             if encontrado:
                 dados_sucesso.append(item)
-                ids_sucesso_para_salvar.append(id_unico)
+                ids_sucesso_para_salvar.append(id_novo)
             else:
                 dados_analise.append(item)
-                ids_analise_para_salvar.append(id_unico)
+                ids_analise_para_salvar.append(id_novo)
 
         # --- Geração do CSV ---
 

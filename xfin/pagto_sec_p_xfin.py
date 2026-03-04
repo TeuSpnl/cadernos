@@ -247,6 +247,7 @@ def main():
     # Pegamos apenas 10 registros > 2026 conforme solicitado
     sql = """
     SELECT
+        A.CDAPAGAR,
         A.CDFORNECEDOR,
         A.NOMEFORNECEDOR,
         A.CDNOTACOMPRA,
@@ -296,9 +297,8 @@ def main():
             # ID Antigo (Legado): Usado para verificar contas processadas antes da mudança
             id_antigo = f"DOC_{doc_limpo}_FORN_{row['CDFORNECEDOR']}_PARC_{row['NUMPARCELA']}"
 
-            # ID Novo (Com Vencimento): Garante unicidade para pagamentos recorrentes
-            dt_venc_str = dt_vencimento_obj.strftime('%Y%m%d') if dt_vencimento_obj else "SEM_DATA"
-            id_novo = f"{id_antigo}_VENC_{dt_venc_str}"
+            # ID Novo (Com CDAPAGAR): Único e imutável, evita duplicidade se mudar vencimento
+            id_novo = f"CDAPAGAR_{row['CDAPAGAR']}"
 
             # --- VERIFICAÇÃO DE DUPLICIDADE ---
             # A. Sempre verifica se o ID novo (mais específico) já existe. Se sim, pula.

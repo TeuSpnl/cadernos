@@ -305,11 +305,10 @@ def main():
             if ja_foi_exportado(id_novo):
                 continue
             # B. Se a conta venceu ANTES da data de corte, também verifica o ID antigo para não reimportar o histórico.
-            if dt_vencimento_obj and dt_vencimento_obj.date() < DATA_CORTE_LEGADO and ja_foi_exportado(id_antigo):
+            elif ja_foi_exportado(id_antigo):
                 continue
 
             # --- Processamento Lógico ---
-
             # 1. Pessoa
             pessoa = row['NOMEFORNECEDOR'] if row['NOMEFORNECEDOR'] else "Consumidor Final"
 

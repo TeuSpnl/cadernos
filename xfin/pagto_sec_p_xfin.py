@@ -15,7 +15,7 @@ DB_CONTROLE = "controle_exportacao.db"
 # Data em que a nova lógica de ID foi implementada.
 # Contas com vencimento ANTES desta data serão verificadas com o ID antigo.
 # Contas com vencimento A PARTIR desta data serão verificadas APENAS com o ID novo.
-DATA_CORTE_LEGADO = date(2026, 3, 4) #Y,M,D - Data da implementação da nova lógica de ID (com vencimento)
+DATA_CORTE_LEGADO = date(2026, 3, 4)  # Y,M,D - Data da implementação da nova lógica de ID (com vencimento)
 
 
 def inicializar_db_controle():
@@ -32,6 +32,7 @@ def inicializar_db_controle():
     conn.commit()
     conn.close()
 
+
 def ja_foi_exportado(id_unico):
     conn = sqlite3.connect(DB_CONTROLE)
     cursor = conn.cursor()
@@ -40,6 +41,7 @@ def ja_foi_exportado(id_unico):
     conn.close()
     return existe
 
+
 def marcar_como_exportado(lista_ids):
     conn = sqlite3.connect(DB_CONTROLE)
     cursor = conn.cursor()
@@ -47,7 +49,7 @@ def marcar_como_exportado(lista_ids):
         try:
             cursor.execute("INSERT INTO historico_pagar (id_unico) VALUES (?)", (id_unico,))
         except sqlite3.IntegrityError:
-            pass # Já existe, segue o baile
+            pass  # Já existe, segue o baile
     conn.commit()
     conn.close()
 
@@ -163,7 +165,7 @@ def definir_tipo_documento(num_conta_cred, descricao, cd_fornecedor):
     termos_dev_cred = ["devolução", "devolucao", "estorno", "garantia", "credito", "crédito"]
     if any(termo in desc_lower for termo in termos_dev_cred):
         return "Crédito/Estorno"
-    
+
     termos_emprestimo = ["empréstimo", "emprestimo", "financiamento", "financiamento", "finame"]
     if any(termo in desc_lower for termo in termos_emprestimo):
         return "Débito Automático"
@@ -237,9 +239,9 @@ def main():
     cursor_filiais.execute(sql_filiais)
     filiais_encontradas = [row[0] for row in cursor_filiais.fetchall()]
     filiais_encontradas.pop(0)  # Remove a filial 0 (Contas sem filial)
-    
+
     print(f"Filiais encontradas com movimentos: {filiais_encontradas}")
-    
+
     arquivos_gerados_prontos = []
     cursor = conn.cursor()
 
@@ -271,15 +273,15 @@ def main():
 
     for cd_filial in filiais_encontradas:
         print(f"\n--- Processando Filial {cd_filial} ---")
-        
+
         cursor.execute(sql, (cd_filial,))
         registros = cursor.fetchall()
 
         # Listas separadas
         dados_sucesso = []
         dados_analise = []
-        ids_sucesso_para_salvar = [] # Lista temporária de IDs processados com sucesso
-        ids_analise_para_salvar = [] # Lista temporária de IDs enviados para análise
+        ids_sucesso_para_salvar = []  # Lista temporária de IDs processados com sucesso
+        ids_analise_para_salvar = []  # Lista temporária de IDs enviados para análise
 
         # Obter nomes das colunas para mapear no dict
         colunas = [desc[0] for desc in cursor.description]
@@ -305,7 +307,7 @@ def main():
             if ja_foi_exportado(id_novo):
                 continue
             # B. Se a conta venceu ANTES da data de corte, também verifica o ID antigo para não reimportar o histórico.
-            elif ja_foi_exportado(id_antigo):
+            elif ja_foi_exportado(id_antigo) and row["CDAPAGAR"] < 107236:
                 continue
 
             # --- Processamento Lógico ---
@@ -314,7 +316,7 @@ def main():
 
             # 2. Datas
             dt_emissao = definir_data_emissao(row)
-            dt_vencimento = dt_vencimento_obj # Reutiliza o objeto já pego
+            dt_vencimento = dt_vencimento_obj  # Reutiliza o objeto já pego
 
             # --- Definição do Plano de Contas ---
             nome_conta_seculos = str(row['NOME_SUBSUBCONTA']).strip().upper()
@@ -389,8 +391,8 @@ def main():
             df_sucesso = df_sucesso.reindex(columns=colunas_finais)
             nome_arq_sucesso = f"arquivos/importacao_xfin_filial_{cd_filial}_PRONTO.csv"
             df_sucesso.to_csv(nome_arq_sucesso, index=False, sep=';', encoding='utf-8-sig')
-            
-            marcar_como_exportado(ids_sucesso_para_salvar) # Persiste no SQLite
+
+            marcar_como_exportado(ids_sucesso_para_salvar)  # Persiste no SQLite
             arquivos_gerados_prontos.append(nome_arq_sucesso)
             print(f"SUCESSO: '{nome_arq_sucesso}' gerado com {len(dados_sucesso)} registros.")
 
@@ -400,8 +402,8 @@ def main():
             df_analise = df_analise.reindex(columns=colunas_finais)
             nome_arq_analise = f"arquivos/importacao_xfin_filial_{cd_filial}_PARA_ANALISE.csv"
             df_analise.to_csv(nome_arq_analise, index=False, sep=';', encoding='utf-8-sig')
-            
-            marcar_como_exportado(ids_analise_para_salvar) # Persiste no SQLite também os enviados para análise
+
+            marcar_como_exportado(ids_analise_para_salvar)  # Persiste no SQLite também os enviados para análise
             # Envia e-mail de alerta IMEDIATAMENTE para esta filial
             email_alert.enviar_email_erro(nome_arq_analise, len(dados_analise))
             print(f"ATENÇÃO: '{nome_arq_analise}' gerado com {len(dados_analise)} registros para revisão.")

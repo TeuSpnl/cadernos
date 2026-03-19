@@ -471,11 +471,11 @@ def create_excel(df, output_path, cols_map):
 
             if is_pix_layout:
                 headers = ["Vencimento", "Nome Recebedor", "Fornecedor",
-                           "Chave PIX", "Observação", "Valor", "Valor Total"]
-                val_col_idx = 7
+                           "Chave PIX", "Nº Doc", "Observação", "Valor", "Valor Total"]
+                val_col_idx = 8
             else:
-                headers = ["Vencimento", "Banco/Conta", "Fornecedor", "CNPJ", "Observação", "Valor"]
-                val_col_idx = 6
+                headers = ["Vencimento", "Banco/Conta", "Fornecedor", "CNPJ", "Nº Doc", "Observação", "Valor"]
+                val_col_idx = 7
 
             # Cabeçalho
             for col_num, header in enumerate(headers, 1):
@@ -537,10 +537,10 @@ def create_excel(df, output_path, cols_map):
                     if supplier != current_supplier:
                         if current_supplier is not None:
                             if start_merge_row < current_row - 1:
-                                ws.merge_cells(start_row=start_merge_row, start_column=7,
-                                               end_row=current_row-1, end_column=7)
-                            ws.cell(row=start_merge_row, column=7, value=supplier_total).number_format = currency_fmt
-                            ws.cell(row=start_merge_row, column=7).alignment = Alignment(vertical='center')
+                                ws.merge_cells(start_row=start_merge_row, start_column=8,
+                                               end_row=current_row-1, end_column=8)
+                            ws.cell(row=start_merge_row, column=8, value=supplier_total).number_format = currency_fmt
+                            ws.cell(row=start_merge_row, column=8).alignment = Alignment(vertical='center')
                         current_supplier = supplier
                         start_merge_row = current_row
                         supplier_total = 0.0
@@ -550,8 +550,9 @@ def create_excel(df, output_path, cols_map):
                     ws.cell(row=current_row, column=2, value=row.get('Config_Nome Titular', ''))
                     ws.cell(row=current_row, column=3, value=supplier)
                     ws.cell(row=current_row, column=4, value=row.get('Config_Chave PIX', ''))
-                    ws.cell(row=current_row, column=5, value=row[col_obs] if col_obs and col_obs in row else "")
-                    ws.cell(row=current_row, column=6, value=val).number_format = currency_fmt
+                    ws.cell(row=current_row, column=5, value=row[col_doc] if col_doc and col_doc in row else "")
+                    ws.cell(row=current_row, column=6, value=row[col_obs] if col_obs and col_obs in row else "")
+                    ws.cell(row=current_row, column=7, value=val).number_format = currency_fmt
                 else:
                     # Layout Padrão
                     banco_val = row.get('Config_Banco', '')
@@ -559,17 +560,18 @@ def create_excel(df, output_path, cols_map):
                     ws.cell(row=current_row, column=2, value=banco_val)
                     ws.cell(row=current_row, column=3, value=row[col_forn])
                     ws.cell(row=current_row, column=4, value=row.get('CNPJ_Final', ''))
-                    ws.cell(row=current_row, column=5, value=row[col_obs] if col_obs and col_obs in row else "")
-                    ws.cell(row=current_row, column=6, value=val).number_format = currency_fmt
+                    ws.cell(row=current_row, column=5, value=row[col_doc] if col_doc and col_doc in row else "")
+                    ws.cell(row=current_row, column=6, value=row[col_obs] if col_obs and col_obs in row else "")
+                    ws.cell(row=current_row, column=7, value=val).number_format = currency_fmt
 
                 current_row += 1
 
             # Finalizar último grupo PIX
             if is_pix_layout and current_supplier is not None:
                 if start_merge_row < current_row - 1:
-                    ws.merge_cells(start_row=start_merge_row, start_column=7, end_row=current_row-1, end_column=7)
-                ws.cell(row=start_merge_row, column=7, value=supplier_total).number_format = currency_fmt
-                ws.cell(row=start_merge_row, column=7).alignment = Alignment(vertical='center')
+                    ws.merge_cells(start_row=start_merge_row, start_column=8, end_row=current_row-1, end_column=8)
+                ws.cell(row=start_merge_row, column=8, value=supplier_total).number_format = currency_fmt
+                ws.cell(row=start_merge_row, column=8).alignment = Alignment(vertical='center')
 
             # Linha de Total da Aba
             total_row = current_row + 1
@@ -636,7 +638,7 @@ class PaymentBotApp:
     def __init__(self, root):
         self.root = root
         self.root.title("Robô de Pagamentos Xfin")
-        self.root.geometry("450x300")
+        self.root.geometry("450x400")
 
         self.stop_event = threading.Event()
 
@@ -661,13 +663,17 @@ class PaymentBotApp:
         # Botões de Data Rápida
         frame_quick_dates = tk.Frame(root)
         frame_quick_dates.pack(pady=5)
+        frame_quick_dates_2 = tk.Frame(root)
+        frame_quick_dates_2.pack(pady=5)
 
         tk.Button(frame_quick_dates, text="Hoje", command=lambda: self.set_dates(0)).pack(side=tk.LEFT, padx=2)
         tk.Button(frame_quick_dates, text="Amanhã", command=lambda: self.set_dates(
             1, start_today=False)).pack(side=tk.LEFT, padx=2)
-        tk.Button(frame_quick_dates, text="3 Dias", command=lambda: self.set_dates(3)).pack(side=tk.LEFT, padx=2)
-        tk.Button(frame_quick_dates, text="7 Dias", command=lambda: self.set_dates(7)).pack(side=tk.LEFT, padx=2)
-        tk.Button(frame_quick_dates, text="15 Dias", command=lambda: self.set_dates(15)).pack(side=tk.LEFT, padx=2)
+        tk.Button(frame_quick_dates, text="dps amanhã", command=lambda: self.set_dates(
+            2, start_today=False)).pack(side=tk.LEFT, padx=2)
+        tk.Button(frame_quick_dates_2, text="3 Dias", command=lambda: self.set_dates(3)).pack(side=tk.LEFT, padx=2)
+        tk.Button(frame_quick_dates_2, text="7 Dias", command=lambda: self.set_dates(7)).pack(side=tk.LEFT, padx=2)
+        tk.Button(frame_quick_dates_2, text="15 Dias", command=lambda: self.set_dates(15)).pack(side=tk.LEFT, padx=2)
 
         self.var_merge_days = tk.BooleanVar()
         self.chk_merge = tk.Checkbutton(
@@ -694,10 +700,10 @@ class PaymentBotApp:
             self.entry_start.set_date(today)
             self.entry_end.set_date(today + timedelta(days=days))
         else:
-            # Case for "Amanhã" where start is also tomorrow
-            tomorrow = today + timedelta(days=1)
-            self.entry_start.set_date(tomorrow)
-            self.entry_end.set_date(tomorrow)
+            # Starts at "today + days" and ends at "today + days"
+            target_date = today + timedelta(days=days)
+            self.entry_start.set_date(target_date)
+            self.entry_end.set_date(target_date)
 
     def update_status(self, text):
         self.lbl_status.config(text=text)

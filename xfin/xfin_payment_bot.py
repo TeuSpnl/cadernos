@@ -1,13 +1,12 @@
-import os
-import sys
-import time
-import threading
-import tkinter as tk
-import requests
 from tkinter import messagebox, ttk
 from datetime import date, datetime, timedelta
 from tkcalendar import DateEntry
 from dotenv import load_dotenv
+import tkinter as tk
+import pandas as pd
+import threading
+import requests
+import os
 
 
 # --- CONFIGURAÇÕES ---
@@ -92,7 +91,6 @@ def get_date_range():
 
 
 def format_currency(value):
-    import pandas as pd
     if pd.isna(value):
         return "R$ 0,00"
     try:
@@ -102,7 +100,6 @@ def format_currency(value):
 
 
 def create_default_config(path):
-    import pandas as pd
     """Cria o arquivo de configuração padrão com as colunas necessárias."""
     try:
         # Garante que o diretório existe
@@ -153,7 +150,6 @@ def identify_branch_group(val):
 
 
 def get_file_date(dt):
-    import pandas as pd
     """Agrupa datas de fim de semana para a segunda-feira."""
     if pd.isna(dt):
         return date.today()
@@ -169,8 +165,8 @@ def get_file_date(dt):
 
 # --- INTEGRAÇÃO API XFIN ---
 
+
 def fetch_xfin_data_api(status_callback, dt_ini, dt_fim, stop_event):
-    import pandas as pd
 
     if not TK_XFIN:
         raise Exception("Token XFIN (TK_XFIN) não encontrado no arquivo .env. Configure-o para acessar a API.")
@@ -217,7 +213,7 @@ def fetch_xfin_data_api(status_callback, dt_ini, dt_fim, stop_event):
             total_paginas = data.get("totalPaginas", 1)
             if pagina >= total_paginas:
                 break
-            
+
             pagina += 1
 
         except Exception as e:
@@ -230,7 +226,6 @@ def fetch_xfin_data_api(status_callback, dt_ini, dt_fim, stop_event):
 
 
 def process_data(df_xfin, status_callback, stop_event):
-    import pandas as pd
     import re
     status_callback("Processando dados da API...")
 
@@ -364,7 +359,6 @@ def clean_sheet_name(name):
 
 def create_excel(df, output_path, cols_map):
     import openpyxl
-    import pandas as pd
     from openpyxl.styles import Font, PatternFill, Border, Side, Alignment
     from openpyxl.utils import get_column_letter
     col_forn, col_venc, col_valor, col_doc, col_obs, col_forma, col_banco = cols_map
@@ -564,6 +558,7 @@ def create_excel(df, output_path, cols_map):
                     ws.cell(row=current_row, column=6, value=row[col_obs] if col_obs and col_obs in row else "")
                     ws.cell(row=current_row, column=7, value=val).number_format = currency_fmt
 
+                ws.column_dimensions['E'].width = 7  # Nº Doc mais estreito
                 current_row += 1
 
             # Finalizar último grupo PIX
@@ -723,7 +718,6 @@ class PaymentBotApp:
 
     def run_pipeline(self):
         import shutil
-        import pandas as pd
         try:
             import email_alert
         except ImportError:

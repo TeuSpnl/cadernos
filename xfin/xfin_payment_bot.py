@@ -225,7 +225,7 @@ def fetch_xfin_data_api(status_callback, dt_ini, dt_fim, stop_event):
 # --- PROCESSAMENTO DE DADOS ---
 
 
-def process_data(df_xfin, status_callback, stop_event):
+def process_data(df_xfin, status_callback, stop_event, dt_ini_ui=None, dt_fim_ui=None):
     import re
     status_callback("Processando dados da API...")
 
@@ -241,8 +241,91 @@ def process_data(df_xfin, status_callback, stop_event):
     col_banco = COL_XFIN_BANCO_PAGAR
     col_filial = COL_XFIN_FILIAL
 
-    # Converter vencimento para datetime
-    df_xfin[col_vencimento] = pd.to_datetime(df_xfin[col_vencimento], dayfirst=True, errors='coerce')
+    def _parse_vencimento_series(series: pd.Series, dt_ini_str: str | None, dt_fim_str: str | None) -> pd.Series:
+        """
+        Converte a série de datas do Xfin para datetime de forma robusta.
+
+        Problema que isso resolve:
+        - Alguns payloads podem vir como '04/01/2026' (MM/DD/YYYY) e outros como '01/04/2026' (DD/MM/YYYY).
+        - Se interpretarmos errado, '01/04' (1º de Abril) vira 4 de Janeiro e o robô salva em pastas "trocadas".
+        """
+
+        # Intervalo escolhido na UI (sempre dd/mm/yyyy), usado para desambiguar datas com barras
+        ini = None
+        fim = None
+        try:
+            if dt_ini_str:
+                ini = datetime.strptime(dt_ini_str, "%d/%m/%Y").date()
+            if dt_fim_str:
+                fim = datetime.strptime(dt_fim_str, "%d/%m/%Y").date()
+        except Exception:
+            ini = None
+            fim = None
+
+        s = series.copy()
+        # Se já for datetime, mantém
+        if pd.api.types.is_datetime64_any_dtype(s):
+            return s
+
+        s_str = s.astype(str).str.strip()
+        s_str = s_str.replace({"None": "", "nan": "", "NaT": ""})
+
+        out = pd.Series(pd.NaT, index=s_str.index, dtype="datetime64[ns]")
+
+        # 1) ISO (yyyy-mm-dd...) é não-ambíguo
+        iso_mask = s_str.str.match(r"^\d{4}-\d{2}-\d{2}")
+        if iso_mask.any():
+            out.loc[iso_mask] = pd.to_datetime(s_str.loc[iso_mask], errors="coerce")
+
+        # 2) Datas com barras (dd/mm/yyyy ou mm/dd/yyyy)
+        slash_mask = s_str.str.match(r"^\d{1,2}/\d{1,2}/\d{2,4}$")
+        if slash_mask.any():
+            slash_vals = s_str.loc[slash_mask]
+            parts = slash_vals.str.split("/", expand=True)
+            p1 = pd.to_numeric(parts[0], errors="coerce")
+            p2 = pd.to_numeric(parts[1], errors="coerce")
+
+            # Casos não-ambíguos
+            ddmm_mask = (p1 > 12)  # 13/04/... só pode ser dd/mm
+            mmdd_mask = (p2 > 12)  # 04/13/... só pode ser mm/dd
+
+            if ddmm_mask.any():
+                idx = slash_vals.index[ddmm_mask]
+                out.loc[idx] = pd.to_datetime(slash_vals.loc[idx], dayfirst=True, errors="coerce")
+            if mmdd_mask.any():
+                idx = slash_vals.index[mmdd_mask]
+                out.loc[idx] = pd.to_datetime(slash_vals.loc[idx], dayfirst=False, errors="coerce")
+
+            # Casos ambíguos (1..12 / 1..12)
+            amb_mask = ~(ddmm_mask | mmdd_mask)
+            if amb_mask.any():
+                idx = slash_vals.index[amb_mask]
+                parsed_dayfirst = pd.to_datetime(slash_vals.loc[idx], dayfirst=True, errors="coerce")
+                parsed_monthfirst = pd.to_datetime(slash_vals.loc[idx], dayfirst=False, errors="coerce")
+
+                # Se tivermos intervalo da UI, escolhe a interpretação que mais cai dentro do intervalo
+                if ini is not None and fim is not None:
+                    d1 = parsed_dayfirst.dt.date
+                    d2 = parsed_monthfirst.dt.date
+                    score1 = ((d1 >= ini) & (d1 <= fim)).sum()
+                    score2 = ((d2 >= ini) & (d2 <= fim)).sum()
+                    chosen = parsed_dayfirst if score1 >= score2 else parsed_monthfirst
+                else:
+                    # Padrão BR quando não dá para desambiguar
+                    chosen = parsed_dayfirst
+
+                out.loc[idx] = chosen
+
+        # 3) Fallback: tenta parse genérico
+        remaining = out.isna() & (s_str != "")
+        if remaining.any():
+            out.loc[remaining] = pd.to_datetime(s_str.loc[remaining], errors="coerce")
+
+        return out
+
+    # Converter vencimento para datetime (robusto para DD/MM vs MM/DD)
+    # dt_ini_ui/dt_fim_ui vêm da UI e ajudam a desambiguar datas com barras.
+    df_xfin[col_vencimento] = _parse_vencimento_series(df_xfin[col_vencimento], dt_ini_ui, dt_fim_ui)
 
     df_filtered = df_xfin.copy()
 
@@ -255,7 +338,7 @@ def process_data(df_xfin, status_callback, stop_event):
         end_date = date.today()
 
     if df_filtered.empty:
-        return None, [], start_date, end_date
+        return None, [], start_date, end_date, None
 
     # 2. Ler Configuração Bancária
     status_callback("Lendo dados bancários...")
@@ -745,7 +828,7 @@ class PaymentBotApp:
 
             # Etapa B: Processamento
             df_merged, missing, dt_start, dt_end, cols_map = process_data(
-                df_xfin, self.update_status, self.stop_event)
+                df_xfin, self.update_status, self.stop_event, dt_ini_ui=dt_ini, dt_fim_ui=dt_fim)
 
             if self.stop_event.is_set():
                 self.finish("Processo cancelado pelo usuário.")

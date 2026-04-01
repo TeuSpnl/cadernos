@@ -124,13 +124,79 @@ def fetch_data(start_date, end_date):
         # Convertendo valores para float (se necessário)
         if not total_df.empty:
             total_df["Total Vendas"] = total_df["Total Vendas"].astype(float)
+            total_df["Data"] = pd.to_datetime(total_df["Data"])
         if not avg_df.empty:
             avg_df["Média Diária"] = avg_df["Média Diária"].astype(float)
+
+        # Total por vendedor no período completo
+        if total_df.empty:
+            total_periodo_por_vendedor_df = pd.DataFrame(columns=["Vendedor", "Total Período"])
+            total_geral_periodo_df = pd.DataFrame(
+                [{"Data Inicial": start_date, "Data Final": end_date, "Total Geral Período": 0.0}]
+            )
+            resumo_semanal_vendedor_df = pd.DataFrame(columns=["Vendedor", "Semana", "Total Vendas"])
+            resumo_semanal_geral_df = pd.DataFrame(columns=["Semana", "Total Vendas"])
+            resumo_mensal_vendedor_df = pd.DataFrame(columns=["Vendedor", "Mês", "Total Vendas"])
+            resumo_mensal_geral_df = pd.DataFrame(columns=["Mês", "Total Vendas"])
+        else:
+            total_periodo_por_vendedor_df = (
+                total_df.groupby("Vendedor", as_index=False)["Total Vendas"]
+                .sum()
+                .rename(columns={"Total Vendas": "Total Período"})
+                .sort_values("Total Período", ascending=False)
+            )
+
+            total_geral_periodo_df = pd.DataFrame(
+                [
+                    {
+                        "Data Inicial": start_date,
+                        "Data Final": end_date,
+                        "Total Geral Período": float(total_df["Total Vendas"].sum()),
+                    }
+                ]
+            )
+
+            # Relatório semanal (semanas iniciando no domingo)
+            # Em pandas, 'W-SAT' significa semanas que terminam no sábado (logo começam no domingo).
+            semana_period = total_df["Data"].dt.to_period("W-SAT")
+            total_df_semanal = total_df.assign(
+                Semana=semana_period.apply(lambda p: f"{p.start_time.date()} a {p.end_time.date()}")
+            )
+            resumo_semanal_vendedor_df = (
+                total_df_semanal.groupby(["Vendedor", "Semana"], as_index=False)["Total Vendas"]
+                .sum()
+                .sort_values(["Semana", "Vendedor"])
+            )
+            resumo_semanal_geral_df = (
+                total_df_semanal.groupby(["Semana"], as_index=False)["Total Vendas"]
+                .sum()
+                .sort_values(["Semana"])
+            )
+
+            # Relatório mensal
+            mes_period = total_df["Data"].dt.to_period("M")
+            total_df_mensal = total_df.assign(Mês=mes_period.astype(str))
+            resumo_mensal_vendedor_df = (
+                total_df_mensal.groupby(["Vendedor", "Mês"], as_index=False)["Total Vendas"]
+                .sum()
+                .sort_values(["Mês", "Vendedor"])
+            )
+            resumo_mensal_geral_df = (
+                total_df_mensal.groupby(["Mês"], as_index=False)["Total Vendas"]
+                .sum()
+                .sort_values(["Mês"])
+            )
 
         # Salvar resultados em uma planilha Excel
         with pd.ExcelWriter("arquivos/vendas_vendedores.xlsx") as writer:
             total_df.to_excel(writer, sheet_name="Total Diário", index=False)
             avg_df.to_excel(writer, sheet_name="Média Diária", index=False)
+            total_periodo_por_vendedor_df.to_excel(writer, sheet_name="Total Período", index=False)
+            total_geral_periodo_df.to_excel(writer, sheet_name="Total Geral", index=False)
+            resumo_semanal_vendedor_df.to_excel(writer, sheet_name="Resumo Semanal", index=False)
+            resumo_semanal_geral_df.to_excel(writer, sheet_name="Semanal (Geral)", index=False)
+            resumo_mensal_vendedor_df.to_excel(writer, sheet_name="Resumo Mensal", index=False)
+            resumo_mensal_geral_df.to_excel(writer, sheet_name="Mensal (Geral)", index=False)
 
         print("Planilha Excel criada com sucesso: vendas_vendedores.xlsx")
         cursor.close()

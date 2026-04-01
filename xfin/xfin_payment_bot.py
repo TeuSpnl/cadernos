@@ -937,7 +937,7 @@ class PaymentBotApp:
                 missing_df.to_csv(missing_csv, index=False)
                 email_alert.enviar_email_erro(missing_csv, len(missing), True)
 
-            self.finish(f"Sucesso!\nGerados: {len(generated_files)} arquivos\nSalvos nas pastas de data.")
+            self.finish(f"Sucesso!\nGerados: {len(generated_files)} arquivos\nSalvos em {current_base_path}.")
 
         except Exception as e:
             self.finish(f"Erro: {str(e)}", error=True)

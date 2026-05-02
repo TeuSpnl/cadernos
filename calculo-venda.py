@@ -48,7 +48,7 @@ def main():
             try:
                 # Converte para número e faz o cálculo
                 valor_base = float(decoded_str)
-                resultado = valor_base / 0.59
+                resultado = valor_base / 0.59   
                 
                 # Formatação PT-BR
                 res_formatado = f"{resultado:.2f}".replace('.', ',')

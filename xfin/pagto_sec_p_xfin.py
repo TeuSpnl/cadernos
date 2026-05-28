@@ -196,10 +196,12 @@ def definir_banco(num_conta_cred):
         5: "Sicoob",
         6: "Banco Inter Peças",
         7: "Banco do Nordeste",
-        8: "Banco do Brasil Peças",
+        8: "Banco Itaú Peças",
         9: "Caixa Empresa Serviços",
         10: "Banco Inter Serviços",
-        11: "Banco do Brasil Serviços"
+        11: "Banco do Brasil Serviços",
+        12: "Mercado Pago",
+        13: "Banco Itaú Peças",
     }
     return mapa_bancos.get(num_conta_cred, "")  # Retorna vazio se não achar
 

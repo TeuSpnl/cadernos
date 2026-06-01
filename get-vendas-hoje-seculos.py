@@ -113,11 +113,11 @@ def carregar_movimentos_do_dia(conn, data_iso: str) -> pd.DataFrame:
         return pd.DataFrame(
             columns=[
                 'TIPO',
-                'CODIGO',
+                'Nº PEDIDO',
                 'NOME_CLIENTE',
                 'DATA_MOVIMENTO',
-                'VALOR',
-                'FORMA_PAGAMENTO',
+                'VALOR C/ DESC.',
+                'FORMA PAG.',
             ]
         )
 
@@ -136,6 +136,16 @@ def carregar_movimentos_do_dia(conn, data_iso: str) -> pd.DataFrame:
         ascending=[True, True, True],
         kind='mergesort',
     ).reset_index(drop=True)
+    
+    # Define os nomes das colunas para o Excel
+    df_final.columns = [
+        'TIPO',
+        'Nº PEDIDO',
+        'NOME_CLIENTE',
+        'DATA_MOVIMENTO',
+        'VALOR C/ DESC.',
+        'FORMA PAG.',
+    ]
 
     return df_final
 

@@ -115,6 +115,61 @@ class RenomeadorComprovantes:
                 return f"PAGAMENTOS_BB_{data_fmt}"
         return None
 
+    def _data_do_caminho(self, caminho_arq):
+        """Tenta extrair uma data DD-MM-YY do nome do arquivo ou da pasta pai.
+        Útil para DDA Itaú em formato imagem (sem texto extraível)."""
+        if not caminho_arq:
+            return None
+
+        # 1) Tenta no nome do próprio arquivo (ex: PAGAMENTOS_DDA_ITAU_29-05-26.pdf)
+        nome = os.path.basename(caminho_arq)
+        match = re.search(r'(\d{2})[-_/](\d{2})[-_/](\d{2,4})', nome)
+        if match:
+            dia, mes, ano = match.groups()
+            if len(ano) == 4:
+                ano = ano[-2:]
+            return f"{dia}-{mes}-{ano}"
+
+        # 2) Tenta na pasta pai (ex: ".../05. MAIO/29-05-26/arquivo.pdf")
+        pasta = os.path.basename(os.path.dirname(caminho_arq))
+        match_p = re.match(r'^(\d{2})[-_](\d{2})[-_](\d{2,4})$', pasta)
+        if match_p:
+            dia, mes, ano = match_p.groups()
+            if len(ano) == 4:
+                ano = ano[-2:]
+            return f"{dia}-{mes}-{ano}"
+
+        return None
+
+    def processar_itau_dda(self, texto, caminho_arq=None):
+        """Detecta se é o arquivo de lote / consolidado DDA do Itaú.
+
+        Dois sub-casos:
+        a) PDF com texto extraível (relatório "Lançamentos do período" gerado pelo Itaú web).
+        b) PDF imagem (Microsoft Print To PDF), sem texto. Aí caímos em heurística pelo nome do arquivo.
+        """
+        # Caso A: relatório de lançamentos do Itaú (tem texto extraível)
+        if "Lançamentos do período" in texto and (
+            "COMAGRO" in texto.upper() or "openhtmltopdf" in texto.lower()
+        ):
+            data_match = re.search(r'Lançamentos do período:\s*(\d{2}/\d{2}/\d{4})', texto)
+            if data_match:
+                data_fmt = self.formatar_data(data_match.group(1))
+                return f"PAGAMENTOS_ITAU_{data_fmt}"
+
+        # Caso B: PDF imagem (Print To PDF do Itaú). Sem texto, mas o nome ou a pasta
+        # ainda permitem reconstruir a data.
+        if caminho_arq and (not texto or len(texto.strip()) < 50):
+            nome_orig_upper = os.path.basename(caminho_arq).upper()
+            # Heurística: nome sugere DDA / Itaú (o usuário costuma nomear assim ao baixar)
+            if ("ITAU" in nome_orig_upper or "ITAÚ" in nome_orig_upper
+                    or "DDA" in nome_orig_upper):
+                data_fmt = self._data_do_caminho(caminho_arq)
+                if data_fmt:
+                    return f"PAGAMENTOS_ITAU_{data_fmt}"
+
+        return None
+
     def refinar_por_data(self, grupo, data_pgto):
         if not data_pgto:
             return None
@@ -130,6 +185,25 @@ class RenomeadorComprovantes:
                     return regra["descricao"]
         return None
 
+    def _remover_rodape_legal(self, texto):
+        """Remove rodapés legais padrão dos comprovantes para não contaminar regras.
+
+        Exemplo concreto: o Itaú coloca "em dias úteis, das 9h às 18h" no rodapé,
+        e o termo "das" estava sendo confundido com a sigla DAS (impostos).
+        """
+        marcadores_corte = [
+            "Em caso de dúvidas",  # Itaú
+            "Em caso de duvidas",
+            "SAC 0800",
+            "Ouvidoria:",
+        ]
+        idx_min = len(texto)
+        for marcador in marcadores_corte:
+            idx = texto.find(marcador)
+            if idx != -1 and idx < idx_min:
+                idx_min = idx
+        return texto[:idx_min]
+
     def extrair_dados(self, texto):
         dados = {
             "data_pgto": "",
@@ -139,6 +213,11 @@ class RenomeadorComprovantes:
             "data_ref": ""
         }
 
+        # Texto sem o rodapé legal padrão, usado para casar regras genéricas.
+        # O texto original (`texto`) continua sendo usado nos blocos de banco,
+        # porque alguns campos (autenticação, CTRL, etc.) ficam depois do rodapé.
+        texto_limpo = self._remover_rodape_legal(texto)
+
         # 1. Tentar extrair DATA DE PAGAMENTO
         # Padrões comuns: 05/01/2026
         match_data = re.search(r'(\d{2}/\d{2}/\d{4})', texto)
@@ -146,7 +225,7 @@ class RenomeadorComprovantes:
             dados["data_pgto"] = self.formatar_data(match_data.group(1))
 
         # 2. Aplicar Regras do JSON (Prioridade na Descrição)
-        texto_upper = texto.upper()
+        texto_upper = texto_limpo.upper()
         for regra in self.config.get("regras", []):
             grupo = regra.get("grupo", "")
             termos = regra.get("termos", [])
@@ -162,6 +241,10 @@ class RenomeadorComprovantes:
                 break
 
         # 3. Identificar Banco e Estrutura para Recebedor/Doc
+
+        # Indica se já temos uma descrição específica vinda do banco (Itaú etc.).
+        # Quando True, evitamos que o restante do fluxo (recorrentes, "SALARIO", etc.) sobrescreva.
+        descricao_especifica = False
 
         # --- BANCO DO BRASIL (SISBB) ---
         if "SISBB" in texto or "BANCO DO BRASIL" in texto:
@@ -179,8 +262,106 @@ class RenomeadorComprovantes:
                 elif dados["descricao"] == "PGTO":  # Só sobrescreve se ainda for default
                     dados["descricao"] = valor
 
+        # --- BANCO ITAÚ ---
+        # Marcadores típicos: "Banco Itaú", "Itaú Empresas", "via Sispag",
+        # "agente arrecadador:CNC:341 Banco Itaú S/A".
+        # IMPORTANTE: deve vir ANTES do Inter, porque o Itaú menciona "Internet"
+        # no rodapé ("Itaú Empresas na Internet") e isso fazia o branch do Inter
+        # capturar erroneamente o comprovante do Itaú.
+        elif ("Banco Itaú" in texto or "Itaú Empresas" in texto
+              or "via Sispag" in texto or "CNC:341" in texto):
+
+            # === Caso A: DARF (CSLL, IRPJ, COFINS, etc.) ===
+            if "Comprovante de pagamento - DARF" in texto:
+                # Data: padrão "data do pagamento:DD/MM/AAAA"
+                m_data = re.search(r'data do pagamento:\s*(\d{2}/\d{2}/\d{4})', texto, re.IGNORECASE)
+                if m_data:
+                    dados["data_pgto"] = self.formatar_data(m_data.group(1))
+
+                # "identificação no extrato:" carrega o tributo legível (CSLL, IRPJ, ...)
+                m_id = re.search(r'identificação no extrato:\s*(.+)', texto, re.IGNORECASE)
+                if m_id:
+                    id_extrato = m_id.group(1).strip().split('\n')[0].strip()
+                    if id_extrato:
+                        dados["descricao"] = id_extrato
+                        descricao_especifica = True
+
+                # Número do documento do DARF (útil como rastreio)
+                m_ndoc = re.search(r'número do documento:\s*([\d.\-]+)', texto, re.IGNORECASE)
+                if m_ndoc and not dados["num_doc"]:
+                    dados["num_doc"] = m_ndoc.group(1).strip()
+
+                # Recebedor padrão para DARF é a Receita Federal
+                if not dados["nome_recebedor"]:
+                    dados["nome_recebedor"] = "RECEITA FEDERAL"
+
+            # === Caso B: Boleto comum (Cartão Caixa, fornecedor, etc.) ===
+            elif "Comprovante de pagamento de boleto" in texto:
+                # Data: "Data de pagamento: DD/MM/AAAA"
+                m_data_b = re.search(r'Data de pagamento:\s*(\d{2}/\d{2}/\d{4})', texto, re.IGNORECASE)
+                if m_data_b:
+                    dados["data_pgto"] = self.formatar_data(m_data_b.group(1))
+
+                # Beneficiário: a "Razão Social" costuma vir mais limpa que "Beneficiário".
+                m_razao = re.search(r'Razão Social:\s*(.+?)(?:\s+\d{2}\.\d{3}\.\d{3}/|\n)', texto)
+                if m_razao:
+                    dados["nome_recebedor"] = m_razao.group(1).strip()
+                else:
+                    m_benef = re.search(r'Beneficiário:\s*(.+?)(?:\s+CPF|\n)', texto)
+                    if m_benef:
+                        dados["nome_recebedor"] = m_benef.group(1).strip()
+
+            # === Caso C: Concessionárias (VIVO, COELBA via Itaú, etc.) ===
+            elif "Comprovante de Pagamento de concessionárias" in texto:
+                # Data: "Operação efetuada em DD/MM/AAAA"
+                m_data_c = re.search(r'Operação efetuada em (\d{2}/\d{2}/\d{4})', texto)
+                if m_data_c:
+                    dados["data_pgto"] = self.formatar_data(m_data_c.group(1))
+
+                # As "Informações fornecidas pelo pagador" trazem o rótulo legível
+                # (ex: "VIVO INTERNET LOJA", "VIVO MONITORA OFICINA"). Por causa do
+                # layout em colunas, o pdfplumber às vezes intercala "pagador:"
+                # entre o rótulo "Informações fornecidas pelo" e o valor.
+                info_pagador = ""
+                m_info = re.search(
+                    r'Informações fornecidas pelo\s*\n?\s*(.+?)\s*\n?\s*pagador:',
+                    texto, re.IGNORECASE | re.DOTALL
+                )
+                if m_info:
+                    info_pagador = re.sub(r'\s+', ' ', m_info.group(1)).strip()
+                else:
+                    # Fallback: layout em colunas. Ex.:
+                    #   "Informações fornecidas pelo"
+                    #   "VIVO INTERNET LOJA"
+                    #   "pagador:"
+                    idx = texto.find("Informações fornecidas pelo")
+                    if idx != -1:
+                        bloco = texto[idx:].split('\n')
+                        for linha in bloco[1:6]:
+                            lin = linha.strip()
+                            if not lin or lin.lower().startswith("pagador"):
+                                continue
+                            info_pagador = lin
+                            break
+
+                if info_pagador:
+                    dados["descricao"] = info_pagador
+                    descricao_especifica = True
+
+                # Concessionária (linha "0041 - VIVO-BA" / "0084 - TELEFONICA EMPRESAS")
+                # serve como nome do recebedor caso a info do pagador esteja vazia.
+                if not dados["nome_recebedor"]:
+                    m_conc = re.search(r'^\s*\d{4}\s*-\s*(.+)$', texto, re.MULTILINE)
+                    if m_conc and not info_pagador:
+                        dados["nome_recebedor"] = m_conc.group(1).strip()
+
         # --- BANCO INTER ---
-        elif "inter" in texto.lower() and ("Pix enviado" in texto or "Comprovante" in texto):
+        # Detecção específica: o Inter usa "Banco Inter S.A." no comprovante e/ou
+        # "Pix enviado". Antes a regra era apenas "inter" no lower(), o que dava
+        # falso positivo no Itaú (que tem "Internet" no rodapé legal).
+        elif (("Banco Inter" in texto or "banco inter" in texto.lower()
+               or "Pix enviado" in texto)
+              and ("Pix enviado" in texto or "Comprovante" in texto)):
 
             # 1. DESCRIÇÃO: Pega o que vier depois de "Descrição" (sem aspas)
             # Aceita: "Descrição: Blabla" ou "Descrição \n Blabla"
@@ -238,18 +419,26 @@ class RenomeadorComprovantes:
             dados["descricao"] = dados["descricao"].replace(termo, "").strip()
 
         # Se a descrição tiver "SALARIO", simplifica
-        if "SALARIO" in dados["descricao"].upper():
+        # (pula caso a descrição já tenha sido fixada por um banco específico,
+        # para não estragar coisas como "VIVO INTERNET LOJA" se um dia algum
+        # comprovante do Itaú vier com a palavra "SALARIO" embutida)
+        if "SALARIO" in dados["descricao"].upper() and not descricao_especifica:
             dados["descricao"] = "SALARIO"
 
         if not dados["data_ref"]:
             keywords_recorrentes = self.config.get("recorrentes", [])
 
+            # Para a checagem de recorrência, consideramos descrição + nome do recebedor.
+            # Motivo: alguns boletos (ex: Cartão Caixa via Itaú) não têm descrição própria,
+            # mas o termo recorrente aparece no recebedor (ex: "CARTOES CAIXA VISA PF").
+            texto_busca = (dados["descricao"] + " " + dados["nome_recebedor"]).upper()
+
             # Só adiciona data se for algo reconhecidamente recorrente ou salário
             # Se for "Compra de Carne" (que não tá na lista), fica sem data.
-            eh_recorrente = any(k in desc_upper for k in keywords_recorrentes)
+            eh_recorrente = any(k in texto_busca for k in keywords_recorrentes)
 
             if eh_recorrente:
-                dados["data_ref"] = self.calcular_mes_referencia(dados["data_pgto"], desc_upper)
+                dados["data_ref"] = self.calcular_mes_referencia(dados["data_pgto"], texto_busca)
 
         # Se não achou recebedor, tenta pegar de linhas genéricas de boleto
         if not dados["nome_recebedor"]:
@@ -305,10 +494,16 @@ class RenomeadorComprovantes:
                     # Para DDA, pegamos tudo para garantir
                     texto_completo = ""
                     for page in pdf.pages:
-                        texto_completo += page.extract_text() + "\n"
+                        # Em PDFs imagem (Print To PDF), extract_text pode retornar None
+                        page_text = page.extract_text() or ""
+                        texto_completo += page_text + "\n"
 
-                # Verifica se é DDA (caso especial)
-                nome_dda = self.processar_bb_dda(texto_completo)
+                # Verifica se é DDA / consolidado (caso especial)
+                # Tenta primeiro o BB, depois o Itaú (inclui caso de PDF imagem).
+                nome_dda = (
+                    self.processar_bb_dda(texto_completo)
+                    or self.processar_itau_dda(texto_completo, caminho_arq)
+                )
 
                 pasta = os.path.dirname(caminho_arq)
 

@@ -149,6 +149,40 @@ def identify_branch_group(val):
     return "Geral"
 
 
+def identify_filial_tab(val):
+    """
+    Identifica a filial para aba e ordenação do Excel.
+    Loja=1, Oficina=2, Divisa=3, Serviços=4.
+    Retorna tupla (ordem, nome_aba).
+    """
+    val = str(val).upper()
+
+    # 1. Verificação por CNPJ (mais preciso)
+    if "62.188.494" in val:
+        return (4, "PAGAMENTOS - SERVICOS")
+    if "59.185.879" in val:
+        return (3, "PAGAMENTOS - DIVISA")
+    if "0004" in val:
+        return (2, "PAGAMENTOS - OFICINA")
+    if "0001" in val or "14.255.350" in val:
+        return (1, "PAGAMENTOS - LOJA")
+
+    # 2. Verificação por Nome
+    if "DIVISA" in val:
+        return (3, "PAGAMENTOS - DIVISA")
+    # OFICINA antes de PEÇAS para evitar ambiguidade
+    if "OFICINA" in val:
+        return (2, "PAGAMENTOS - OFICINA")
+    if "SERVI" in val and "COMAGRO" in val:
+        return (4, "PAGAMENTOS - SERVICOS")
+    if "PEÇAS" in val or "PECAS" in val or "LOJA" in val:
+        return (1, "PAGAMENTOS - LOJA")
+    if "COMAGRO" in val:
+        return (1, "PAGAMENTOS - LOJA")
+
+    return (99, "GERAL")
+
+
 def get_file_date(dt):
     """Agrupa datas de fim de semana para a segunda-feira."""
     if pd.isna(dt):
@@ -400,10 +434,16 @@ def process_data(df_xfin, status_callback, stop_event, dt_ini_ui=None, dt_fim_ui
     # A API já retorna valores numéricos, mas garantimos o tipo e tratamos vazios
     df_merged[col_valor] = pd.to_numeric(df_merged[col_valor], errors='coerce').fillna(0.0)
 
-    # Identificar grupo da filial
+    # Identificar filial para abas do Excel (ordem: Loja, Oficina, Divisa, Serviços)
     if col_filial:
+        filial_info = df_merged[col_filial].apply(identify_filial_tab)
+        df_merged['Filial_Order'] = filial_info.apply(lambda x: x[0])
+        df_merged['Filial_Sheet'] = filial_info.apply(lambda x: x[1])
+        # Mantém Filial_Group para compatibilidade com alertas e logs
         df_merged['Filial_Group'] = df_merged[col_filial].apply(identify_branch_group)
     else:
+        df_merged['Filial_Order'] = 99
+        df_merged['Filial_Sheet'] = 'GERAL'
         df_merged['Filial_Group'] = 'Geral'
 
     # 5. Definir CNPJ Final (Prioridade: Excel > Firebird)
@@ -439,21 +479,288 @@ def clean_sheet_name(name):
 
 # --- GERAÇÃO DE EXCEL ---
 
+# Espaçamento entre tabelas empilhadas na mesma aba
+GAP_ENTRE_TABELAS = 3
+# Tabela de totais por forma de pagamento começa em K3
+COL_RESUMO_TIPO = 11  # K
+COL_RESUMO_VALOR = 12  # L
+LINHA_RESUMO_CABECALHO = 3
+
+
+def _doc_priority(x):
+    """Ordena formas de pagamento: NF, DDA, Boleto, PIX e demais."""
+    xu = x.upper()
+    if "NF" in xu or "NOTA" in xu:
+        return (0, xu)
+    if "BOLETO" in xu:
+        return (1, xu)
+    if "PIX" in xu:
+        return (2, xu)
+    return (3, xu)
+
+
+def _get_doc_style(doc_type):
+    """Retorna cores de cabeçalho conforme o tipo de pagamento."""
+    dt_upper = doc_type.upper()
+    if "NF" in dt_upper or "NOTA" in dt_upper:
+        return "FFFF00", "000000"
+    if "BOLETO" in dt_upper:
+        return "366092", "FFFFFF"
+    if "CRÉDITO" in dt_upper or "CREDITO" in dt_upper or "ESTORNO" in dt_upper:
+        return "00B050", "FFFFFF"
+    if "DÉBITO" in dt_upper or "DEBITO" in dt_upper:
+        return "FF0000", "FFFFFF"
+    if "PIX" in dt_upper:
+        return "e56700", "FFFFFF"
+    return "000000", "FFFFFF"
+
+
+def _prepare_group_df(group_df, is_pix_layout, col_forn, col_valor, col_obs, col_venc):
+    """Ordena e agrupa faturas/PIX antes de escrever a tabela."""
+    group_df = group_df.copy()
+
+    if is_pix_layout:
+        group_df['__Total_Supplier'] = group_df.groupby(col_forn)[col_valor].transform('sum')
+        return group_df.sort_values(
+            by=['__Total_Supplier', col_forn, col_valor],
+            ascending=[True, True, True])
+
+    if 'Fatura' in group_df.columns:
+        group_df['Fatura'] = group_df['Fatura'].fillna('').astype(str).str.strip()
+        mask_invoice = group_df['Fatura'] != ''
+        df_invoice = group_df[mask_invoice].copy()
+        df_no_invoice = group_df[~mask_invoice].copy()
+
+        if not df_invoice.empty:
+            grp_keys = ['Fatura', col_forn, col_venc]
+            if 'CNPJ_Final' in df_invoice.columns:
+                df_invoice['CNPJ_Final'] = df_invoice['CNPJ_Final'].fillna('')
+                grp_keys.append('CNPJ_Final')
+            if 'Config_Banco' in df_invoice.columns:
+                df_invoice['Config_Banco'] = df_invoice['Config_Banco'].fillna('')
+                grp_keys.append('Config_Banco')
+
+            grouped_rows = []
+            for key, block in df_invoice.groupby(grp_keys):
+                row_data = block.iloc[0].copy()
+                row_data[col_valor] = block[col_valor].sum()
+                if col_obs:
+                    row_data[col_obs] = f"Fatura - {key[0]}"
+                grouped_rows.append(row_data)
+            group_df = pd.concat([df_no_invoice, pd.DataFrame(grouped_rows)], ignore_index=True)
+
+    return group_df.sort_values(by=[col_valor], ascending=True)
+
+
+def _add_schedule_dropdown(ws, row, col, dv_agendamento):
+    """Adiciona seletor de agendamento com cor verde/vermelha."""
+    from openpyxl.styles import Font, PatternFill
+    from openpyxl.formatting.rule import FormulaRule
+    from openpyxl.utils import get_column_letter
+
+    col_letter = get_column_letter(col)
+    cell_ref = f"${col_letter}${row}"
+
+    schedule_cell = ws.cell(row=row, column=col, value="Não Agendado")
+    schedule_cell.font = Font(bold=True, color="FFFFFF")
+    schedule_cell.fill = PatternFill(start_color="FF0000", end_color="FF0000", fill_type="solid")
+
+    dv_agendamento.add(schedule_cell)
+
+    green_rule = FormulaRule(
+        formula=[f'{cell_ref}="Agendado"'],
+        fill=PatternFill(start_color="00B050", end_color="00B050", fill_type="solid"),
+        font=Font(bold=True, color="FFFFFF"),
+    )
+    red_rule = FormulaRule(
+        formula=[f'{cell_ref}="Não Agendado"'],
+        fill=PatternFill(start_color="FF0000", end_color="FF0000", fill_type="solid"),
+        font=Font(bold=True, color="FFFFFF"),
+    )
+    ws.conditional_formatting.add(f"{col_letter}{row}", green_rule)
+    ws.conditional_formatting.add(f"{col_letter}{row}", red_rule)
+
+
+def _write_payment_table(ws, group_df, table_title, doc_type, start_row, cols_map, border, currency_fmt, dv_agendamento):
+    """
+    Escreve uma tabela de pagamento empilhada na aba.
+    Retorna (próxima_linha_livre, referência_célula_total).
+    """
+    from openpyxl.styles import Font, PatternFill, Alignment
+    from openpyxl.utils import get_column_letter
+
+    col_forn, col_venc, col_valor, col_doc, col_obs, col_forma, col_banco = cols_map
+    current_row = start_row
+
+    # Título da tabela (nome da forma de pagamento)
+    fill_color, font_color = _get_doc_style(doc_type)
+    title_cell = ws.cell(row=current_row, column=1, value=table_title.upper())
+    title_cell.font = Font(bold=True, color=font_color, size=12)
+    title_cell.fill = PatternFill(start_color=fill_color, end_color=fill_color, fill_type="solid")
+    current_row += 1
+
+    is_pix_layout = "PIX" in doc_type.upper()
+    if is_pix_layout:
+        headers = ["Vencimento", "Nome Recebedor", "Fornecedor",
+                   "Chave PIX", "Nº Doc", "Observação", "Valor", "Valor Total"]
+        val_col_idx = 8
+    else:
+        headers = ["Vencimento", "Banco/Conta", "Fornecedor", "CNPJ", "Nº Doc", "Observação", "Valor"]
+        val_col_idx = 7
+
+    header_font = Font(bold=True, color=font_color)
+    header_fill = PatternFill(start_color=fill_color, end_color=fill_color, fill_type="solid")
+
+    header_row = current_row
+    for col_num, header in enumerate(headers, 1):
+        cell = ws.cell(row=header_row, column=col_num, value=header)
+        cell.font = header_font
+        cell.fill = header_fill
+        cell.border = border
+        ws.column_dimensions[get_column_letter(col_num)].width = 20
+
+    group_df = _prepare_group_df(group_df, is_pix_layout, col_forn, col_valor, col_obs, col_venc)
+    current_row = header_row + 1
+    data_start_row = current_row
+
+    start_merge_row = current_row
+    current_supplier = None
+    supplier_total = 0.0
+
+    for _, row in group_df.iterrows():
+        val = row[col_valor]
+
+        if is_pix_layout:
+            supplier = row[col_forn]
+            if supplier != current_supplier:
+                if current_supplier is not None:
+                    if start_merge_row < current_row - 1:
+                        ws.merge_cells(start_row=start_merge_row, start_column=8,
+                                       end_row=current_row - 1, end_column=8)
+                    ws.cell(row=start_merge_row, column=8, value=supplier_total).number_format = currency_fmt
+                    ws.cell(row=start_merge_row, column=8).alignment = Alignment(vertical='center')
+                current_supplier = supplier
+                start_merge_row = current_row
+                supplier_total = 0.0
+            supplier_total += val
+
+            ws.cell(row=current_row, column=1, value=row[col_venc].strftime('%d/%m/%Y'))
+            ws.cell(row=current_row, column=2, value=row.get('Config_Nome Titular', ''))
+            ws.cell(row=current_row, column=3, value=supplier)
+            ws.cell(row=current_row, column=4, value=row.get('Config_Chave PIX', ''))
+            ws.cell(row=current_row, column=5, value=row[col_doc] if col_doc and col_doc in row else "")
+            ws.cell(row=current_row, column=6, value=row[col_obs] if col_obs and col_obs in row else "")
+            ws.cell(row=current_row, column=7, value=val).number_format = currency_fmt
+        else:
+            banco_val = row.get('Config_Banco', '')
+            ws.cell(row=current_row, column=1, value=row[col_venc].strftime('%d/%m/%Y'))
+            ws.cell(row=current_row, column=2, value=banco_val)
+            ws.cell(row=current_row, column=3, value=row[col_forn])
+            ws.cell(row=current_row, column=4, value=row.get('CNPJ_Final', ''))
+            ws.cell(row=current_row, column=5, value=row[col_doc] if col_doc and col_doc in row else "")
+            ws.cell(row=current_row, column=6, value=row[col_obs] if col_obs and col_obs in row else "")
+            ws.cell(row=current_row, column=7, value=val).number_format = currency_fmt
+
+        ws.column_dimensions['E'].width = 7
+        current_row += 1
+
+    if is_pix_layout and current_supplier is not None:
+        if start_merge_row < current_row - 1:
+            ws.merge_cells(start_row=start_merge_row, start_column=8, end_row=current_row - 1, end_column=8)
+        ws.cell(row=start_merge_row, column=8, value=supplier_total).number_format = currency_fmt
+        ws.cell(row=start_merge_row, column=8).alignment = Alignment(vertical='center')
+
+    data_end_row = current_row - 1
+    total_row = current_row + 1
+    col_letter = get_column_letter(val_col_idx)
+
+    ws.cell(row=total_row, column=val_col_idx - 1, value="TOTAL:").font = Font(bold=True)
+    if data_end_row >= data_start_row:
+        sum_formula = f"=SUM({col_letter}{data_start_row}:{col_letter}{data_end_row})"
+    else:
+        sum_formula = 0
+    c_total = ws.cell(row=total_row, column=val_col_idx, value=sum_formula)
+    c_total.number_format = currency_fmt
+    c_total.font = Font(bold=True)
+
+    schedule_row = total_row + 2
+    _add_schedule_dropdown(ws, schedule_row, 1, dv_agendamento)
+
+    next_row = schedule_row + 1 + GAP_ENTRE_TABELAS
+    return next_row, f"{col_letter}{total_row}"
+
+
+def _write_summary_table(ws, summary_data, border, currency_fmt):
+    """Escreve tabela de totais na mesma aba, a partir de K3."""
+    from openpyxl.styles import Font, PatternFill
+
+    header_font_tot = Font(bold=True, color="FFFFFF")
+    header_fill_tot = PatternFill(start_color="366092", end_color="366092", fill_type="solid")
+
+    ws.column_dimensions['K'].width = 30
+    ws.column_dimensions['L'].width = 20
+
+    cell_h1 = ws.cell(row=LINHA_RESUMO_CABECALHO, column=COL_RESUMO_TIPO, value="Tipo de Pagamento")
+    cell_h2 = ws.cell(row=LINHA_RESUMO_CABECALHO, column=COL_RESUMO_VALOR, value="Valor Total")
+    for c in [cell_h1, cell_h2]:
+        c.font = header_font_tot
+        c.fill = header_fill_tot
+        c.border = border
+
+    r = LINHA_RESUMO_CABECALHO + 1
+    first_data_row = r
+    for name, cell_ref in summary_data:
+        ws.cell(row=r, column=COL_RESUMO_TIPO, value=name)
+        c_val = ws.cell(row=r, column=COL_RESUMO_VALOR, value=f"={cell_ref}")
+        c_val.number_format = currency_fmt
+        r += 1
+
+    if summary_data:
+        r += 1
+        cell_gt_lbl = ws.cell(row=r, column=COL_RESUMO_TIPO, value="TOTAL GERAL")
+        cell_gt_val = ws.cell(row=r, column=COL_RESUMO_VALOR, value=f"=SUM(L{first_data_row}:L{r - 1})")
+        for c in [cell_gt_lbl, cell_gt_val]:
+            c.font = Font(bold=True, size=12)
+            c.border = border
+        cell_gt_val.number_format = currency_fmt
+
+
+def _build_payment_subgroups(df_filial, col_forma, col_banco):
+    """Monta subgrupos por forma de pagamento (separando bancos quando necessário)."""
+    doc_vals = list(df_filial[col_forma].astype(str).fillna('').unique())
+    doc_types = sorted(doc_vals, key=_doc_priority)
+    sub_groups = []
+
+    for doc_type in doc_types:
+        df_doc = df_filial[df_filial[col_forma] == doc_type].copy()
+        unique_banks = df_doc[col_banco].unique()
+        real_banks = [b for b in unique_banks if str(b).strip()]
+
+        if len(real_banks) > 1:
+            for bank in unique_banks:
+                sub_df = df_doc[df_doc[col_banco] == bank]
+                if sub_df.empty:
+                    continue
+                s_name = f"{doc_type}"
+                if str(bank).strip():
+                    s_name += f" - {bank}"
+                sub_groups.append((s_name, doc_type, sub_df))
+        else:
+            sub_groups.append((doc_type, doc_type, df_doc))
+
+    return sub_groups
+
 
 def create_excel(df, output_path, cols_map):
     import openpyxl
-    from openpyxl.styles import Font, PatternFill, Border, Side, Alignment
-    from openpyxl.utils import get_column_letter
+    from openpyxl.styles import Border, Side
+    from openpyxl.worksheet.datavalidation import DataValidation
+
     col_forn, col_venc, col_valor, col_doc, col_obs, col_forma, col_banco = cols_map
 
     wb = openpyxl.Workbook()
-
-    # Remover aba padrão
     if 'Sheet' in wb.sheetnames:
         wb.remove(wb['Sheet'])
-
-    # Preparar dados para o Resumo
-    summary_data = []  # Lista de tuplas (Nome da Aba, Valor Total)
 
     # Garantir colunas de agrupamento
     if col_forma and col_forma in df.columns:
@@ -468,240 +775,53 @@ def create_excel(df, output_path, cols_map):
         df['__Banco_Temp'] = ''
         col_banco = '__Banco_Temp'
 
-    # Agrupar por Tipo de Documento (col_forma)
-    # Ordenar para que NF/NOTA venha primeiro, BOLETO em seguida, depois o PIX e depois os demais em ordem alfabética
-    doc_vals = list(df[col_forma].astype(str).fillna('').unique())
+    currency_fmt = '_-R$* #,##0.00_-;-R$* #,##0.00_-;_-R$* \"-\"??_-;_-@_-'
+    border = Border(
+        left=Side(style='thin'), right=Side(style='thin'),
+        top=Side(style='thin'), bottom=Side(style='thin'),
+    )
 
-    def _doc_priority(x):
-        xu = x.upper()
-        if "NF" in xu:
-            return (0, xu)
-        if "BOLETO" in xu:
-            return (1, xu)
-        if "PIX" in xu:
-            return (2, xu)
-        return (3, xu)
+    # Uma aba por filial, na ordem Loja -> Oficina -> Divisa -> Serviços
+    filiais = (
+        df[['Filial_Order', 'Filial_Sheet']]
+        .drop_duplicates()
+        .sort_values('Filial_Order')
+    )
 
-    doc_types = sorted(doc_vals, key=_doc_priority)
+    for _, filial_row in filiais.iterrows():
+        sheet_name = clean_sheet_name(filial_row['Filial_Sheet'])
+        df_filial = df[df['Filial_Sheet'] == filial_row['Filial_Sheet']].copy()
+        if df_filial.empty:
+            continue
 
-    for doc_type in doc_types:
-        df_doc = df[df[col_forma] == doc_type].copy()
+        ws = wb.create_sheet(sheet_name)
 
-        # Verificar se há múltiplos bancos para este tipo de documento
-        unique_banks = df_doc[col_banco].unique()
-        # Remove bancos vazios da contagem se houver outros
-        real_banks = [b for b in unique_banks if b.strip()]
+        # Validação de agendamento reutilizada em todas as tabelas da aba
+        dv_agendamento = DataValidation(
+            type="list",
+            formula1='"Agendado,Não Agendado"',
+            allow_blank=False,
+        )
+        dv_agendamento.error = "Selecione Agendado ou Não Agendado"
+        dv_agendamento.errorTitle = "Agendamento"
+        ws.add_data_validation(dv_agendamento)
 
-        # Lógica de separação de abas
-        sub_groups = []
-        if len(real_banks) > 1:
-            # Separa por banco
-            for bank in unique_banks:
-                sub_df = df_doc[df_doc[col_banco] == bank]
-                if sub_df.empty:
-                    continue
+        current_row = 1
+        sheet_summary = []
 
-                s_name = f"{doc_type}"
-                if bank.strip():
-                    s_name += f" - {bank}"
-                sub_groups.append((s_name, sub_df))
-        else:
-            # Aba única
-            sub_groups.append((doc_type, df_doc))
+        for table_title, doc_type, group_df in _build_payment_subgroups(df_filial, col_forma, col_banco):
+            current_row, total_ref = _write_payment_table(
+                ws, group_df, table_title, doc_type, current_row,
+                cols_map, border, currency_fmt, dv_agendamento,
+            )
+            sheet_summary.append((table_title, total_ref))
 
-        # Criar abas
-        for sheet_name, group_df in sub_groups:
-            safe_name = clean_sheet_name(sheet_name)
-            ws = wb.create_sheet(safe_name)
+        if sheet_summary:
+            _write_summary_table(ws, sheet_summary, border, currency_fmt)
 
-            # Formato de Moeda Brasileiro
-            currency_fmt = '_-R$* #,##0.00_-;-R$* #,##0.00_-;_-R$* \"-\"??_-;_-@_-'
+    if not wb.sheetnames:
+        wb.create_sheet("VAZIO")
 
-            # Definir Cores do Cabeçalho
-            dt_upper = doc_type.upper()
-            if "NF" in dt_upper or "NOTA" in dt_upper:
-                fill_color = "FFFF00"  # Amarelo
-                font_color = "000000"  # Preto
-            elif "BOLETO" in dt_upper:
-                fill_color = "366092"  # Azul (Padrão anterior)
-                font_color = "FFFFFF"  # Branco
-            elif "CRÉDITO" in dt_upper or "CREDITO" in dt_upper or "ESTORNO" in dt_upper:
-                fill_color = "00B050"  # Verde
-                font_color = "FFFFFF"
-            elif "DÉBITO" in dt_upper or "DEBITO" in dt_upper:
-                fill_color = "FF0000"  # Vermelho
-                font_color = "FFFFFF"
-            elif "PIX" in dt_upper:
-                fill_color = "e56700"  # Laranja
-                font_color = "FFFFFF"
-            else:
-                fill_color = "000000"  # Preto (Outros)
-                font_color = "FFFFFF"
-
-            header_font = Font(bold=True, color=font_color)
-            header_fill = PatternFill(start_color=fill_color, end_color=fill_color, fill_type="solid")
-            border = Border(left=Side(style='thin'), right=Side(style='thin'),
-                            top=Side(style='thin'), bottom=Side(style='thin'))
-
-            # Determinar Layout (PIX ou Padrão)
-            is_pix_layout = "PIX" in doc_type.upper()
-
-            if is_pix_layout:
-                headers = ["Vencimento", "Nome Recebedor", "Fornecedor",
-                           "Chave PIX", "Nº Doc", "Observação", "Valor", "Valor Total"]
-                val_col_idx = 8
-            else:
-                headers = ["Vencimento", "Banco/Conta", "Fornecedor", "CNPJ", "Nº Doc", "Observação", "Valor"]
-                val_col_idx = 7
-
-            # Cabeçalho
-            for col_num, header in enumerate(headers, 1):
-                cell = ws.cell(row=1, column=col_num, value=header)
-                cell.font = header_font
-                cell.fill = header_fill
-                cell.border = border
-                ws.column_dimensions[get_column_letter(col_num)].width = 20
-
-            # Dados
-            if is_pix_layout:
-                # Calcular total por fornecedor para ordenação (mantendo agrupamento)
-                group_df['__Total_Supplier'] = group_df.groupby(col_forn)[col_valor].transform('sum')
-                group_df = group_df.sort_values(
-                    by=['__Total_Supplier', col_forn, col_valor],
-                    ascending=[True, True, True])
-            else:
-                # Agrupar Faturas (se houver)
-                if 'Fatura' in group_df.columns:
-                    group_df['Fatura'] = group_df['Fatura'].fillna('').astype(str).str.strip()
-                    mask_invoice = group_df['Fatura'] != ''
-                    df_invoice = group_df[mask_invoice].copy()
-                    df_no_invoice = group_df[~mask_invoice].copy()
-
-                    if not df_invoice.empty:
-                        grp_keys = ['Fatura', col_forn, col_venc]
-                        if 'CNPJ_Final' in df_invoice.columns:
-                            df_invoice['CNPJ_Final'] = df_invoice['CNPJ_Final'].fillna('')
-                            grp_keys.append('CNPJ_Final')
-                        if 'Config_Banco' in df_invoice.columns:
-                            df_invoice['Config_Banco'] = df_invoice['Config_Banco'].fillna('')
-                            grp_keys.append('Config_Banco')
-
-                        grouped_rows = []
-                        for key, block in df_invoice.groupby(grp_keys):
-                            row_data = block.iloc[0].copy()
-                            row_data[col_valor] = block[col_valor].sum()
-                            if col_obs:
-                                row_data[col_obs] = f"Fatura - {key[0]}"
-                            grouped_rows.append(row_data)
-                        group_df = pd.concat([df_no_invoice, pd.DataFrame(grouped_rows)], ignore_index=True)
-
-                group_df = group_df.sort_values(by=[col_valor], ascending=True)
-
-            current_row = 2
-            sheet_total = 0.0
-
-            # Variáveis para agrupamento PIX
-            start_merge_row = 2
-            current_supplier = None
-            supplier_total = 0.0
-
-            for idx, row in group_df.iterrows():
-                val = row[col_valor]
-                sheet_total += val
-
-                if is_pix_layout:
-                    supplier = row[col_forn]
-                    if supplier != current_supplier:
-                        if current_supplier is not None:
-                            if start_merge_row < current_row - 1:
-                                ws.merge_cells(start_row=start_merge_row, start_column=8,
-                                               end_row=current_row-1, end_column=8)
-                            ws.cell(row=start_merge_row, column=8, value=supplier_total).number_format = currency_fmt
-                            ws.cell(row=start_merge_row, column=8).alignment = Alignment(vertical='center')
-                        current_supplier = supplier
-                        start_merge_row = current_row
-                        supplier_total = 0.0
-                    supplier_total += val
-
-                    ws.cell(row=current_row, column=1, value=row[col_venc].strftime('%d/%m/%Y'))
-                    ws.cell(row=current_row, column=2, value=row.get('Config_Nome Titular', ''))
-                    ws.cell(row=current_row, column=3, value=supplier)
-                    ws.cell(row=current_row, column=4, value=row.get('Config_Chave PIX', ''))
-                    ws.cell(row=current_row, column=5, value=row[col_doc] if col_doc and col_doc in row else "")
-                    ws.cell(row=current_row, column=6, value=row[col_obs] if col_obs and col_obs in row else "")
-                    ws.cell(row=current_row, column=7, value=val).number_format = currency_fmt
-                else:
-                    # Layout Padrão
-                    banco_val = row.get('Config_Banco', '')
-                    ws.cell(row=current_row, column=1, value=row[col_venc].strftime('%d/%m/%Y'))
-                    ws.cell(row=current_row, column=2, value=banco_val)
-                    ws.cell(row=current_row, column=3, value=row[col_forn])
-                    ws.cell(row=current_row, column=4, value=row.get('CNPJ_Final', ''))
-                    ws.cell(row=current_row, column=5, value=row[col_doc] if col_doc and col_doc in row else "")
-                    ws.cell(row=current_row, column=6, value=row[col_obs] if col_obs and col_obs in row else "")
-                    ws.cell(row=current_row, column=7, value=val).number_format = currency_fmt
-
-                ws.column_dimensions['E'].width = 7  # Nº Doc mais estreito
-                current_row += 1
-
-            # Finalizar último grupo PIX
-            if is_pix_layout and current_supplier is not None:
-                if start_merge_row < current_row - 1:
-                    ws.merge_cells(start_row=start_merge_row, start_column=8, end_row=current_row-1, end_column=8)
-                ws.cell(row=start_merge_row, column=8, value=supplier_total).number_format = currency_fmt
-                ws.cell(row=start_merge_row, column=8).alignment = Alignment(vertical='center')
-
-            # Linha de Total da Aba
-            total_row = current_row + 1
-            ws.cell(row=total_row, column=val_col_idx-1, value="TOTAL:").font = Font(bold=True)
-
-            col_letter = get_column_letter(val_col_idx)
-            sum_formula = f"=SUM({col_letter}2:{col_letter}{current_row-1})"
-            c_total = ws.cell(row=total_row, column=val_col_idx, value=sum_formula)
-            c_total.number_format = currency_fmt
-            c_total.font = Font(bold=True)
-
-            summary_data.append((ws.title, f"{col_letter}{total_row}"))
-
-    # --- ABA TOTAIS ---
-    if summary_data:
-        ws = wb.create_sheet("Totais")  # Cria no final por padrão
-        ws.column_dimensions['A'].width = 30
-        ws.column_dimensions['B'].width = 20
-
-        # Formato de Moeda
-        currency_fmt = '_-R$* #,##0.00_-;-R$* #,##0.00_-;_-R$* \"-\"??_-;_-@_-'
-
-        # Estilo Padrão para Totais
-        header_font_tot = Font(bold=True, color="FFFFFF")
-        header_fill_tot = PatternFill(start_color="366092", end_color="366092", fill_type="solid")
-
-        # Cabeçalho
-        cell_h1 = ws.cell(row=1, column=1, value="Tipo de Pagamento")
-        cell_h2 = ws.cell(row=1, column=2, value="Valor Total")
-        for c in [cell_h1, cell_h2]:
-            c.font = header_font_tot
-            c.fill = header_fill_tot
-            c.border = border
-
-        r = 2
-        for name, cell_ref in summary_data:
-            ws.cell(row=r, column=1, value=name)
-            c_val = ws.cell(row=r, column=2, value=f"='{name}'!{cell_ref}")
-            c_val.number_format = currency_fmt
-            r += 1
-
-        # Total Geral
-        r += 1
-        cell_gt_lbl = ws.cell(row=r, column=1, value="TOTAL GERAL")
-        cell_gt_val = ws.cell(row=r, column=2, value=f"=SUM(B2:B{r-1})")
-
-        for c in [cell_gt_lbl, cell_gt_val]:
-            c.font = Font(bold=True, size=12)
-            c.border = border
-        cell_gt_val.number_format = currency_fmt
-
-    # Salvar
     try:
         wb.save(output_path)
     except PermissionError:
@@ -852,7 +972,7 @@ class PaymentBotApp:
             col_venc = cols_map[1]
             df_merged['File_Date'] = df_merged[col_venc].apply(get_file_date)
 
-            print("Iniciando geração dos arquivos por data e filial...")
+            print("Iniciando geração do arquivo único por data...")
 
             merge_days = self.var_merge_days.get()
 
@@ -874,28 +994,24 @@ class PaymentBotApp:
                 date_str_initial = min_file_date.strftime('%d_%m_%Y')
                 date_str_final = max_file_date.strftime('%d_%m_%Y')
 
-                for group_name, df_group in df_merged.groupby('Filial_Group'):
-                    print(f"Processando (Fundido): {date_str_initial} a {date_str_final} - Filial {group_name}")
+                if date_str_initial == date_str_final:
+                    fname = f"Contas_A_Pagar-{date_str_final}.xlsx"
+                else:
+                    fname = f"Contas_A_Pagar-{date_str_initial}-{date_str_final}.xlsx"
 
-                    suffix = f"_{group_name}" if group_name != "Geral" else ""
-                    if date_str_initial == date_str_final:
-                        fname = f"Contas_A_Pagar{suffix}-{date_str_final}.xlsx"
-                    else:
-                        fname = f"Contas_A_Pagar{suffix}-{date_str_initial}-{date_str_final}.xlsx"
-
-                    full_path = os.path.join(current_base_path, fname)
-                    create_excel(df_group, full_path, cols_map)
-                    generated_files.append(fname)
+                print(f"Processando (Fundido): {date_str_initial} a {date_str_final} - todas as filiais")
+                full_path = os.path.join(current_base_path, fname)
+                create_excel(df_merged, full_path, cols_map)
+                generated_files.append(fname)
             else:
-                # Loop por Data (Comportamento Padrão)
+                # Um arquivo por data, com abas por filial
                 for file_date, df_date in df_merged.groupby('File_Date'):
                     if self.stop_event.is_set():
                         self.finish("Processo cancelado pelo usuário.")
                         return
 
-                    # Estrutura de pastas: CONTAS A PAGAR\{ANO}\{Nº MÊS}. {NOME MÊS}\{DD-MM-AA}
                     year = file_date.strftime("%Y")
-                    month_num = file_date.month  # Número sem zero à esquerda
+                    month_num = file_date.month
                     month_name = months[month_num-1]
                     folder_month = f"{month_num}. {month_name.upper()}"
                     day_folder = file_date.strftime("%d-%m-%y")
@@ -906,23 +1022,14 @@ class PaymentBotApp:
                         os.makedirs(current_base_path)
 
                     date_str = file_date.strftime('%d_%m_%Y')
+                    fname = f"Contas_A_Pagar-{date_str}.xlsx"
 
-                    # Loop por Filial dentro da Data
-                    for group_name, df_group in df_date.groupby('Filial_Group'):
-                        print(f"Processando: Data {date_str} - Filial {group_name} ({len(df_group)} registros)")
+                    print(f"Processando: Data {date_str} - todas as filiais ({len(df_date)} registros)")
+                    full_path = os.path.join(current_base_path, fname)
+                    create_excel(df_date, full_path, cols_map)
+                    generated_files.append(fname)
 
-                        if df_group.empty:
-                            continue
-
-                        # Nome do arquivo: Contas_A_Pagar_FILIAL-DD_MM_AAAA.xlsx
-                        suffix = f"_{group_name}" if group_name != "Geral" else ""
-                        fname = f"Contas_A_Pagar{suffix}-{date_str}.xlsx"
-
-                        full_path = os.path.join(current_base_path, fname)
-                        create_excel(df_group, full_path, cols_map)
-                        generated_files.append(fname)
-
-            print("Arquivos gerados com sucesso.")
+            print("Arquivo(s) gerado(s) com sucesso.")
 
             # Alerta de Faltantes
             if len(missing) > 0 and email_alert:
@@ -937,7 +1044,7 @@ class PaymentBotApp:
                 missing_df.to_csv(missing_csv, index=False)
                 email_alert.enviar_email_erro(missing_csv, len(missing), True)
 
-            self.finish(f"Sucesso!\nGerados: {len(generated_files)} arquivos\nSalvos em {current_base_path}.")
+            self.finish(f"Sucesso!\nGerado(s): {len(generated_files)} arquivo(s)\nSalvos em {current_base_path}.")
 
         except Exception as e:
             self.finish(f"Erro: {str(e)}", error=True)

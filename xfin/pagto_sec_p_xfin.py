@@ -171,7 +171,7 @@ def definir_tipo_documento(num_conta_cred, descricao, cd_fornecedor):
         return "Débito Automático"
 
     # 1. Checa NUMCONTACRED
-    if num_conta_cred == 8:
+    if num_conta_cred == 8 or num_conta_cred == 13:
         return "NF"
     if num_conta_cred == 6:
         return "PIX"
@@ -341,6 +341,8 @@ def main():
 
             # 5. Banco
             banco = definir_banco(row['NUMCONTACRED'])
+            if row['NUMCONTACRED'] == 13:
+                banco = "Banco Itaú Peças"
 
             # 6. Valores
             valor_nominal = row['VALOR']

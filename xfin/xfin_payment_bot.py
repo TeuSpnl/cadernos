@@ -511,6 +511,8 @@ def _get_doc_style(doc_type):
         return "366191", "FFFFFF"  # azul-escuro (0.21, 0.38, 0.57)
     if "PIX" in dt_upper:
         return "FABF8F", "000000"  # pêssego (0.98, 0.75, 0.56)
+    if "VALE" in dt_upper:
+        return "1AB394", "FFFFFF"  # verde (0.10, 0.70, 0.58)
     return "BFBFBF", "000000"  # cinza (0.75, 0.75, 0.75) — demais tipos
 
 

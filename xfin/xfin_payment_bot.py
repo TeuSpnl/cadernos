@@ -709,17 +709,32 @@ def _write_summary_table(ws, summary_data, border, currency_fmt):
     r = LINHA_RESUMO_CABECALHO + 1
     first_data_row = r
     for name, cell_ref in summary_data:
-        ws.cell(row=r, column=COL_RESUMO_TIPO, value=name)
+        fill_color, font_color = _get_doc_style(name)
+        row_font = Font(bold=True, color=font_color)
+        row_fill = PatternFill(start_color=fill_color, end_color=fill_color, fill_type="solid")
+
+        c_tipo = ws.cell(row=r, column=COL_RESUMO_TIPO, value=name)
+        c_tipo.font = row_font
+        c_tipo.fill = row_fill
+        c_tipo.border = border
+
         c_val = ws.cell(row=r, column=COL_RESUMO_VALOR, value=f"={cell_ref}")
+        c_val.font = row_font
+        c_val.fill = row_fill
+        c_val.border = border
         c_val.number_format = currency_fmt
         r += 1
 
     if summary_data:
         r += 1
+        gt_fill, gt_font = "BFBFBF", "000000"
+        gt_style_font = Font(bold=True, size=12, color=gt_font)
+        gt_style_fill = PatternFill(start_color=gt_fill, end_color=gt_fill, fill_type="solid")
         cell_gt_lbl = ws.cell(row=r, column=COL_RESUMO_TIPO, value="TOTAL GERAL")
         cell_gt_val = ws.cell(row=r, column=COL_RESUMO_VALOR, value=f"=SUM(L{first_data_row}:L{r - 1})")
         for c in [cell_gt_lbl, cell_gt_val]:
-            c.font = Font(bold=True, size=12)
+            c.font = gt_style_font
+            c.fill = gt_style_fill
             c.border = border
         cell_gt_val.number_format = currency_fmt
 

@@ -173,10 +173,11 @@ def identify_filial_tab(val):
     # OFICINA antes de PEÇAS para evitar ambiguidade
     if "OFICINA" in val:
         return (2, "PAGAMENTOS - OFICINA")
-    if "SERVI" in val and "COMAGRO" in val:
-        return (4, "PAGAMENTOS - SERVICOS")
+    # PEÇAS antes de SERVIÇOS — "Comagro Peças e Serviços" é a razão social da loja, não a filial de Serviços
     if "PEÇAS" in val or "PECAS" in val or "LOJA" in val:
         return (1, "PAGAMENTOS - LOJA")
+    if "SERVI" in val and "COMAGRO" in val:
+        return (4, "PAGAMENTOS - SERVICOS")
     if "COMAGRO" in val:
         return (1, "PAGAMENTOS - LOJA")
 
@@ -503,16 +504,14 @@ def _get_doc_style(doc_type):
     """Retorna cores de cabeçalho conforme o tipo de pagamento."""
     dt_upper = doc_type.upper()
     if "NF" in dt_upper or "NOTA" in dt_upper:
-        return "FFFF00", "000000"
+        return "C4BD96", "000000"  # marrom-claro (0.77, 0.74, 0.59)
     if "BOLETO" in dt_upper:
-        return "366092", "FFFFFF"
+        return "B2A1C7", "000000"  # lilás (0.70, 0.63, 0.78)
     if "CRÉDITO" in dt_upper or "CREDITO" in dt_upper or "ESTORNO" in dt_upper:
-        return "00B050", "FFFFFF"
-    if "DÉBITO" in dt_upper or "DEBITO" in dt_upper:
-        return "FF0000", "FFFFFF"
+        return "366191", "FFFFFF"  # azul-escuro (0.21, 0.38, 0.57)
     if "PIX" in dt_upper:
-        return "e56700", "FFFFFF"
-    return "000000", "FFFFFF"
+        return "FABF8F", "000000"  # pêssego (0.98, 0.75, 0.56)
+    return "BFBFBF", "000000"  # cinza (0.75, 0.75, 0.75) — demais tipos
 
 
 def _prepare_group_df(group_df, is_pix_layout, col_forn, col_valor, col_obs, col_venc):

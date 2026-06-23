@@ -341,7 +341,7 @@ def main():
 
             # 5. Banco
             banco = definir_banco(row['NUMCONTACRED'])
-            if row['NUMCONTACRED'] == 13:
+            if row['NUMCONTACRED'] in (8, 13):
                 banco = "Banco Itaú Peças"
 
             # 6. Valores

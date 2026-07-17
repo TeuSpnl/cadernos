@@ -891,6 +891,14 @@ foreach ($line in $result.Lines) { Write-Output $line.Text }
                 dados["data_ref"] = self.extrair_data_referencia(dados["descricao"])
             dados["descricao"] = ""
 
+        # "PGTO - INTERNO" sem casar regra completa → completa com o banco do OCR
+        if re.fullmatch(r'INTERNO', (dados.get("descricao") or "").strip(), re.IGNORECASE):
+            tn = self._texto_sem_acento(texto)
+            if "ITAU" in tn:
+                dados["descricao"] = "INTERNO_ITAU"
+            elif "BNB" in tn:
+                dados["descricao"] = "INTERNO_BNB"
+
         # Se a descrição tiver "SALARIO", simplifica
         # (pula caso a descrição já tenha sido fixada por um banco específico,
         # para não estragar coisas como "VIVO INTERNET LOJA" se um dia algum
@@ -922,6 +930,14 @@ foreach ($line in $result.Lines) { Write-Output $line.Text }
         # Garantia final: Séculos no nome do arquivo sem a beneficiária
         if dados.get("descricao", "").upper() == "SECULOS":
             dados["nome_recebedor"] = ""
+
+        # Recebedor lixo do OCR (rodapé Deficiência/0800, CPF/CNPO, etc.)
+        if self._recebedor_parece_lixo(dados.get("nome_recebedor", "")):
+            dados["nome_recebedor"] = ""
+            # Interno: padrão histórico do arquivo é COMAGRO_INTERNO_*
+            desc_u = (dados.get("descricao") or "").upper()
+            if "INTERNO" in desc_u:
+                dados["nome_recebedor"] = "Comagro"
 
         return dados
 
@@ -984,19 +1000,22 @@ foreach ($line in $result.Lines) { Write-Output $line.Text }
         if not datas:
             return ""
 
+        n = len(texto)
         candidatas = []
         for m in datas:
+            # Descarta datas no último quinto do texto (rodapé de impressão)
+            if m.start() > n * 0.80:
+                continue
             ini = max(0, m.start() - 30)
             ctx = texto[ini:m.end() + 20].lower()
-            # Rodapé de impressão do browser/Inter
             if "of 1" in ctx or "of1" in ctx.replace(" ", ""):
                 continue
             candidatas.append(m.group(1))
 
         if not candidatas:
+            # Se só sobrou a do rodapé, usa a primeira do documento mesmo
             candidatas = [m.group(1) for m in datas]
 
-        # Primeira data "boa" = transação; a última costuma ser impressão
         return self.formatar_data(candidatas[0])
 
     def _descricao_pgto_inter(self, texto):
@@ -1028,11 +1047,49 @@ foreach ($line in $result.Lines) { Write-Output $line.Text }
                     desc = f"{desc} {seg}".strip()
         return desc
 
+    def _recebedor_parece_lixo(self, nome):
+        """True se o 'recebedor' for rótulo/rodapé/telefone do Inter (OCR Windows)."""
+        if not nome or not str(nome).strip():
+            return True
+        n = self._texto_sem_acento(nome)
+        # Remove caracteres não-ASCII estranhos do OCR (ˆ ‡ Æ etc.) para casar melhor
+        n_ascii = re.sub(r'[^A-Z0-9\s/:\-.]', '', n)
+        lixo_substrings = [
+            "DEFICI", "AUDI", "FALA E", "OUVIDORIA", "CAPITAIS", "DEMAIS LOCAL",
+            "FALE COM", "0800", "3003", "HTTPS", "CONTADIGITAL",
+            "CPF/CNP", "CPF/CNPJ", "CPFCNP", "INSTITUICAO", "AGENCIA",
+            "QUEM RECEBEU", "QUEM PAGOU", "DESCRICAO", "BANCO INTER",
+            "1 OF 1", "WINTER",
+        ]
+        if any(x in n or x in n_ascii for x in lixo_substrings):
+            return True
+        # Telefone / só números longos
+        if re.search(r'0800\s*\d{3}', n) or re.search(r'\b\d{4}\s*\d{4}\b', n):
+            return True
+        # Rótulo curto tipo "CPF/CNPO" (OCR de CPF/CNPJ)
+        if re.fullmatch(r'CPF/?CNP[JO]?', n_ascii.replace(" ", "")):
+            return True
+        if len(re.sub(r'[^A-Za-z]', '', nome)) < 3:
+            return True
+        return False
+
     def _recebedor_inter(self, texto):
         """Nome de quem recebeu — robusto ao layout do OCR Windows."""
         tu = self._texto_sem_acento(texto)
-        # Caroline continua sendo âncora em _parece_seculos; no nome do arquivo
-        # o grupo SECULOS já basta (não devolve o nome dela aqui).
+
+        # Transferência interna: o recebedor legítimo costuma ser só "Comagro"
+        # (mesmo CNPJ). Preferir isso a qualquer lixo de rodapé.
+        if re.search(r'(?<![A-Z0-9])COMAGRO(?![A-Z0-9])', tu) and (
+            "INTERNO" in tu or "ITAU" in tu or "BNB" in tu
+        ):
+            # Só usa Comagro se não for o pagador completo "COMAGRO PECAS..."
+            # como único sinal — no Pix interno o recebedor aparece como "Comagro".
+            if re.search(r'(?<![A-Z0-9])COMAGRO(?![A-Z0-9\s]*PECAS)', tu) or "INTERNO" in tu:
+                # Confirma linha curta "Comagro" no texto
+                for ln in texto.split('\n'):
+                    lim = ln.strip()
+                    if re.fullmatch(r'Comagro', lim, re.IGNORECASE):
+                        return "Comagro"
 
         idx_recebedor = tu.find("QUEM RECEBEU")
         if idx_recebedor == -1:
@@ -1042,7 +1099,7 @@ foreach ($line in $result.Lines) { Write-Output $line.Text }
         candidatos = []
         for linha in bloco[1:40]:
             lin = linha.strip().replace('"', '')
-            if not lin:
+            if not lin or self._recebedor_parece_lixo(lin):
                 continue
             lin_up = self._texto_sem_acento(lin)
             if lin_up in ["NOME", "QUEM RECEBEU", "DADOS DO RECEBEDOR", "CPF/CNPJ",
@@ -1051,7 +1108,8 @@ foreach ($line in $result.Lines) { Write-Output $line.Text }
                           "QUEM PAGOU", "DESCRICAO", "DESCRIÇÃO", "BANCO INTER"]:
                 continue
             if any(x in lin_up for x in ["HTTPS://", "FALE COM", "CAPITAIS", "OUVIDORIA",
-                                          "DEFICIENCIA", "DEMAIS LOCAL", "CONTADIGITAL"]):
+                                          "DEFICIENCIA", "DEFICI", "DEMAIS LOCAL",
+                                          "CONTADIGITAL", "0800"]):
                 continue
             if re.match(r'^\d{2}/\d{2}/\d{4}', lin):
                 continue
@@ -1065,6 +1123,7 @@ foreach ($line in $result.Lines) { Write-Output $line.Text }
                 continue
             if re.fullmatch(r'[\d.\-*/]+', lin):
                 continue
+            # Pagador completo (razão social) — não é o recebedor do Pix interno curto
             if "COMAGRO" in lin_up and "PEC" in lin_up:
                 continue
             if lin.startswith("Nome "):
@@ -1079,6 +1138,8 @@ foreach ($line in $result.Lines) { Write-Output $line.Text }
                 break
         busca = candidatos[pagador_idx + 1:] if pagador_idx is not None else candidatos
         for c in busca:
+            if self._recebedor_parece_lixo(c):
+                continue
             cu = self._texto_sem_acento(c)
             if any(b in cu for b in ["BANCO INTER", "BCO ", "ITAU", "BRADESCO", "UNIBANCO", "BNB"]):
                 continue
@@ -1087,7 +1148,13 @@ foreach ($line in $result.Lines) { Write-Output $line.Text }
             nome = re.sub(r'\s+\d{11}\s*$', '', c).strip()
             nome = re.split(r'\s+\d{2}\.\d{3}\.\d{3}/', nome)[0].strip()
             if nome and not re.fullmatch(r'[\d.\-]+', nome) and len(nome) > 2:
+                if self._recebedor_parece_lixo(nome):
+                    continue
                 return nome
+
+        # Fallback interno: Comagro
+        if "INTERNO" in tu:
+            return "Comagro"
         return ""
 
     def gerar_novo_nome(self, dados, original_filename):

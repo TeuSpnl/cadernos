@@ -1061,12 +1061,29 @@ foreach ($line in $result.Lines) { Write-Output $line.Text }
         if not nome or not str(nome).strip():
             return True
         n = self._texto_sem_acento(nome)
-        # Remove caracteres não-ASCII estranhos do OCR (ˆ ‡ Æ etc.) para casar melhor
+        # Só letras: Agˆncia → AGNCIA, Institui‡Æo → INSTITUAO / INSTITUI...
+        letras = re.sub(r'[^A-Z]', '', n)
+        rotulos_exatos = {
+            "NOME", "CONTA", "CHAVE", "TIPO", "CACC", "SVGS",
+            "AGENCIA", "AGNCIA", "HORARIO", "DESCRICAO",
+            "INSTITUICAO", "INSTITUIO", "INSTITUICAO", "INSTITUICA", "INSTITUAO",
+            "CPFCNPJ", "CPFCNPO", "CPFCNP", "OUVIDORIA", "CAPITAIS", "WINTER",
+            "TRANSACAO", "BANCOINTER",
+        }
+        if letras in rotulos_exatos:
+            return True
+        # Prefixo de rótulo (cobre mojibake: AGNCIA, INSTITUI‡ÆO, Deficiˆncia…)
+        if any(letras.startswith(p) for p in (
+            "AGENCI", "AGNCI", "INSTITU", "DEFICI", "OUVIDOR", "CAPITA",
+            "DEMAIS", "FALECOM", "CONTADIGITAL", "QUEMRECE", "QUEMPAG",
+        )):
+            return True
+
         n_ascii = re.sub(r'[^A-Z0-9\s/:\-.]', '', n)
         lixo_substrings = [
             "DEFICI", "AUDI", "FALA E", "OUVIDORIA", "CAPITAIS", "DEMAIS LOCAL",
             "FALE COM", "0800", "3003", "HTTPS", "CONTADIGITAL",
-            "CPF/CNP", "CPF/CNPJ", "CPFCNP", "INSTITU", "AGENCIA",
+            "CPF/CNP", "CPF/CNPJ", "CPFCNP", "INSTITU", "AGENCIA", "AGNCIA",
             "QUEM RECEBEU", "QUEM PAGOU", "DESCRICAO", "BANCO INTER",
             "1 OF 1", "WINTER", "HORARIO", "TRANSACAO",
         ]
@@ -1075,14 +1092,18 @@ foreach ($line in $result.Lines) { Write-Output $line.Text }
         # Telefone / só números longos
         if re.search(r'0800\s*\d{3}', n) or re.search(r'\b\d{4}\s*\d{4}\b', n):
             return True
-        # Rótulo curto tipo "CPF/CNPO" (OCR de CPF/CNPJ)
-        compact = n_ascii.replace(" ", "").replace("/", "")
-        if re.fullmatch(r'CPF/?CNP[JO]?', compact) or compact in (
-            "NOME", "CONTA", "CHAVE", "TIPO", "CACC", "SVGS", "INSTITUICAO", "INSTITUIO"
-        ):
-            return True
         if len(re.sub(r'[^A-Za-z]', '', nome)) < 3:
             return True
+        # Uma única palavra curta + sem sobrenome → quase sempre rótulo OCR
+        palavras = [p for p in re.split(r'\s+', nome.strip()) if p]
+        if len(palavras) == 1 and len(letras) <= 10 and not re.search(r'\d{5,}', nome):
+            # Ex.: "Agência", "Nome", "Conta" — nomes reais de pessoa costumam ter 2+ palavras
+            # Exceto "Comagro" (interno)
+            if letras not in {"COMAGRO"}:
+                # Se parece 100% com rótulo conhecido por fuzzy já caiu acima;
+                # aqui bloqueia sobras curtas ambíguas do rodapé
+                if letras.endswith("CIA") or letras.endswith("CAO") or letras.endswith("RIO"):
+                    return True
         return False
 
     def _recebedor_inter(self, texto):

@@ -67,6 +67,7 @@
             "grupo": "INTERNO_BNB",
             "termos": [
                 "INTERNO_BNB",
+                "INTERNO",
                 "BNB"
             ]
         },

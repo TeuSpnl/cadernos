@@ -44,13 +44,15 @@ class RenomeadorComprovantes:
             try:
                 with open(arquivo_json, 'w', encoding='utf-8') as f:
                     json.dump(config_padrao, f, indent=4, ensure_ascii=False)
-            except:
+            except Exception:
                 pass
             return config_padrao
 
         try:
             with open(arquivo_json, 'r', encoding='utf-8') as f:
-                return json.load(f)
+                config = json.load(f)
+            config["_caminho_carregado"] = arquivo_json
+            return config
         except Exception as e:
             messagebox.showerror("Erro Config", f"Erro ao ler JSON: {e}")
             return config_padrao
@@ -335,7 +337,7 @@ class RenomeadorComprovantes:
                 return True
         return False
 
-    def _garantir_ocr_helper(self):
+    def _garantir_ocr_helper_mac(self):
         """Compila (se preciso) e devolve o binário ocr_vision_helper no macOS."""
         if self._ocr_bin and os.path.exists(self._ocr_bin):
             return self._ocr_bin
@@ -348,7 +350,6 @@ class RenomeadorComprovantes:
             self._ocr_bin = bin_path
             return bin_path
 
-        # Tenta compilar a partir do .swift (só macOS com swiftc)
         swiftc = shutil.which("swiftc")
         if not swiftc or not os.path.exists(src_path):
             return None
@@ -362,46 +363,118 @@ class RenomeadorComprovantes:
         except Exception:
             return None
 
-    def _ocr_primeira_pagina(self, caminho_arq):
-        """Renderiza a 1ª página e roda OCR (Vision no Mac). Devolve texto ou ''."""
-        helper = self._garantir_ocr_helper()
-        if not helper:
-            # Fallback opcional: tesseract, se existir no PATH
-            if not shutil.which("tesseract"):
-                return ""
-            helper = None
+    def _ocr_via_windows(self, caminho_png):
+        """OCR nativo do Windows 10/11 (Windows.Media.Ocr via PowerShell 5)."""
+        script_dir = os.path.dirname(os.path.abspath(__file__))
+        ps1 = os.path.join(script_dir, "ocr_windows.ps1")
+        if not os.path.exists(ps1):
+            return ""
 
+        # Windows PowerShell 5.x (WinRT OCR NÃO funciona no PowerShell 7)
+        powershell = shutil.which("powershell") or shutil.which("powershell.exe")
+        if not powershell:
+            # Caminho clássico do Windows
+            candidato = r"C:\Windows\System32\WindowsPowerShell\v1.0\powershell.exe"
+            if os.path.exists(candidato):
+                powershell = candidato
+            else:
+                return ""
+
+        try:
+            r = subprocess.run(
+                [
+                    powershell,
+                    "-NoProfile",
+                    "-ExecutionPolicy", "Bypass",
+                    "-File", ps1,
+                    "-Path", caminho_png,
+                ],
+                capture_output=True, text=True, timeout=90,
+                creationflags=subprocess.CREATE_NO_WINDOW if os.name == "nt" else 0,
+            )
+            out = (r.stdout or "").strip()
+            if not out and r.stderr:
+                self.log(f"  OCR Windows stderr: {(r.stderr or '')[:300]}")
+            return out
+        except Exception as e:
+            self.log(f"  OCR Windows falhou: {e}")
+            return ""
+
+    def _ocr_via_tesseract(self, caminho_png):
+        """Fallback se o Tesseract estiver instalado no PATH."""
+        if not shutil.which("tesseract"):
+            return ""
+        try:
+            r = subprocess.run(
+                ["tesseract", caminho_png, "stdout", "-l", "por+eng"],
+                capture_output=True, text=True, timeout=60
+            )
+            return (r.stdout or "").strip()
+        except Exception as e:
+            self.log(f"  OCR tesseract falhou: {e}")
+            return ""
+
+    def _ocr_via_mac_vision(self, caminho_png):
+        """OCR via Vision (macOS), se o helper estiver disponível."""
+        helper = self._garantir_ocr_helper_mac()
+        if not helper:
+            return ""
+        try:
+            r = subprocess.run(
+                [helper, caminho_png],
+                capture_output=True, text=True, timeout=60
+            )
+            return (r.stdout or "").strip()
+        except Exception as e:
+            self.log(f"  OCR Mac Vision falhou: {e}")
+            return ""
+
+    def _ocr_primeira_pagina(self, caminho_arq):
+        """Renderiza a 1ª página e roda OCR (Windows nativo → Mac Vision → tesseract)."""
+        tmp_path = None
         try:
             with pdfplumber.open(caminho_arq) as pdf:
                 if not pdf.pages:
                     return ""
-                # Resolução moderada: OCR rápido o bastante e legível
-                im = pdf.pages[0].to_image(resolution=150)
+                try:
+                    # Resolução um pouco maior ajuda o OCR nos laranjas do Inter
+                    im = pdf.pages[0].to_image(resolution=180)
+                except Exception as e_img:
+                    # pdfplumber.to_image exige pypdfium2 (ou similar) instalado
+                    self.log(
+                        f"  OCR: nao consegui renderizar a pagina ({e_img}). "
+                        f"No Windows: pip install pypdfium2"
+                    )
+                    return ""
                 with tempfile.NamedTemporaryFile(suffix=".png", delete=False) as tmp:
                     tmp_path = tmp.name
                 im.save(tmp_path)
 
-            try:
-                if helper:
-                    r = subprocess.run(
-                        [helper, tmp_path],
-                        capture_output=True, text=True, timeout=60
-                    )
-                    return (r.stdout or "").strip()
-                # tesseract fallback
-                r = subprocess.run(
-                    ["tesseract", tmp_path, "stdout", "-l", "por+eng"],
-                    capture_output=True, text=True, timeout=60
-                )
-                return (r.stdout or "").strip()
-            finally:
+            # Ordem: no Windows o motor nativo é o que resolve; no Mac, Vision.
+            for nome, fn in (
+                ("Windows", self._ocr_via_windows),
+                ("Mac Vision", self._ocr_via_mac_vision),
+                ("tesseract", self._ocr_via_tesseract),
+            ):
+                if nome == "Windows" and os.name != "nt":
+                    continue
+                if nome == "Mac Vision" and os.name == "nt":
+                    continue
+                texto = fn(tmp_path)
+                if texto and len(texto) > 40:
+                    self.log(f"  OCR ok via {nome} ({len(texto)} chars)")
+                    return texto
+
+            return ""
+        except Exception as e:
+            self.log(f"  OCR falhou: {e}")
+            return ""
+        finally:
+            if tmp_path:
                 try:
                     os.unlink(tmp_path)
                 except Exception:
                     pass
-        except Exception as e:
-            self.log(f"  OCR falhou: {e}")
-            return ""
 
     def extrair_dados(self, texto):
         dados = {
@@ -766,12 +839,17 @@ class RenomeadorComprovantes:
                 texto_completo += page_text + "\n"
 
         if self._texto_precisa_ocr(texto_completo):
-            self.log(f"  OCR: {os.path.basename(caminho_arq)} (texto Inter incompleto)")
+            self.log(f"  OCR necessario: {os.path.basename(caminho_arq)} (Inter sem texto util)")
             ocr = self._ocr_primeira_pagina(caminho_arq)
             if ocr:
                 # OCR substitui o texto nativo: no Inter os valores vêm como curva/outline,
                 # e os labels nativos ainda têm "Ouvidoria:" que cortaria o OCR no rodapé.
                 texto_completo = ocr
+            else:
+                self.log(
+                    "  AVISO: OCR falhou — comprovante Inter vai sair como PGTO generico. "
+                    "No Windows use o ocr_windows.ps1 (OCR nativo) ou instale Tesseract."
+                )
 
         return texto_completo, num_paginas
 
@@ -782,8 +860,11 @@ class RenomeadorComprovantes:
 
         sucessos = 0
         erros = 0
-        caminho_cfg = self.config.get("_caminho_carregado", "(nenhum)")
-        self.log(f"Iniciando processamento... (regras: {caminho_cfg})")
+        n_regras = len(self.config.get("regras", []))
+        caminho_cfg = self.config.get("_caminho_carregado", r"\\Servidor\...\regras_renomeador.json")
+        self.log(f"Iniciando... regras={n_regras} grupos | {caminho_cfg}")
+        if n_regras == 0:
+            self.log("AVISO: JSON de regras vazio ou nao carregou — tudo vai sair como PGTO.")
 
         for caminho_arq in arquivos:
             try:
@@ -803,6 +884,12 @@ class RenomeadorComprovantes:
                 else:
                     dados = self.extrair_dados(texto_completo)
                     novo_nome = self.gerar_novo_nome(dados, os.path.basename(caminho_arq))
+                    # Log curto do que as regras/OCR enxergaram (ajuda a debugar PGTO generico)
+                    self.log(
+                        f"  dados: desc={dados.get('descricao')!r} "
+                        f"recebedor={dados.get('nome_recebedor')!r} "
+                        f"data={dados.get('data_pgto')!r}"
+                    )
 
                 novo_caminho = os.path.join(pasta, novo_nome)
 

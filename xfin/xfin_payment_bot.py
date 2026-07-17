@@ -497,7 +497,9 @@ def _doc_priority(x):
         return (1, xu)
     if "PIX" in xu:
         return (2, xu)
-    return (3, xu)
+    if "VALE" in xu:
+        return (3, xu)
+    return (4, xu)
 
 
 def _get_doc_style(doc_type):

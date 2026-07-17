@@ -329,6 +329,58 @@ class RenomeadorComprovantes:
 
     # --- OCR (Inter imprime valores como curvas; pdfplumber só vê os rótulos) ---
 
+    # Script PowerShell embutido: assim o OCR Windows funciona mesmo se o .ps1
+    # nao estiver na mesma pasta do renomeador.py (caso comum no Servidor).
+    _OCR_WINDOWS_PS1 = r'''
+param([Parameter(Mandatory=$true)][string]$Path)
+$ErrorActionPreference = 'Stop'
+if (-not (Test-Path -LiteralPath $Path)) { Write-Error "Arquivo nao encontrado: $Path"; exit 2 }
+$Path = (Resolve-Path -LiteralPath $Path).Path
+Add-Type -AssemblyName System.Runtime.WindowsRuntime | Out-Null
+$null = [Windows.Storage.StorageFile,Windows.Storage,ContentType=WindowsRuntime]
+$null = [Windows.Media.Ocr.OcrEngine,Windows.Foundation,ContentType=WindowsRuntime]
+$null = [Windows.Graphics.Imaging.BitmapDecoder,Windows.Foundation,ContentType=WindowsRuntime]
+$null = [Windows.Graphics.Imaging.SoftwareBitmap,Windows.Foundation,ContentType=WindowsRuntime]
+$null = [Windows.Storage.Streams.RandomAccessStream,Windows.Storage.Streams,ContentType=WindowsRuntime]
+$null = [Windows.Globalization.Language,Windows.Foundation,ContentType=WindowsRuntime]
+$getAwaiter = [WindowsRuntimeSystemExtensions].GetMember('GetAwaiter').Where({
+    $PSItem.GetParameters()[0].ParameterType.Name -eq 'IAsyncOperation`1'
+}, 'First')[0]
+function Await-WinRT($AsyncTask, [Type]$ResultType) {
+    $getAwaiter.MakeGenericMethod($ResultType).Invoke($null, @($AsyncTask)).GetResult()
+}
+$engine = $null
+$tentativas = @('pt-BR','pt-PT','en-US','en-GB')
+foreach ($tag in $tentativas) {
+    try {
+        $lang = [Windows.Globalization.Language]::new($tag)
+        $engine = [Windows.Media.Ocr.OcrEngine]::TryCreateFromLanguage($lang)
+        if ($engine) { break }
+    } catch {}
+}
+if (-not $engine) {
+    try { $engine = [Windows.Media.Ocr.OcrEngine]::TryCreateFromUserProfileLanguages() } catch {}
+}
+if (-not $engine) {
+    $disponiveis = @()
+    try {
+        foreach ($l in [Windows.Media.Ocr.OcrEngine]::AvailableRecognizerLanguages) {
+            $disponiveis += $l.LanguageTag
+        }
+    } catch {}
+    $lista = if ($disponiveis.Count) { $disponiveis -join ', ' } else { '(nenhum)' }
+    [Console]::Error.WriteLine("OCR_ENGINE_MISSING langs=$lista")
+    Write-Error "Nenhum motor OCR do Windows disponivel. Idiomas OCR instalados: $lista. Instale 'OCR do idioma' em Configuracoes > Hora e idioma > Idioma, ou: pip install rapidocr-onnxruntime"
+    exit 3
+}
+$file = Await-WinRT ([Windows.Storage.StorageFile]::GetFileFromPathAsync($Path)) ([Windows.Storage.StorageFile])
+$stream = Await-WinRT ($file.OpenAsync([Windows.Storage.FileAccessMode]::Read)) ([Windows.Storage.Streams.IRandomAccessStream])
+$decoder = Await-WinRT ([Windows.Graphics.Imaging.BitmapDecoder]::CreateAsync($stream)) ([Windows.Graphics.Imaging.BitmapDecoder])
+$bitmap = Await-WinRT ($decoder.GetSoftwareBitmapAsync()) ([Windows.Graphics.Imaging.SoftwareBitmap])
+$result = Await-WinRT ($engine.RecognizeAsync($bitmap)) ([Windows.Media.Ocr.OcrResult])
+foreach ($line in $result.Lines) { Write-Output $line.Text }
+'''
+
     def _texto_precisa_ocr(self, texto):
         """Heurística: comprovante Inter sem valores extraíveis (só labels)."""
         if "Internet Banking Inter" in texto or "contadigital.inter.co" in texto:
@@ -363,24 +415,50 @@ class RenomeadorComprovantes:
         except Exception:
             return None
 
+    def _powershell_51(self):
+        """Sempre usa Windows PowerShell 5.1 (WinRT OCR quebra no PowerShell 7)."""
+        candidatos = [
+            os.path.expandvars(r"%SystemRoot%\System32\WindowsPowerShell\v1.0\powershell.exe"),
+            r"C:\Windows\System32\WindowsPowerShell\v1.0\powershell.exe",
+        ]
+        for c in candidatos:
+            if c and os.path.exists(c):
+                return c
+        # Último recurso: o que estiver no PATH (pode ser PS7 e falhar)
+        return shutil.which("powershell") or shutil.which("powershell.exe")
+
     def _ocr_via_windows(self, caminho_png):
-        """OCR nativo do Windows 10/11 (Windows.Media.Ocr via PowerShell 5)."""
-        script_dir = os.path.dirname(os.path.abspath(__file__))
-        ps1 = os.path.join(script_dir, "ocr_windows.ps1")
-        if not os.path.exists(ps1):
+        """OCR nativo do Windows 10/11 (Windows.Media.Ocr via PowerShell 5.1)."""
+        powershell = self._powershell_51()
+        if not powershell:
+            self.log("  OCR Windows: powershell.exe nao encontrado")
             return ""
 
-        # Windows PowerShell 5.x (WinRT OCR NÃO funciona no PowerShell 7)
-        powershell = shutil.which("powershell") or shutil.which("powershell.exe")
-        if not powershell:
-            # Caminho clássico do Windows
-            candidato = r"C:\Windows\System32\WindowsPowerShell\v1.0\powershell.exe"
-            if os.path.exists(candidato):
-                powershell = candidato
-            else:
+        # Garante caminho absoluto (WinRT StorageFile exige)
+        caminho_png = os.path.abspath(caminho_png)
+
+        # Prefere o .ps1 ao lado do script; senão grava o embutido num temp
+        script_dir = os.path.dirname(os.path.abspath(__file__))
+        ps1 = os.path.join(script_dir, "ocr_windows.ps1")
+        ps1_temp = None
+        if not os.path.exists(ps1):
+            try:
+                fd, ps1_temp = tempfile.mkstemp(suffix=".ps1")
+                os.close(fd)
+                with open(ps1_temp, "w", encoding="utf-8") as f:
+                    f.write(self._OCR_WINDOWS_PS1)
+                ps1 = ps1_temp
+                self.log("  OCR Windows: usando script embutido (ocr_windows.ps1 ausente)")
+            except Exception as e:
+                self.log(f"  OCR Windows: nao consegui gravar script temp ({e})")
                 return ""
 
         try:
+            # creationflags só existe no Windows
+            kwargs = {"capture_output": True, "text": True, "timeout": 90}
+            if os.name == "nt":
+                kwargs["creationflags"] = subprocess.CREATE_NO_WINDOW
+
             r = subprocess.run(
                 [
                     powershell,
@@ -389,15 +467,50 @@ class RenomeadorComprovantes:
                     "-File", ps1,
                     "-Path", caminho_png,
                 ],
-                capture_output=True, text=True, timeout=90,
-                creationflags=subprocess.CREATE_NO_WINDOW if os.name == "nt" else 0,
+                **kwargs,
             )
             out = (r.stdout or "").strip()
-            if not out and r.stderr:
-                self.log(f"  OCR Windows stderr: {(r.stderr or '')[:300]}")
+            err = (r.stderr or "").strip()
+            if not out:
+                if "OCR_ENGINE_MISSING" in err or "Nenhum motor OCR" in err:
+                    self.log(
+                        "  OCR Windows: pacote de idioma OCR nao instalado no Windows. "
+                        "Instale pt-BR/en-US em Configuracoes > Idioma, "
+                        "OU rode: pip install rapidocr-onnxruntime"
+                    )
+                elif err:
+                    self.log(f"  OCR Windows stderr: {err[:400]}")
+                elif r.returncode:
+                    self.log(f"  OCR Windows exit={r.returncode} (sem texto)")
             return out
         except Exception as e:
             self.log(f"  OCR Windows falhou: {e}")
+            return ""
+        finally:
+            if ps1_temp:
+                try:
+                    os.unlink(ps1_temp)
+                except Exception:
+                    pass
+
+    def _ocr_via_rapidocr(self, caminho_png):
+        """Fallback Python puro (pip install rapidocr-onnxruntime) — nao depende do Windows."""
+        try:
+            from rapidocr_onnxruntime import RapidOCR
+        except ImportError:
+            return ""
+        try:
+            # Cache do engine na instancia (modelo demora a carregar na 1ª vez)
+            if not getattr(self, "_rapidocr_engine", None):
+                self.log("  OCR RapidOCR: carregando modelo (1a vez pode demorar)...")
+                self._rapidocr_engine = RapidOCR()
+            result, _ = self._rapidocr_engine(caminho_png)
+            if not result:
+                return ""
+            # Cada item: [box, texto, confianca]
+            return "\n".join(item[1] for item in result if item and len(item) > 1).strip()
+        except Exception as e:
+            self.log(f"  OCR RapidOCR falhou: {e}")
             return ""
 
     def _ocr_via_tesseract(self, caminho_png):
@@ -430,7 +543,7 @@ class RenomeadorComprovantes:
             return ""
 
     def _ocr_primeira_pagina(self, caminho_arq):
-        """Renderiza a 1ª página e roda OCR (Windows nativo → Mac Vision → tesseract)."""
+        """Renderiza a 1ª página e roda OCR (Windows → RapidOCR → Mac → tesseract)."""
         tmp_path = None
         try:
             with pdfplumber.open(caminho_arq) as pdf:
@@ -440,22 +553,24 @@ class RenomeadorComprovantes:
                     # Resolução um pouco maior ajuda o OCR nos laranjas do Inter
                     im = pdf.pages[0].to_image(resolution=180)
                 except Exception as e_img:
-                    # pdfplumber.to_image exige pypdfium2 (ou similar) instalado
                     self.log(
                         f"  OCR: nao consegui renderizar a pagina ({e_img}). "
-                        f"No Windows: pip install pypdfium2"
+                        f"Confirme: pip install pypdfium2"
                     )
                     return ""
-                with tempfile.NamedTemporaryFile(suffix=".png", delete=False) as tmp:
-                    tmp_path = tmp.name
+
+                # Caminho simples em TEMP — WinRT às vezes falha com nomes estranhos
+                tmp_dir = tempfile.gettempdir()
+                tmp_path = os.path.join(tmp_dir, "renomeador_ocr_page.png")
                 im.save(tmp_path)
 
-            # Ordem: no Windows o motor nativo é o que resolve; no Mac, Vision.
-            for nome, fn in (
+            tentativas = [
                 ("Windows", self._ocr_via_windows),
+                ("RapidOCR", self._ocr_via_rapidocr),
                 ("Mac Vision", self._ocr_via_mac_vision),
                 ("tesseract", self._ocr_via_tesseract),
-            ):
+            ]
+            for nome, fn in tentativas:
                 if nome == "Windows" and os.name != "nt":
                     continue
                 if nome == "Mac Vision" and os.name == "nt":
@@ -465,6 +580,19 @@ class RenomeadorComprovantes:
                     self.log(f"  OCR ok via {nome} ({len(texto)} chars)")
                     return texto
 
+            # Nenhum motor funcionou — mensagem acionável
+            tem_rapid = True
+            try:
+                import rapidocr_onnxruntime  # noqa: F401
+            except ImportError:
+                tem_rapid = False
+            if not tem_rapid:
+                self.log(
+                    "  OCR: nenhum motor disponivel. No Windows rode UM destes:\n"
+                    "    pip install rapidocr-onnxruntime\n"
+                    "  ou instale o pacote 'OCR' do idioma (pt-BR/en-US) em\n"
+                    "    Configuracoes > Hora e idioma > Idioma e regiao"
+                )
             return ""
         except Exception as e:
             self.log(f"  OCR falhou: {e}")
@@ -848,7 +976,7 @@ class RenomeadorComprovantes:
             else:
                 self.log(
                     "  AVISO: OCR falhou — comprovante Inter vai sair como PGTO generico. "
-                    "No Windows use o ocr_windows.ps1 (OCR nativo) ou instale Tesseract."
+                    "No Windows: pip install rapidocr-onnxruntime"
                 )
 
         return texto_completo, num_paginas

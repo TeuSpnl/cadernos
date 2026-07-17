@@ -899,6 +899,11 @@ foreach ($line in $result.Lines) { Write-Output $line.Text }
             elif "BNB" in tn:
                 dados["descricao"] = "INTERNO_BNB"
 
+        # Normaliza título longo do Inter → nome curto no arquivo
+        desc_u = (dados.get("descricao") or "").upper().replace(" ", "_").replace("-", "_")
+        if "PIX" in desc_u and "DEVOLVID" in desc_u:
+            dados["descricao"] = "PIX_DEVOLVIDO"
+
         # Se a descrição tiver "SALARIO", simplifica
         # (pula caso a descrição já tenha sido fixada por um banco específico,
         # para não estragar coisas como "VIVO INTERNET LOJA" se um dia algum
@@ -969,10 +974,14 @@ foreach ($line in $result.Lines) { Write-Output $line.Text }
 
         # Título quando não há descrição útil
         if dados["descricao"] == "PGTO" or self._descricao_inutil(dados["descricao"]):
-            for titulo in ("Pix recebido devolvido", "Pix enviado", "Pix recebido"):
-                if titulo in texto:
-                    dados["descricao"] = titulo
-                    break
+            tu = self._texto_sem_acento(texto)
+            if "PIX RECEBIDO DEVOLVIDO" in tu:
+                # Nome curto pedido: PIX_DEVOLVIDO (não PIX_RECEBIDO_DEVOLVIDO)
+                dados["descricao"] = "PIX_DEVOLVIDO"
+            elif "PIX ENVIADO" in tu:
+                dados["descricao"] = "Pix enviado"
+            elif "PIX RECEBIDO" in tu:
+                dados["descricao"] = "Pix recebido"
 
         # Reforço Séculos — no log real o OCR trouxe 669 chars mas regras não
         # casaram (rodapé cortava cedo) e a desc virou só 0712026.
@@ -1057,9 +1066,9 @@ foreach ($line in $result.Lines) { Write-Output $line.Text }
         lixo_substrings = [
             "DEFICI", "AUDI", "FALA E", "OUVIDORIA", "CAPITAIS", "DEMAIS LOCAL",
             "FALE COM", "0800", "3003", "HTTPS", "CONTADIGITAL",
-            "CPF/CNP", "CPF/CNPJ", "CPFCNP", "INSTITUICAO", "AGENCIA",
+            "CPF/CNP", "CPF/CNPJ", "CPFCNP", "INSTITU", "AGENCIA",
             "QUEM RECEBEU", "QUEM PAGOU", "DESCRICAO", "BANCO INTER",
-            "1 OF 1", "WINTER",
+            "1 OF 1", "WINTER", "HORARIO", "TRANSACAO",
         ]
         if any(x in n or x in n_ascii for x in lixo_substrings):
             return True
@@ -1067,7 +1076,10 @@ foreach ($line in $result.Lines) { Write-Output $line.Text }
         if re.search(r'0800\s*\d{3}', n) or re.search(r'\b\d{4}\s*\d{4}\b', n):
             return True
         # Rótulo curto tipo "CPF/CNPO" (OCR de CPF/CNPJ)
-        if re.fullmatch(r'CPF/?CNP[JO]?', n_ascii.replace(" ", "")):
+        compact = n_ascii.replace(" ", "").replace("/", "")
+        if re.fullmatch(r'CPF/?CNP[JO]?', compact) or compact in (
+            "NOME", "CONTA", "CHAVE", "TIPO", "CACC", "SVGS", "INSTITUICAO", "INSTITUIO"
+        ):
             return True
         if len(re.sub(r'[^A-Za-z]', '', nome)) < 3:
             return True

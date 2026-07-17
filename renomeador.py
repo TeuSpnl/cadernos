@@ -1,6 +1,9 @@
 import os
 import re
 import json
+import shutil
+import subprocess
+import tempfile
 import pdfplumber
 import tkinter as as_tk
 from tkinter import filedialog, messagebox
@@ -15,6 +18,7 @@ class RenomeadorComprovantes:
         self.root.geometry("600x450")
 
         self.config = self.carregar_configuracao()
+        self._ocr_bin = None  # cache do caminho do helper Vision (macOS)
 
         # Interface Gráfica
         frame = as_tk.Frame(self.root)
@@ -74,7 +78,7 @@ class RenomeadorComprovantes:
         try:
             dt = datetime.strptime(data_str, "%d/%m/%Y")
             return dt.strftime("%d-%m-%y")
-        except:
+        except Exception:
             return data_str.replace("/", "-")
 
     def calcular_mes_referencia(self, data_pagamento, tipo_pagamento):
@@ -95,12 +99,15 @@ class RenomeadorComprovantes:
                 primeiro_dia_mes_atual = dt_pgto.replace(day=1)
                 ultimo_dia_mes_anterior = primeiro_dia_mes_atual - timedelta(days=1)
                 return ultimo_dia_mes_anterior.strftime("%m-%Y")
-        except:
+        except Exception:
             return ""
 
     def extrair_data_referencia(self, texto):
-        """Tenta encontrar algo como 12/2025 ou 12-2025 no texto"""
-        match = re.search(r'\b(0[1-9]|1[0-2])[-/](20\d{2})\b', texto)
+        """Tenta encontrar algo como 12/2025 ou 12-2025 no texto.
+
+        Evita falso positivo dentro de data completa (ex: 17/07/2026 → não é 07/2026).
+        """
+        match = re.search(r'(?<!\d{2}/)(?<!\d)(0[1-9]|1[0-2])[-/](20\d{2})\b', texto)
         if match:
             return f"{match.group(1)}-{match.group(2)}"
         return ""
@@ -141,12 +148,32 @@ class RenomeadorComprovantes:
 
         return None
 
-    def processar_itau_dda(self, texto, caminho_arq=None):
+    def _identificacao_boleto_itau(self, texto):
+        """Extrai o campo 'Identificação no meu comprovante' do boleto Itaú.
+
+        Retorna (valor, preenchida):
+        - preenchida=True  → boleto avulso (usuário digitou algo legível, ex: 'Cartao Caixa')
+        - preenchida=False → DDA (campo vazio; o que sobra é a linha digitável/código de barras)
+        """
+        m = re.search(r'Identifica[cç][aã]o no meu comprovante:\s*(.*)', texto, re.IGNORECASE)
+        if not m:
+            return "", False
+        valor = m.group(1).strip().split('\n')[0].strip()
+        # Linha digitável: só dígitos/espaços/pontos e bem longa
+        so_codigo = bool(re.fullmatch(r'[\d\s.]+', valor)) and len(re.sub(r'\s', '', valor)) >= 20
+        if not valor or so_codigo:
+            return "", False
+        return valor, True
+
+    def processar_itau_dda(self, texto, caminho_arq=None, num_paginas=1):
         """Detecta se é o arquivo de lote / consolidado DDA do Itaú.
 
-        Dois sub-casos:
-        a) PDF com texto extraível (relatório "Lançamentos do período" gerado pelo Itaú web).
-        b) PDF imagem (Microsoft Print To PDF), sem texto. Aí caímos em heurística pelo nome do arquivo.
+        Sub-casos:
+        a) Relatório "Lançamentos do período" (texto extraível do Itaú web).
+        b) Lote de comprovantes de boleto Sispag (mesmo layout do avulso):
+           - DDA: sempre >1 página e identificação vazia
+           - Avulso: 1 página com identificação preenchida pelo usuário
+        c) PDF imagem (Print To PDF), sem texto — heurística pelo nome/pasta.
         """
         # Caso A: relatório de lançamentos do Itaú (tem texto extraível)
         if "Lançamentos do período" in texto and (
@@ -157,7 +184,36 @@ class RenomeadorComprovantes:
                 data_fmt = self.formatar_data(data_match.group(1))
                 return f"PAGAMENTOS_ITAU_{data_fmt}"
 
-        # Caso B: PDF imagem (Print To PDF do Itaú). Sem texto, mas o nome ou a pasta
+        # Caso B: comprovantes de boleto via Sispag (DDA multipágina vs avulso 1 página)
+        eh_boleto_sispag = (
+            "Comprovante de pagamento de boleto" in texto
+            and ("via Sispag" in texto or "CNC:341" in texto)
+        )
+        if eh_boleto_sispag:
+            # DDA consolidado: sempre vem com mais de uma página
+            if num_paginas and num_paginas > 1:
+                data_match = re.search(r'Data de pagamento:\s*(\d{2}/\d{2}/\d{4})', texto, re.IGNORECASE)
+                if data_match:
+                    data_fmt = self.formatar_data(data_match.group(1))
+                else:
+                    data_fmt = self._data_do_caminho(caminho_arq)
+                if data_fmt:
+                    return f"PAGAMENTOS_ITAU_{data_fmt}"
+
+            # 1 página: se a identificação estiver vazia, ainda trata como DDA (lote de 1)
+            _, ident_ok = self._identificacao_boleto_itau(texto)
+            if not ident_ok:
+                data_match = re.search(r'Data de pagamento:\s*(\d{2}/\d{2}/\d{4})', texto, re.IGNORECASE)
+                if data_match:
+                    data_fmt = self.formatar_data(data_match.group(1))
+                else:
+                    data_fmt = self._data_do_caminho(caminho_arq)
+                if data_fmt:
+                    return f"PAGAMENTOS_ITAU_{data_fmt}"
+            # Identificação preenchida + 1 página = boleto avulso → não é DDA
+            return None
+
+        # Caso C: PDF imagem (Print To PDF do Itaú). Sem texto, mas o nome ou a pasta
         # ainda permitem reconstruir a data.
         if caminho_arq and (not texto or len(texto.strip()) < 50):
             nome_orig_upper = os.path.basename(caminho_arq).upper()
@@ -175,7 +231,7 @@ class RenomeadorComprovantes:
             return None
         try:
             dia = int(data_pgto.split('-')[0])
-        except:
+        except Exception:
             return None
 
         regras_data = self.config.get("regras_data", {})
@@ -196,6 +252,7 @@ class RenomeadorComprovantes:
             "Em caso de duvidas",
             "SAC 0800",
             "Ouvidoria:",
+            "Fale com a gente",  # Inter
         ]
         idx_min = len(texto)
         for marcador in marcadores_corte:
@@ -203,6 +260,148 @@ class RenomeadorComprovantes:
             if idx != -1 and idx < idx_min:
                 idx_min = idx
         return texto[:idx_min]
+
+    def _texto_sem_acento(self, texto):
+        """Normaliza acentos para comparações (ITAÚ → ITAU)."""
+        mapa = str.maketrans({
+            "Á": "A", "À": "A", "Ã": "A", "Â": "A",
+            "É": "E", "Ê": "E",
+            "Í": "I",
+            "Ó": "O", "Õ": "O", "Ô": "O",
+            "Ú": "U", "Ü": "U",
+            "Ç": "C",
+        })
+        return texto.upper().translate(mapa)
+
+    def _termo_presente(self, termo, texto_upper):
+        """Verifica se o termo aparece no texto sem falso positivo tipo DAS⊂TODAS.
+
+        Usa fronteira alfanumérica (não \\b), para casar SECULOS dentro de
+        MENSALIDADE_SISTEMA_SECULOS (underscore não quebra \\b do Python).
+        """
+        t = termo.upper()
+        if not t:
+            return False
+        # (?<![A-Z0-9]) termo (?![A-Z0-9]) — underscore/_hífen contam como separador
+        padrao = r'(?<![A-Z0-9])' + re.escape(t) + r'(?![A-Z0-9])'
+        return re.search(padrao, texto_upper) is not None
+
+    def _aplicar_regras_json(self, texto_limpo, dados):
+        """Aplica as regras do JSON na descrição. Retorna True se casou alguma."""
+        texto_upper = texto_limpo.upper()
+        texto_norm = self._texto_sem_acento(texto_limpo)
+
+        for regra in self.config.get("regras", []):
+            grupo = regra.get("grupo", "")
+            termos = regra.get("termos", [])
+            termo_casado = None
+            for termo in termos:
+                if self._termo_presente(termo, texto_upper):
+                    termo_casado = termo.upper()
+                    break
+            if not termo_casado:
+                continue
+
+            # Desambiguação INTERNO: "INTERNO" sozinho precisa do banco de destino
+            if grupo.startswith("INTERNO_") and termo_casado == "INTERNO":
+                if "ITAU" in grupo.upper():
+                    if "ITAU" not in texto_norm:
+                        continue
+                elif "BNB" in grupo.upper():
+                    if "BNB" not in texto_norm:
+                        continue
+
+            desc_refinada = self.refinar_por_data(grupo, dados["data_pgto"])
+            if desc_refinada:
+                dados["descricao"] = termos[0] + "_" + desc_refinada
+            elif "AGUA" in grupo or "LUZ" in grupo:
+                dados["descricao"] = termos[0] + "_" + grupo
+            else:
+                dados["descricao"] = grupo
+
+            # Preserva mês explícito no comprovante (ex: MENSALIDADE_SISTEMA_SECULOS 07/2026)
+            if not dados.get("data_ref"):
+                dados["data_ref"] = self.extrair_data_referencia(texto_limpo)
+            return True
+        return False
+
+    # --- OCR (Inter imprime valores como curvas; pdfplumber só vê os rótulos) ---
+
+    def _texto_precisa_ocr(self, texto):
+        """Heurística: comprovante Inter sem valores extraíveis (só labels)."""
+        if "Internet Banking Inter" in texto or "contadigital.inter.co" in texto:
+            # Se não tem "Pix" nem "R$", os valores estão como outline/curva
+            if "Pix" not in texto and "R$" not in texto:
+                return True
+        return False
+
+    def _garantir_ocr_helper(self):
+        """Compila (se preciso) e devolve o binário ocr_vision_helper no macOS."""
+        if self._ocr_bin and os.path.exists(self._ocr_bin):
+            return self._ocr_bin
+
+        script_dir = os.path.dirname(os.path.abspath(__file__))
+        bin_path = os.path.join(script_dir, "ocr_vision_helper")
+        src_path = os.path.join(script_dir, "ocr_vision.swift")
+
+        if os.path.exists(bin_path) and os.access(bin_path, os.X_OK):
+            self._ocr_bin = bin_path
+            return bin_path
+
+        # Tenta compilar a partir do .swift (só macOS com swiftc)
+        swiftc = shutil.which("swiftc")
+        if not swiftc or not os.path.exists(src_path):
+            return None
+        try:
+            subprocess.run(
+                [swiftc, src_path, "-o", bin_path],
+                check=True, capture_output=True, timeout=120
+            )
+            self._ocr_bin = bin_path
+            return bin_path
+        except Exception:
+            return None
+
+    def _ocr_primeira_pagina(self, caminho_arq):
+        """Renderiza a 1ª página e roda OCR (Vision no Mac). Devolve texto ou ''."""
+        helper = self._garantir_ocr_helper()
+        if not helper:
+            # Fallback opcional: tesseract, se existir no PATH
+            if not shutil.which("tesseract"):
+                return ""
+            helper = None
+
+        try:
+            with pdfplumber.open(caminho_arq) as pdf:
+                if not pdf.pages:
+                    return ""
+                # Resolução moderada: OCR rápido o bastante e legível
+                im = pdf.pages[0].to_image(resolution=150)
+                with tempfile.NamedTemporaryFile(suffix=".png", delete=False) as tmp:
+                    tmp_path = tmp.name
+                im.save(tmp_path)
+
+            try:
+                if helper:
+                    r = subprocess.run(
+                        [helper, tmp_path],
+                        capture_output=True, text=True, timeout=60
+                    )
+                    return (r.stdout or "").strip()
+                # tesseract fallback
+                r = subprocess.run(
+                    ["tesseract", tmp_path, "stdout", "-l", "por+eng"],
+                    capture_output=True, text=True, timeout=60
+                )
+                return (r.stdout or "").strip()
+            finally:
+                try:
+                    os.unlink(tmp_path)
+                except Exception:
+                    pass
+        except Exception as e:
+            self.log(f"  OCR falhou: {e}")
+            return ""
 
     def extrair_dados(self, texto):
         dados = {
@@ -225,26 +424,13 @@ class RenomeadorComprovantes:
             dados["data_pgto"] = self.formatar_data(match_data.group(1))
 
         # 2. Aplicar Regras do JSON (Prioridade na Descrição)
-        texto_upper = texto_limpo.upper()
-        for regra in self.config.get("regras", []):
-            grupo = regra.get("grupo", "")
-            termos = regra.get("termos", [])
-            # Usa Regex com \b para garantir palavra exata (evita que "DAS" case com "TODAS")
-            if any(re.search(r'\b' + re.escape(termo.upper()) + r'\b', texto_upper) for termo in termos):
-                desc_refinada = self.refinar_por_data(grupo, dados["data_pgto"])
-                if desc_refinada:
-                    dados["descricao"] = termos[0] + "_" + desc_refinada
-                elif "AGUA" in grupo or "LUZ" in grupo:
-                    dados["descricao"] = termos[0] + "_" + grupo
-                else:
-                    dados["descricao"] = grupo
-                break
+        self._aplicar_regras_json(texto_limpo, dados)
 
         # 3. Identificar Banco e Estrutura para Recebedor/Doc
 
         # Indica se já temos uma descrição específica vinda do banco (Itaú etc.).
         # Quando True, evitamos que o restante do fluxo (recorrentes, "SALARIO", etc.) sobrescreva.
-        descricao_especifica = False
+        descricao_especifica = dados["descricao"] != "PGTO"
 
         # --- BANCO DO BRASIL (SISBB) ---
         if "SISBB" in texto or "BANCO DO BRASIL" in texto:
@@ -302,6 +488,12 @@ class RenomeadorComprovantes:
                 if m_data_b:
                     dados["data_pgto"] = self.formatar_data(m_data_b.group(1))
 
+                # Identificação digitada no avulso (ex: "Cartao Caixa") — prioridade na descrição
+                ident, ident_ok = self._identificacao_boleto_itau(texto)
+                if ident_ok and dados["descricao"] == "PGTO":
+                    dados["descricao"] = ident
+                    descricao_especifica = True
+
                 # Beneficiário: a "Razão Social" costuma vir mais limpa que "Beneficiário".
                 m_razao = re.search(r'Razão Social:\s*(.+?)(?:\s+\d{2}\.\d{3}\.\d{3}/|\n)', texto)
                 if m_razao:
@@ -356,57 +548,17 @@ class RenomeadorComprovantes:
                         dados["nome_recebedor"] = m_conc.group(1).strip()
 
         # --- BANCO INTER ---
-        # Detecção específica: o Inter usa "Banco Inter S.A." no comprovante e/ou
-        # "Pix enviado". Antes a regra era apenas "inter" no lower(), o que dava
-        # falso positivo no Itaú (que tem "Internet" no rodapé legal).
-        elif (("Banco Inter" in texto or "banco inter" in texto.lower()
-               or "Pix enviado" in texto)
-              and ("Pix enviado" in texto or "Comprovante" in texto)):
+        # Detecção específica: o Inter usa "Banco Inter S.A." / "Internet Banking Inter"
+        # / "Pix enviado" / "Pix recebido". Antes a regra era apenas "inter" no lower(),
+        # o que dava falso positivo no Itaú (que tem "Internet" no rodapé legal).
+        elif (("Internet Banking Inter" in texto or "contadigital.inter.co" in texto
+               or "Banco Inter" in texto or "banco inter" in texto.lower()
+               or "Pix enviado" in texto or "Pix recebido" in texto)
+              and ("Pix" in texto or "Comprovante" in texto or "Internet Banking Inter" in texto)):
 
-            # 1. DESCRIÇÃO: Pega o que vier depois de "Descrição" (sem aspas)
-            # Aceita: "Descrição: Blabla" ou "Descrição \n Blabla"
-            match_desc = re.search(r'Descrição\s*[:\n]?\s*(.+)', texto, re.IGNORECASE)
-            if match_desc:
-                raw_desc = match_desc.group(1).replace('"', '').strip()
-                # Se pegou linha errada ou vazia, ignora
-                if len(raw_desc) > 2 and dados["descricao"] == "PGTO":
-                    dados["descricao"] = raw_desc
-                    # Tenta extrair data da descrição achada
-                    ref = self.extrair_data_referencia(raw_desc)
-                    if ref:
-                        dados["data_ref"] = ref
-                        # Remove a data (ex: 12/2025) da descrição para não duplicar no nome final
-                        match_ref_str = re.search(r'\b(0[1-9]|1[0-2])[-/](20\d{2})\b', raw_desc)
-                        if match_ref_str:
-                            dados["descricao"] = dados["descricao"].replace(match_ref_str.group(0), "")
-
-            # 2. QUEM RECEBEU: Lógica de exclusão linha a linha
-            idx_recebedor = texto.find("Quem recebeu")
-            if idx_recebedor != -1:
-                # Pega um pedaço do texto após "Quem recebeu" e divide em linhas
-                bloco = texto[idx_recebedor:].split('\n')
-
-                # Vamos varrer as próximas 15 linhas procurando o nome
-                for linha in bloco[1:15]:
-                    lin = linha.strip().replace('"', '')  # Limpa aspas se houver
-
-                    # Pula linhas vazias ou cabeçalhos conhecidos do Inter
-                    if not lin or lin.upper() in ["NOME", "QUEM RECEBEU", "DADOS DO RECEBEDOR"]:
-                        continue
-
-                    # Pula linhas que são claramente metadados
-                    if any(x in lin.upper() for x in
-                           ["CPF", "CNPJ", "INSTITUIÇÃO", "AGÊNCIA", "CONTA", "CHAVE", "TIPO"]):
-                        continue
-
-                    # Se a linha começar com "Nome ", pegamos o resto
-                    if lin.startswith("Nome "):
-                        dados["nome_recebedor"] = lin[5:].strip()
-                        break
-
-                    # Se chegou aqui, é muito provável que seja o nome (ex: "Notliv Patrimonial Ltda")
-                    dados["nome_recebedor"] = lin
-                    break
+            self._extrair_inter(texto, dados)
+            if dados["descricao"] != "PGTO":
+                descricao_especifica = True
 
         desc_upper = dados["descricao"].upper()
 
@@ -448,6 +600,131 @@ class RenomeadorComprovantes:
 
         return dados
 
+    def _extrair_inter(self, texto, dados):
+        """Extrai data / descrição / recebedor de comprovantes do Inter.
+
+        Funciona tanto com texto nativo quanto com OCR (Vision), onde os valores
+        costumam aparecer depois de todos os rótulos.
+        """
+        # Data da transação: prefere a que vem logo após o rótulo; senão a 1ª do corpo
+        # (no OCR a data de impressão do rodapé costuma ser a última).
+        m_data_tx = re.search(
+            r'Data da transa[cç][aã]o\s*.*?(\d{2}/\d{2}/\d{4})',
+            texto, re.IGNORECASE | re.DOTALL
+        )
+        if m_data_tx:
+            dados["data_pgto"] = self.formatar_data(m_data_tx.group(1))
+        else:
+            datas = re.findall(r'(\d{2}/\d{2}/\d{4})', texto)
+            if datas:
+                # Se houver 2+ datas, a de impressão costuma ser a última
+                dados["data_pgto"] = self.formatar_data(datas[0] if len(datas) == 1 else datas[0])
+                # Heurística OCR: primeira data após URL do Inter é a da transação
+                idx_url = texto.find("contadigital.inter.co")
+                if idx_url != -1:
+                    datas_apos = re.findall(r'(\d{2}/\d{2}/\d{4})', texto[idx_url:])
+                    if datas_apos:
+                        dados["data_pgto"] = self.formatar_data(datas_apos[0])
+
+        # Descrição explícita "PGTO - ..."
+        if dados["descricao"] == "PGTO":
+            m_pgto = re.search(r'PGTO\s*[-–]\s*(.+)', texto, re.IGNORECASE)
+            if m_pgto:
+                # Pega só a linha (OCR às vezes cola CPF na mesma linha do nome, não da desc)
+                desc = m_pgto.group(0).strip().split('\n')[0].strip()
+                dados["descricao"] = desc
+                ref = self.extrair_data_referencia(desc)
+                if ref:
+                    dados["data_ref"] = ref
+                    match_ref_str = re.search(r'\b(0[1-9]|1[0-2])[-/](20\d{2})\b', desc)
+                    if match_ref_str:
+                        dados["descricao"] = dados["descricao"].replace(match_ref_str.group(0), "").strip()
+            else:
+                # Layout clássico: "Descrição" seguido do valor na mesma/próxima linha
+                match_desc = re.search(r'Descri[cç][aã]o\s*[:\n]?\s*(.+)', texto, re.IGNORECASE)
+                if match_desc:
+                    raw_desc = match_desc.group(1).replace('"', '').strip().split('\n')[0].strip()
+                    # Evita pegar o próximo rótulo ("Quem pagou", "Nome", ...)
+                    rotulos = {"QUEM PAGOU", "QUEM RECEBEU", "NOME", "CPF/CNPJ", "INSTITUIÇÃO", "INSTITUICAO"}
+                    if len(raw_desc) > 2 and raw_desc.upper() not in rotulos:
+                        dados["descricao"] = raw_desc
+
+        # Título do comprovante quando não há descrição (ex: Pix recebido devolvido)
+        if dados["descricao"] == "PGTO":
+            for titulo in ("Pix recebido devolvido", "Pix enviado", "Pix recebido"):
+                if titulo in texto:
+                    dados["descricao"] = titulo
+                    break
+
+        # Recebedor — no OCR os valores vêm depois de todos os labels; pulamos lixo óbvio
+        if not dados["nome_recebedor"]:
+            idx_recebedor = texto.find("Quem recebeu")
+            if idx_recebedor == -1:
+                return
+            # No OCR, o bloco de valores começa após a URL do extrato
+            idx_vals = texto.find("contadigital.inter.co", idx_recebedor)
+            inicio = idx_vals if idx_vals != -1 else idx_recebedor
+            bloco = texto[inicio:].split('\n')
+
+            # Ordem típica dos valores no OCR (Pix enviado com descrição):
+            # data, hora, id, [descrição], pagador..., recebedor(nome)...
+            # Sem descrição: data, hora, id, pagador..., recebedor...
+            candidatos = []
+            for linha in bloco:
+                lin = linha.strip().replace('"', '')
+                if not lin:
+                    continue
+                lin_up = lin.upper()
+                if lin_up in ["NOME", "QUEM RECEBEU", "DADOS DO RECEBEDOR", "CPF/CNPJ",
+                              "INSTITUIÇÃO", "INSTITUICAO", "AGÊNCIA", "AGENCIA", "CONTA",
+                              "CHAVE", "TIPO", "CACC", "SVGS", "SOBRE A TRANSAÇÃO",
+                              "QUEM PAGOU", "DESCRIÇÃO", "DESCRICAO"]:
+                    continue
+                if any(x in lin_up for x in ["HTTPS://", "FALE COM", "CAPITAIS", "OUVIDORIA",
+                                              "DEFICIÊNCIA", "DEFICIENCIA", "DEMAIS LOCAL"]):
+                    continue
+                if re.match(r'^\d{2}/\d{2}/\d{4}', lin):
+                    continue
+                if re.match(r'^\d{1,2}h\d{2}', lin, re.IGNORECASE):
+                    continue
+                if re.match(r'^[ED]\d{10,}', lin):  # ID da transação Inter
+                    continue
+                if lin_up.startswith("PGTO"):
+                    continue
+                if re.fullmatch(r'R\$\s*[\d.,]+', lin_up):
+                    continue
+                if re.fullmatch(r'[\d.\-*/]+', lin):
+                    continue
+                if lin.startswith("Nome "):
+                    candidatos.append(lin[5:].strip())
+                    continue
+                candidatos.append(lin)
+
+            # Pagador costuma ser COMAGRO; o recebedor é o nome seguinte "de pessoa/empresa"
+            pagador_idx = None
+            for i, c in enumerate(candidatos):
+                if "COMAGRO" in c.upper():
+                    pagador_idx = i
+                    break
+            if pagador_idx is not None:
+                # Após o pagador: CNPJ, BANCO INTER, conta, agência, depois o recebedor
+                for c in candidatos[pagador_idx + 1:]:
+                    cu = c.upper()
+                    if "BANCO INTER" in cu or "BCO " in cu or "ITAÚ" in cu or "ITAU" in cu:
+                        continue
+                    if "BRADESCO" in cu or "UNIBANCO" in cu:
+                        continue
+                    if re.match(r'^\d{2}\.\d{3}\.\d{3}/', c):
+                        continue
+                    if re.fullmatch(r'\*+\d{3}\.\d{3}-\*+', c.replace(" ", "")):
+                        continue
+                    # Nome do recebedor (pode vir com CPF na mesma linha)
+                    nome = re.sub(r'\s+\d{11}\s*$', '', c).strip()
+                    nome = re.split(r'\s+\d{2}\.\d{3}\.\d{3}/', nome)[0].strip()
+                    if nome and not re.fullmatch(r'[\d.\-]+', nome):
+                        dados["nome_recebedor"] = nome
+                        break
+
     def gerar_novo_nome(self, dados, original_filename):
         # Se data não foi achada, usa a data de hoje como fallback (ruim, mas evita crash)
         data = dados["data_pgto"] if dados["data_pgto"] else datetime.now().strftime("%d-%m-%y")
@@ -478,6 +755,26 @@ class RenomeadorComprovantes:
 
         return novo_nome
 
+    def _extrair_texto_pdf(self, caminho_arq):
+        """Extrai texto de todas as páginas; se for Inter 'oco', complementa com OCR."""
+        with pdfplumber.open(caminho_arq) as pdf:
+            num_paginas = len(pdf.pages)
+            texto_completo = ""
+            for page in pdf.pages:
+                # Em PDFs imagem (Print To PDF), extract_text pode retornar None
+                page_text = page.extract_text() or ""
+                texto_completo += page_text + "\n"
+
+        if self._texto_precisa_ocr(texto_completo):
+            self.log(f"  OCR: {os.path.basename(caminho_arq)} (texto Inter incompleto)")
+            ocr = self._ocr_primeira_pagina(caminho_arq)
+            if ocr:
+                # OCR substitui o texto nativo: no Inter os valores vêm como curva/outline,
+                # e os labels nativos ainda têm "Ouvidoria:" que cortaria o OCR no rodapé.
+                texto_completo = ocr
+
+        return texto_completo, num_paginas
+
     def executar(self):
         arquivos = self.selecionar_arquivos()
         if not arquivos:
@@ -485,24 +782,18 @@ class RenomeadorComprovantes:
 
         sucessos = 0
         erros = 0
-        self.log("Iniciando processamento...")
+        caminho_cfg = self.config.get("_caminho_carregado", "(nenhum)")
+        self.log(f"Iniciando processamento... (regras: {caminho_cfg})")
 
         for caminho_arq in arquivos:
             try:
-                with pdfplumber.open(caminho_arq) as pdf:
-                    # Pega texto da primeira página (suficiente para a maioria)
-                    # Para DDA, pegamos tudo para garantir
-                    texto_completo = ""
-                    for page in pdf.pages:
-                        # Em PDFs imagem (Print To PDF), extract_text pode retornar None
-                        page_text = page.extract_text() or ""
-                        texto_completo += page_text + "\n"
+                texto_completo, num_paginas = self._extrair_texto_pdf(caminho_arq)
 
                 # Verifica se é DDA / consolidado (caso especial)
                 # Tenta primeiro o BB, depois o Itaú (inclui caso de PDF imagem).
                 nome_dda = (
                     self.processar_bb_dda(texto_completo)
-                    or self.processar_itau_dda(texto_completo, caminho_arq)
+                    or self.processar_itau_dda(texto_completo, caminho_arq, num_paginas)
                 )
 
                 pasta = os.path.dirname(caminho_arq)
@@ -515,8 +806,17 @@ class RenomeadorComprovantes:
 
                 novo_caminho = os.path.join(pasta, novo_nome)
 
-                # Renomear
-                os.rename(caminho_arq, novo_caminho)
+                # Evita sobrescrever se já existir nome igual
+                if os.path.abspath(caminho_arq) != os.path.abspath(novo_caminho):
+                    if os.path.exists(novo_caminho):
+                        base, ext = os.path.splitext(novo_nome)
+                        i = 2
+                        while os.path.exists(os.path.join(pasta, f"{base}_{i}{ext}")):
+                            i += 1
+                        novo_nome = f"{base}_{i}{ext}"
+                        novo_caminho = os.path.join(pasta, novo_nome)
+                    os.rename(caminho_arq, novo_caminho)
+
                 self.log(f"OK: {os.path.basename(caminho_arq)} -> {novo_nome}")
                 sucessos += 1
 

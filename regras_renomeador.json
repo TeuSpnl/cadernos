@@ -32,7 +32,6 @@
         {
             "grupo": "INTERNET",
             "termos": [
-                "INTERNET",
                 "FIBRA",
                 "LINK",
                 "HE-NET",
@@ -56,6 +55,31 @@
                 "FGTS",
                 "DAE"
             ]
+        },
+        {
+            "grupo": "INTERNO_ITAU",
+            "termos": [
+                "INTERNO_ITAU",
+                "INTERNO"
+            ]
+        },
+        {
+            "grupo": "INTERNO_BNB",
+            "termos": [
+                "INTERNO_BNB",
+                "BNB"
+            ]
+        },
+        {
+            "grupo": "SECULOS",
+            "termos": [
+                "SECULOS",
+                "Caroline Martins Matos",
+                "01480969567",
+                "SISTEMA SECULOS",
+                "SISTEMA_SECULOS",
+                "MENSALIDADE_SISTEMA_SECULOS"
+            ]
         }
     ],
     "recorrentes": [
@@ -68,7 +92,10 @@
         "13 SALARIO",
         "ADIANTAMENTO",
         "CONDOMINIO",
-        "IMPOSTOS"
+        "IMPOSTOS",
+        "CARTAO",
+        "CARTOES",
+        "MONITORA", "CIEE", "RIACHUELLO"
     ],
     "termos_ignorar": [
         "PIX ENVIADO",

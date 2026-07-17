@@ -26,3 +26,5 @@ arquivos.zip
 dist/
 build/
 *.spec
+# Binário OCR macOS (compila a partir de ocr_vision.swift)
+ocr_vision_helper

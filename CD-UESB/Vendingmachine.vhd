@@ -5,19 +5,13 @@
 --
 --   * Unidade de controle (FSM): IDLE -> CHECK_STOCK -> ACCEPT_MONEY ->
 --                                DISPENSE_ITEM -> FINAL_STATE (troco)
---                                + NO_STOCK (aviso) e RETURN_MONEY (desistencia)
+--   FINAL_STATE    = libera TROCO (compra concluida com sucesso)
+--   RETURN_MONEY   = devolve moedas (DESISTENCIA do cliente, KEY2)
+--   RESET_STATE    = reset geral (KEY3), todos LEDs acesos
 --
--- POR QUE A VERSAO ANTIGA FALHAVA NA PLACA (e como foi corrigido aqui):
---   1) Somava moeda a CADA borda de clock enquanto o botao estava apertado.
---      -> Agora soma UMA vez por clique (deteccao de borda + debounce).
---   2) Botoes sem debounce/borda -> trepidacao virava varios eventos.
---      -> Agora ha sincronizador + amostragem lenta + pulso de 1 ciclo.
---   3) Saida com dois drivers (return_money) -> conflito na sintese.
---      -> Agora cada saida tem UMA unica origem (registrador).
---   4) Display em logica ATIVA-ALTA -> na placa os displays sao ATIVO-BAIXO.
---      -> Agora a tabela de 7 segmentos usa 0 = aceso, 1 = apagado.
 --
--- MAPEAMENTO DE HARDWARE (ajuste os pinos no Pin Planner / .qsf do Quartus):
+--
+-- MAPEAMENTO DE HARDWARE:
 --   CLOCK_50 : clock de 50 MHz da placa
 --   KEY (ATIVO-BAIXO, 0 = pressionado):
 --     KEY(0) = confirmar salgado escolhido
@@ -25,7 +19,7 @@
 --     KEY(2) = desistir (devolve todas as moedas)
 --     KEY(3) = reset geral
 --   SW (1 = cima, 0 = baixo):
---     SW(2..0) = tipo do salgado (one-hot NAO; usar codigo abaixo)
+--     SW(2..0) = tipo do salgado
 --       "001" Batata frita grande   R$ 2,50
 --       "010" Batata frita media    R$ 1,50
 --       "011" Batata frita pequena  R$ 0,75
@@ -35,20 +29,22 @@
 --       "01" = R$ 0,25 | "10" = R$ 0,50 | "11" = R$ 1,00 | "00" = invalida
 --   HEX3 HEX2 = parte em REAIS    (dezena, unidade)
 --   HEX1 HEX0 = parte em CENTAVOS (dezena, unidade)   -> mostra "XX.XX"
---   LEDG(0) = Libera_salgado
---   LEDG(1) = Libera_troco
---   LEDR(0) = Libera_todas_as_moedas (devolucao por desistencia)
---   LEDR(9) = Sem_estoque (pisca como aviso)
+--   LEDG(0..3) = progresso da venda | RETURN_MONEY = LEDG(0..2)
+--   LEDR       = todos acesos em RESET/RETURN | LEDR(9) pisca em NO_STOCK
 --------------------------------------------------------------------------------
 library IEEE;
 use IEEE.STD_LOGIC_1164.ALL;
 use IEEE.NUMERIC_STD.ALL;
 
 entity Vendingmachine is
+    generic (
+        G_HOLD_TIME    : integer := 25000000;  -- ~0,5 s em 50 MHz para ser perceptivel e usavel
+        G_DEBOUNCE_MAX : integer := 249999      -- ~5 ms em 50 MHz
+    );
     port (
         CLOCK_50 : in  STD_LOGIC;                       -- clock de 50 MHz
-        KEY      : in  STD_LOGIC_VECTOR(3 downto 0);    -- botoes (ativo-baixo)
-        SW       : in  STD_LOGIC_VECTOR(9 downto 0);    -- chaves
+        KEY      : in  STD_LOGIC_VECTOR(3 downto 0);    -- botoes de acao
+        SW       : in  STD_LOGIC_VECTOR(9 downto 0);    -- chaves para moeda e selecao de salgados
 
         HEX0     : out STD_LOGIC_VECTOR(6 downto 0);    -- centavos (unidade)
         HEX1     : out STD_LOGIC_VECTOR(6 downto 0);    -- centavos (dezena)
@@ -72,7 +68,8 @@ architecture Behavioral of Vendingmachine is
         DISPENSE_ITEM,  -- libera o salgado e baixa o estoque
         FINAL_STATE,    -- mostra/libera o troco
         NO_STOCK,       -- aviso: sem estoque (pisca LED)
-        RETURN_MONEY    -- desistencia: devolve todas as moedas
+        RETURN_MONEY,   -- desistencia: devolve todas as moedas (KEY2)
+        RESET_STATE     -- reset geral: todos LEDs acesos (KEY3)
     );
     signal state : state_type := IDLE;
 
@@ -86,7 +83,7 @@ architecture Behavioral of Vendingmachine is
     constant PRECO_TORTILHA_PEQUENA : integer := 200;
 
     ----------------------------------------------------------------------------
-    -- Logica auxiliar (datapath)
+    -- Logica auxiliar
     ----------------------------------------------------------------------------
     signal total_inserido : integer range 0 to 9999 := 0;  -- somatorio em centavos
     signal preco          : integer range 0 to 9999 := 0;  -- preco do item escolhido
@@ -98,28 +95,30 @@ architecture Behavioral of Vendingmachine is
     signal estoque : stock_array := (others => 3);
 
     ----------------------------------------------------------------------------
-    -- Saidas registradas (cada uma com UMA unica origem -> sem conflito)
+    -- LEDs verdes de progresso (IDLE = nenhum aceso. Aumenta um led aceso a cada estado que passa)
+    -- ACCEPT_MONEY -> LEDG(0)
+    -- DISPENSE_ITEM -> LEDG(0..1)
+    -- FINAL_STATE   -> LEDG(0..3) todos acesos
     ----------------------------------------------------------------------------
-    signal libera_salgado : STD_LOGIC := '0';
-    signal libera_troco   : STD_LOGIC := '0';
-    signal devolve_moedas : STD_LOGIC := '0';
+    signal ledg_progress : STD_LOGIC_VECTOR(3 downto 0) := "0000";
 
     ----------------------------------------------------------------------------
     -- Temporizador: segura os estados de saida para o olho humano ver os LEDs
     -- 25.000.000 ciclos de 50 MHz ~= 0,5 segundo
     ----------------------------------------------------------------------------
-    constant HOLD_TIME : integer := 25000000;
-    signal t_cnt : integer range 0 to HOLD_TIME := 0;
+    constant HOLD_TIME : integer := G_HOLD_TIME;
+    signal t_cnt : integer range 0 to G_HOLD_TIME := 0;
 
     ----------------------------------------------------------------------------
     -- Debounce e deteccao de borda dos botoes
     ----------------------------------------------------------------------------
-    signal tick_cnt  : integer range 0 to 249999 := 0;       -- ~5 ms
-    signal slow_en   : STD_LOGIC := '0';                     -- pulso de amostragem
-    signal key_meta  : STD_LOGIC_VECTOR(3 downto 0) := "1111";
-    signal key_sync  : STD_LOGIC_VECTOR(3 downto 0) := "1111";
-    signal key_last  : STD_LOGIC_VECTOR(3 downto 0) := "1111";
-    signal key_press : STD_LOGIC_VECTOR(3 downto 0) := "0000"; -- pulso de 1 clique
+    signal tick_cnt  : integer range 0 to G_DEBOUNCE_MAX := 0; -- Tempo de espera até ler o próximo clique
+    signal slow_en   : STD_LOGIC := '0';                     -- pulso de amostragem "É como se avisasse que pode usar o botão de novo"
+    signal key_meta  : STD_LOGIC_VECTOR(3 downto 0) := "1111"; -- Estabilizador que recebe o sinal bruto
+    signal key_sync  : STD_LOGIC_VECTOR(3 downto 0) := "1111"; -- Estabilizador que sincroniza com o ciclo de clock
+    signal key_last  : STD_LOGIC_VECTOR(3 downto 0) := "1111"; -- Guarda estado do botão desde o último pulso do slow_en
+    signal key_press : STD_LOGIC_VECTOR(3 downto 0) := "0000"; -- pulso de 1 clique invertido
+    signal key_press_raw : STD_LOGIC_VECTOR(3 downto 0) := "0000"; -- pulso "cru" (1 ciclo)
 
     ----------------------------------------------------------------------------
     -- Pisca-pisca do aviso de "sem estoque"
@@ -128,7 +127,7 @@ architecture Behavioral of Vendingmachine is
     signal blink     : STD_LOGIC := '0';
 
     ----------------------------------------------------------------------------
-    -- Valor que vai para os displays (somatorio normalmente; troco no final)
+    -- Valor nos displays
     ----------------------------------------------------------------------------
     signal disp_value : integer range 0 to 9999 := 0;
 
@@ -163,7 +162,7 @@ architecture Behavioral of Vendingmachine is
     end function;
 
     ----------------------------------------------------------------------------
-    -- Funcao: digito (0..9) para 7 segmentos
+    -- Funcao: digito (0..9) para 7 segmentos (para mostrar os números corretos nos displays)
     -- Ordem dos bits: (6..0) = g f e d c b a
     ----------------------------------------------------------------------------
     function to_7seg(d : integer) return STD_LOGIC_VECTOR is
@@ -187,11 +186,12 @@ begin
 
     ----------------------------------------------------------------------------
     -- (1) Gera pulso de amostragem lenta (~5 ms) para o debounce
+	-- Em outras palavras, conta cada 5ms
     ----------------------------------------------------------------------------
     process (CLOCK_50)
     begin
         if rising_edge(CLOCK_50) then
-            if tick_cnt >= 249999 then
+            if tick_cnt >= G_DEBOUNCE_MAX then
                 tick_cnt <= 0;
                 slow_en  <= '1';
             else
@@ -203,7 +203,7 @@ begin
 
     ----------------------------------------------------------------------------
     -- (2) Sincroniza os botoes e gera um PULSO de 1 ciclo a cada clique
-    --     Como KEY e ativo-baixo, "clique" = borda de descida (1 -> 0)
+    --     Como KEY eh ativo-baixo, "clique" = borda de descida (1 -> 0)
     ----------------------------------------------------------------------------
     process (CLOCK_50)
     begin
@@ -212,10 +212,13 @@ begin
             key_meta <= KEY;
             key_sync <= key_meta;
 
-            key_press <= "0000";                  -- por padrao, sem clique
+            -- Para que o key_press não pegue o clique raw do botão, usamos o key_press_raw e depois o key_press
+            -- para sincroniar com o clock. 
+            key_press <= key_press_raw;            -- por padrão: pulso atrasado
+            key_press_raw <= "0000";             -- por padrão: sem clique
             if slow_en = '1' then
                 -- press(i) = estava solto (1) e agora esta apertado (0)
-                key_press <= key_last and (not key_sync);
+                key_press_raw <= key_last and (not key_sync);
                 key_last  <= key_sync;
             end if;
         end if;
@@ -238,25 +241,15 @@ begin
 
     ----------------------------------------------------------------------------
     -- (4) MAQUINA DE ESTADOS + DATAPATH
-    --     Reset por KEY(3) (apertado = 0).
+    --     KEY(3) -> RESET_STATE | KEY(2) em ACCEPT_MONEY -> RETURN_MONEY
     ----------------------------------------------------------------------------
     process (CLOCK_50)
     begin
         if rising_edge(CLOCK_50) then
-            if key_sync(3) = '0' then
-                ------------------------------------------------------------------
-                -- RESET geral
-                ------------------------------------------------------------------
-                state          <= IDLE;
-                total_inserido <= 0;
-                preco          <= 0;
-                troco          <= 0;
-                t_cnt          <= 0;
-                item_sel       <= "000";
-                libera_salgado <= '0';
-                libera_troco   <= '0';
-                devolve_moedas <= '0';
-                -- Obs.: o estoque NAO e recarregado no reset (esgota de verdade)
+            -- Reset (KEY3): entra em RESET_STATE a partir de qualquer estado
+            if key_sync(3) = '0' and state /= RESET_STATE then
+                state <= RESET_STATE;
+                t_cnt <= 0;
             else
                 case state is
 
@@ -264,9 +257,7 @@ begin
                     -- IDLE: pronto para uma nova venda
                     --------------------------------------------------------------
                     when IDLE =>
-                        libera_salgado <= '0';
-                        libera_troco   <= '0';
-                        devolve_moedas <= '0';
+                        ledg_progress  <= "0000";
                         total_inserido <= 0;
                         troco          <= 0;
                         t_cnt          <= 0;
@@ -296,6 +287,7 @@ begin
                     --------------------------------------------------------------
                     when ACCEPT_MONEY =>
                         t_cnt <= 0;
+                        ledg_progress(0) <= '1';               -- 1 LED: pagando
                         if key_press(2) = '1' then               -- desistir
                             state <= RETURN_MONEY;
                         elsif total_inserido >= preco then       -- pagou o bastante
@@ -313,7 +305,7 @@ begin
                     -- DISPENSE_ITEM: libera o salgado e baixa o estoque
                     --------------------------------------------------------------
                     when DISPENSE_ITEM =>
-                        libera_salgado <= '1';
+                        ledg_progress(1 downto 0) <= "11";     -- 2 LEDs: liberando
                         if t_cnt = 0 then
                             -- baixa o estoque e calcula o troco apenas uma vez
                             estoque(indice_do(item_sel)) <=
@@ -331,14 +323,12 @@ begin
                     -- FINAL_STATE: mostra e libera o troco
                     --------------------------------------------------------------
                     when FINAL_STATE =>
-                        libera_salgado <= '0';
-                        libera_troco   <= '1';
+                        ledg_progress <= "1111";               -- 4 LEDs: concluido
                         if t_cnt < HOLD_TIME then
                             t_cnt <= t_cnt + 1;
                         else
-                            t_cnt        <= 0;
-                            libera_troco <= '0';
-                            state        <= IDLE;
+                            t_cnt <= 0;
+                            state <= IDLE;
                         end if;
 
                     --------------------------------------------------------------
@@ -356,15 +346,31 @@ begin
                     -- RETURN_MONEY: desistencia -> devolve todas as moedas
                     --------------------------------------------------------------
                     when RETURN_MONEY =>
-                        devolve_moedas <= '1';
+                        -- Desistencia: 3 verdes (na saida) + todos vermelhos acesos
                         if t_cnt < HOLD_TIME then
                             t_cnt <= t_cnt + 1;
                         else
                             t_cnt          <= 0;
-                            devolve_moedas <= '0';
                             total_inserido <= 0;
                             state          <= IDLE;
                         end if;
+
+                    --------------------------------------------------------------
+                    -- RESET_STATE: reset geral -> todos LEDs acesos, depois IDLE
+                    --------------------------------------------------------------
+                    when RESET_STATE =>
+                        total_inserido <= 0;
+                        preco          <= 0;
+                        troco          <= 0;
+                        item_sel       <= "000";
+                        ledg_progress  <= "0000";
+                        if t_cnt < HOLD_TIME then
+                            t_cnt <= t_cnt + 1;
+                        else
+                            t_cnt <= 0;
+                            state <= IDLE;
+                        end if;
+                        -- Obs.: estoque NAO e recarregado no reset
 
                     when others =>
                         state <= IDLE;
@@ -395,14 +401,29 @@ begin
     end process;
 
     ----------------------------------------------------------------------------
-    -- (7) LEDs (cada saida vem de uma unica origem registrada)
+    -- (7) LEDs: combinacional conforme o estado
     ----------------------------------------------------------------------------
-    LEDG(0)          <= libera_salgado;                   -- Libera_salgado
-    LEDG(1)          <= libera_troco;                     -- Libera_troco
-    LEDG(7 downto 2) <= (others => '0');
+    process (state, ledg_progress, blink)
+    begin
+        -- Padrao: progresso verde, vermelhos apagados
+        LEDG <= "0000" & ledg_progress;
+        LEDR <= (others => '0');
 
-    LEDR(0)          <= devolve_moedas;                   -- Libera_todas_as_moedas
-    LEDR(8 downto 1) <= (others => '0');
-    LEDR(9)          <= blink when (state = NO_STOCK) else '0';  -- Sem_estoque
+        case state is
+            when RESET_STATE =>
+                LEDG <= (others => '1');   -- todos verdes acesos
+                LEDR <= (others => '1');   -- todos vermelhos acesos
+
+            when RETURN_MONEY =>
+                LEDG <= "00000111";        -- 3 LEDs verdes (LEDG0..2)
+                LEDR <= (others => '1');   -- todos vermelhos acesos
+
+            when NO_STOCK =>
+                LEDR(9) <= blink;          -- aviso sem estoque piscando
+
+            when others =>
+                null;
+        end case;
+    end process;
 
 end Behavioral;

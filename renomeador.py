@@ -408,6 +408,10 @@ class RenomeadorComprovantes:
             else:
                 dados["descricao"] = grupo
 
+            # Séculos: no nome do arquivo só entra SECULOS (sem o nome da beneficiária)
+            if grupo.upper() == "SECULOS":
+                dados["nome_recebedor"] = ""
+
             # Preserva mês explícito no comprovante (ex: MENSALIDADE_SISTEMA_SECULOS 07/2026)
             if not dados.get("data_ref"):
                 dados["data_ref"] = self.extrair_data_referencia(texto_limpo)
@@ -856,10 +860,8 @@ foreach ($line in $result.Lines) { Write-Output $line.Text }
                 descricao_especifica = True
                 if not dados.get("data_ref"):
                     dados["data_ref"] = self.extrair_data_referencia(texto)
-                if not dados.get("nome_recebedor") and re.search(
-                    r'CAROLINE', self._texto_sem_acento(texto)
-                ):
-                    dados["nome_recebedor"] = "Caroline Martins Matos"
+                # Nome do arquivo: só SECULOS (sem Caroline Martins Matos)
+                dados["nome_recebedor"] = ""
             else:
                 # Reaplica regras no texto completo (OCR pode ter caído depois do 1º passe)
                 self._aplicar_regras_json(self._remover_rodape_legal(texto), dados)
@@ -917,6 +919,10 @@ foreach ($line in $result.Lines) { Write-Output $line.Text }
             if match_benef:
                 dados["nome_recebedor"] = match_benef.group(1)
 
+        # Garantia final: Séculos no nome do arquivo sem a beneficiária
+        if dados.get("descricao", "").upper() == "SECULOS":
+            dados["nome_recebedor"] = ""
+
         return dados
 
     def _extrair_inter(self, texto, dados):
@@ -958,8 +964,8 @@ foreach ($line in $result.Lines) { Write-Output $line.Text }
             dados["descricao"] = "SECULOS"
             if not dados.get("data_ref"):
                 dados["data_ref"] = self.extrair_data_referencia(texto)
-            if not dados.get("nome_recebedor"):
-                dados["nome_recebedor"] = "Caroline Martins Matos"
+            # Nome do arquivo: só SECULOS (Caroline é só âncora de detecção)
+            dados["nome_recebedor"] = ""
             return
 
         if not dados["nome_recebedor"]:
@@ -1025,8 +1031,8 @@ foreach ($line in $result.Lines) { Write-Output $line.Text }
     def _recebedor_inter(self, texto):
         """Nome de quem recebeu — robusto ao layout do OCR Windows."""
         tu = self._texto_sem_acento(texto)
-        if re.search(r'(?<![A-Z0-9])CAROLINE(?![A-Z0-9])', tu):
-            return "Caroline Martins Matos"
+        # Caroline continua sendo âncora em _parece_seculos; no nome do arquivo
+        # o grupo SECULOS já basta (não devolve o nome dela aqui).
 
         idx_recebedor = tu.find("QUEM RECEBEU")
         if idx_recebedor == -1:

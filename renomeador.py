@@ -184,7 +184,7 @@ class RenomeadorComprovantes:
             data_match = re.search(r'Lançamentos do período:\s*(\d{2}/\d{2}/\d{4})', texto)
             if data_match:
                 data_fmt = self.formatar_data(data_match.group(1))
-                return f"PAGAMENTOS_ITAU_{data_fmt}"
+                return f"PAGAMENTOS_DDA_ITAU_{data_fmt}"
 
         # Caso B: comprovantes de boleto via Sispag (DDA multipágina vs avulso 1 página)
         eh_boleto_sispag = (
@@ -200,7 +200,7 @@ class RenomeadorComprovantes:
                 else:
                     data_fmt = self._data_do_caminho(caminho_arq)
                 if data_fmt:
-                    return f"PAGAMENTOS_ITAU_{data_fmt}"
+                    return f"PAGAMENTOS_DDA_ITAU_{data_fmt}"
 
             # 1 página: se a identificação estiver vazia, ainda trata como DDA (lote de 1)
             _, ident_ok = self._identificacao_boleto_itau(texto)
@@ -211,7 +211,7 @@ class RenomeadorComprovantes:
                 else:
                     data_fmt = self._data_do_caminho(caminho_arq)
                 if data_fmt:
-                    return f"PAGAMENTOS_ITAU_{data_fmt}"
+                    return f"PAGAMENTOS_DDA_ITAU_{data_fmt}"
             # Identificação preenchida + 1 página = boleto avulso → não é DDA
             return None
 
@@ -224,7 +224,7 @@ class RenomeadorComprovantes:
                     or "DDA" in nome_orig_upper):
                 data_fmt = self._data_do_caminho(caminho_arq)
                 if data_fmt:
-                    return f"PAGAMENTOS_ITAU_{data_fmt}"
+                    return f"PAGAMENTOS_DDA_ITAU_{data_fmt}"
 
         return None
 

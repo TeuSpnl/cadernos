@@ -108,11 +108,74 @@ class RenomeadorComprovantes:
         """Tenta encontrar algo como 12/2025 ou 12-2025 no texto.
 
         Evita falso positivo dentro de data completa (ex: 17/07/2026 → não é 07/2026).
+        Também aceita OCR que lê a barra como '1' (07/2026 → 0712026).
         """
         match = re.search(r'(?<!\d{2}/)(?<!\d)(0[1-9]|1[0-2])[-/](20\d{2})\b', texto)
         if match:
             return f"{match.group(1)}-{match.group(2)}"
+        # OCR clássico: '/' vira '1' → 0712026
+        match_ocr = re.search(r'(?<!\d)(0[1-9]|1[0-2])1(20\d{2})(?!\d)', texto)
+        if match_ocr:
+            return f"{match_ocr.group(1)}-{match_ocr.group(2)}"
         return ""
+
+    def _descricao_inutil(self, desc):
+        """True se a descrição for vazia, só 'PGTO' ou lixo de data do OCR (ex: 0712026)."""
+        if not desc:
+            return True
+        d = desc.strip()
+        if not d or d.upper() in ("PGTO", "-"):
+            return True
+        so_num = re.sub(r'[\s.\-/]', '', d)
+        # Só dígitos → quase sempre data OCR quebrada (0712026, 072026)
+        if re.fullmatch(r'\d{5,8}', so_num):
+            return True
+        if re.fullmatch(r'(0[1-9]|1[0-2])[-/](20\d{2})', d):
+            return True
+        return False
+
+    def _cpf_seculos_presente(self, texto):
+        """CPF da Caroline (Séculos), tolerante a OCR (O↔0, B↔8, S↔5, I↔1)."""
+        bruto = re.sub(r'[^A-Za-z0-9]', '', texto.upper())
+        canon = (
+            bruto
+            .replace("O", "0").replace("D", "0").replace("Q", "0")
+            .replace("I", "1").replace("L", "1")
+            .replace("B", "8").replace("S", "5")
+            .replace("Z", "2").replace("G", "6")
+        )
+        alvo = "01480969567"
+        if alvo in canon:
+            return True
+        # OCR às vezes erra 1 dígito
+        for i in range(0, max(0, len(canon) - 10)):
+            janela = canon[i:i + 11]
+            if len(janela) != 11 or not janela.isdigit():
+                continue
+            if sum(a != b for a, b in zip(janela, alvo)) <= 1:
+                return True
+        return False
+
+    def _parece_seculos(self, texto):
+        """Heurística para mensalidade Séculos mesmo com OCR ruim."""
+        tu = self._texto_sem_acento(texto)
+        if re.search(r'(?<![A-Z0-9])CAROLINE(?![A-Z0-9])', tu) and re.search(
+            r'(?<![A-Z0-9])MATOS(?![A-Z0-9])', tu
+        ):
+            return True
+        if self._cpf_seculos_presente(texto):
+            return True
+        # SECULOS / SECU LOS / 5ECULOS
+        if re.search(r'SE\s*C\s*U\s*L\s*O\s*S', tu):
+            return True
+        if re.search(r'(?<![A-Z0-9])5ECULOS(?![A-Z0-9])', tu):
+            return True
+        if re.search(r'(?<![A-Z0-9])SECULO5(?![A-Z0-9])', tu):
+            return True
+        # Neste fluxo, mensalidade + sistema = Séculos
+        if "MENSALIDADE" in tu and "SISTEMA" in tu:
+            return True
+        return False
 
     def processar_bb_dda(self, texto):
         """Detecta se é o arquivo de lote DDA do BB"""
@@ -248,6 +311,11 @@ class RenomeadorComprovantes:
 
         Exemplo concreto: o Itaú coloca "em dias úteis, das 9h às 18h" no rodapé,
         e o termo "das" estava sendo confundido com a sigla DAS (impostos).
+
+        IMPORTANTE (OCR Windows do Inter): os rótulos "Ouvidoria:" / "Fale com a gente"
+        aparecem CEDO no texto (coluna de labels), antes dos valores. Cortar na
+        primeira ocorrência jogava fora Caroline/SECULOS/descrição. Por isso só
+        cortamos se o marcador estiver na metade final do documento.
         """
         marcadores_corte = [
             "Em caso de dúvidas",  # Itaú
@@ -256,12 +324,18 @@ class RenomeadorComprovantes:
             "Ouvidoria:",
             "Fale com a gente",  # Inter
         ]
-        idx_min = len(texto)
+        n = len(texto)
+        if n == 0:
+            return texto
+        # Só aceita corte a partir da metade do texto (rodapé de verdade)
+        limite_min = n // 2
+        idx_corte = n
         for marcador in marcadores_corte:
-            idx = texto.find(marcador)
-            if idx != -1 and idx < idx_min:
-                idx_min = idx
-        return texto[:idx_min]
+            # Última ocorrência: no Inter OCR os labels repetem e o rodapé real é o último
+            idx = texto.rfind(marcador)
+            if idx != -1 and idx >= limite_min and idx < idx_corte:
+                idx_corte = idx
+        return texto[:idx_corte]
 
     def _texto_sem_acento(self, texto):
         """Normaliza acentos para comparações (ITAÚ → ITAU)."""
@@ -286,7 +360,14 @@ class RenomeadorComprovantes:
             return False
         # (?<![A-Z0-9]) termo (?![A-Z0-9]) — underscore/_hífen contam como separador
         padrao = r'(?<![A-Z0-9])' + re.escape(t) + r'(?![A-Z0-9])'
-        return re.search(padrao, texto_upper) is not None
+        if re.search(padrao, texto_upper) is not None:
+            return True
+        # Variante com espaços no meio (OCR: "SECU LOS")
+        if " " not in t and len(t) >= 5:
+            flex = r'(?<![A-Z0-9])' + r'\s*'.join(re.escape(c) for c in t) + r'(?![A-Z0-9])'
+            if re.search(flex, texto_upper) is not None:
+                return True
+        return False
 
     def _aplicar_regras_json(self, texto_limpo, dados):
         """Aplica as regras do JSON na descrição. Retorna True se casou alguma."""
@@ -298,9 +379,15 @@ class RenomeadorComprovantes:
             termos = regra.get("termos", [])
             termo_casado = None
             for termo in termos:
-                if self._termo_presente(termo, texto_upper):
+                if self._termo_presente(termo, texto_upper) or self._termo_presente(
+                    self._texto_sem_acento(termo), texto_norm
+                ):
                     termo_casado = termo.upper()
                     break
+            # Séculos: reforço quando o OCR come letras do nome/descrição
+            if not termo_casado and grupo.upper() == "SECULOS" and self._parece_seculos(texto_limpo):
+                termo_casado = "SECULOS"
+
             if not termo_casado:
                 continue
 
@@ -761,6 +848,31 @@ foreach ($line in $result.Lines) { Write-Output $line.Text }
             if dados["descricao"] != "PGTO":
                 descricao_especifica = True
 
+        # Se a descrição ficou só com lixo de data do OCR (ex: 0712026), descarta e
+        # tenta as regras de novo — comum no Pix do Séculos quando o OCR come o texto.
+        if self._descricao_inutil(dados["descricao"]) or dados["descricao"].upper() == "PGTO":
+            if self._parece_seculos(texto):
+                dados["descricao"] = "SECULOS"
+                descricao_especifica = True
+                if not dados.get("data_ref"):
+                    dados["data_ref"] = self.extrair_data_referencia(texto)
+                if not dados.get("nome_recebedor") and re.search(
+                    r'CAROLINE', self._texto_sem_acento(texto)
+                ):
+                    dados["nome_recebedor"] = "Caroline Martins Matos"
+            else:
+                # Reaplica regras no texto completo (OCR pode ter caído depois do 1º passe)
+                self._aplicar_regras_json(self._remover_rodape_legal(texto), dados)
+
+        # Descarta descrição que ainda seja só número/data
+        if self._descricao_inutil(dados["descricao"]):
+            # Guarda mês se a "descrição" era 0712026 / 07/2026
+            if not dados.get("data_ref"):
+                dados["data_ref"] = self.extrair_data_referencia(
+                    dados["descricao"] + " " + texto
+                )
+            dados["descricao"] = "PGTO"
+
         desc_upper = dados["descricao"].upper()
 
         dados["descricao"] = dados["descricao"].replace("PGTO", "")
@@ -770,6 +882,12 @@ foreach ($line in $result.Lines) { Write-Output $line.Text }
         # Remover termos a ignorar
         for termo in self.config.get("termos_ignorar", []):
             dados["descricao"] = dados["descricao"].replace(termo, "").strip()
+
+        # Se sobrou só lixo após limpar PGTO/hífens (ex: "0712026"), zera
+        if self._descricao_inutil(dados["descricao"]):
+            if not dados.get("data_ref"):
+                dados["data_ref"] = self.extrair_data_referencia(dados["descricao"])
+            dados["descricao"] = ""
 
         # Se a descrição tiver "SALARIO", simplifica
         # (pula caso a descrição já tenha sido fixada por um banco específico,
@@ -804,127 +922,167 @@ foreach ($line in $result.Lines) { Write-Output $line.Text }
     def _extrair_inter(self, texto, dados):
         """Extrai data / descrição / recebedor de comprovantes do Inter.
 
-        Funciona tanto com texto nativo quanto com OCR (Vision), onde os valores
-        costumam aparecer depois de todos os rótulos.
+        Funciona com texto nativo e OCR (Vision/Windows). O OCR Windows muda a
+        ordem das linhas e costuma ler '07/2026' como '0712026'.
         """
-        # Data da transação: prefere a que vem logo após o rótulo; senão a 1ª do corpo
-        # (no OCR a data de impressão do rodapé costuma ser a última).
-        m_data_tx = re.search(
-            r'Data da transa[cç][aã]o\s*.*?(\d{2}/\d{2}/\d{4})',
-            texto, re.IGNORECASE | re.DOTALL
-        )
-        if m_data_tx:
-            dados["data_pgto"] = self.formatar_data(m_data_tx.group(1))
-        else:
-            datas = re.findall(r'(\d{2}/\d{2}/\d{4})', texto)
-            if datas:
-                # Se houver 2+ datas, a de impressão costuma ser a última
-                dados["data_pgto"] = self.formatar_data(datas[0] if len(datas) == 1 else datas[0])
-                # Heurística OCR: primeira data após URL do Inter é a da transação
-                idx_url = texto.find("contadigital.inter.co")
-                if idx_url != -1:
-                    datas_apos = re.findall(r'(\d{2}/\d{2}/\d{4})', texto[idx_url:])
-                    if datas_apos:
-                        dados["data_pgto"] = self.formatar_data(datas_apos[0])
+        # --- Data da transação (não a de impressão do rodapé) ---
+        dados["data_pgto"] = self._data_transacao_inter(texto)
 
-        # Descrição explícita "PGTO - ..."
-        if dados["descricao"] == "PGTO":
-            m_pgto = re.search(r'PGTO\s*[-–]\s*(.+)', texto, re.IGNORECASE)
-            if m_pgto:
-                # Pega só a linha (OCR às vezes cola CPF na mesma linha do nome, não da desc)
-                desc = m_pgto.group(0).strip().split('\n')[0].strip()
-                dados["descricao"] = desc
-                ref = self.extrair_data_referencia(desc)
-                if ref:
-                    dados["data_ref"] = ref
-                    match_ref_str = re.search(r'\b(0[1-9]|1[0-2])[-/](20\d{2})\b', desc)
-                    if match_ref_str:
-                        dados["descricao"] = dados["descricao"].replace(match_ref_str.group(0), "").strip()
-            else:
-                # Layout clássico: "Descrição" seguido do valor na mesma/próxima linha
-                match_desc = re.search(r'Descri[cç][aã]o\s*[:\n]?\s*(.+)', texto, re.IGNORECASE)
-                if match_desc:
-                    raw_desc = match_desc.group(1).replace('"', '').strip().split('\n')[0].strip()
-                    # Evita pegar o próximo rótulo ("Quem pagou", "Nome", ...)
-                    rotulos = {"QUEM PAGOU", "QUEM RECEBEU", "NOME", "CPF/CNPJ", "INSTITUIÇÃO", "INSTITUICAO"}
-                    if len(raw_desc) > 2 and raw_desc.upper() not in rotulos:
-                        dados["descricao"] = raw_desc
+        # --- Descrição (PGTO pode ocupar 1–2 linhas no OCR Windows) ---
+        if dados["descricao"] == "PGTO" or self._descricao_inutil(dados["descricao"]):
+            desc = self._descricao_pgto_inter(texto)
+            if desc:
+                limpa = re.sub(r'PGTO\s*[-–]?\s*', '', desc, flags=re.IGNORECASE).strip()
+                if not self._descricao_inutil(limpa):
+                    dados["descricao"] = desc
+            ref = self.extrair_data_referencia(texto)
+            if ref:
+                dados["data_ref"] = ref
+                if dados["descricao"] and dados["descricao"] != "PGTO":
+                    dados["descricao"] = re.sub(
+                        r'(?<!\d)(0[1-9]|1[0-2])[-/]?(1)?(20\d{2})(?!\d)',
+                        '',
+                        dados["descricao"],
+                    ).strip(" -_")
 
-        # Título do comprovante quando não há descrição (ex: Pix recebido devolvido)
-        if dados["descricao"] == "PGTO":
+        # Título quando não há descrição útil
+        if dados["descricao"] == "PGTO" or self._descricao_inutil(dados["descricao"]):
             for titulo in ("Pix recebido devolvido", "Pix enviado", "Pix recebido"):
                 if titulo in texto:
                     dados["descricao"] = titulo
                     break
 
-        # Recebedor — no OCR os valores vêm depois de todos os labels; pulamos lixo óbvio
+        # Reforço Séculos — no log real o OCR trouxe 669 chars mas regras não
+        # casaram (rodapé cortava cedo) e a desc virou só 0712026.
+        if self._parece_seculos(texto):
+            dados["descricao"] = "SECULOS"
+            if not dados.get("data_ref"):
+                dados["data_ref"] = self.extrair_data_referencia(texto)
+            if not dados.get("nome_recebedor"):
+                dados["nome_recebedor"] = "Caroline Martins Matos"
+            return
+
         if not dados["nome_recebedor"]:
-            idx_recebedor = texto.find("Quem recebeu")
-            if idx_recebedor == -1:
-                return
-            # No OCR, o bloco de valores começa após a URL do extrato
-            idx_vals = texto.find("contadigital.inter.co", idx_recebedor)
-            inicio = idx_vals if idx_vals != -1 else idx_recebedor
-            bloco = texto[inicio:].split('\n')
+            dados["nome_recebedor"] = self._recebedor_inter(texto)
 
-            # Ordem típica dos valores no OCR (Pix enviado com descrição):
-            # data, hora, id, [descrição], pagador..., recebedor(nome)...
-            # Sem descrição: data, hora, id, pagador..., recebedor...
-            candidatos = []
-            for linha in bloco:
-                lin = linha.strip().replace('"', '')
-                if not lin:
-                    continue
-                lin_up = lin.upper()
-                if lin_up in ["NOME", "QUEM RECEBEU", "DADOS DO RECEBEDOR", "CPF/CNPJ",
-                              "INSTITUIÇÃO", "INSTITUICAO", "AGÊNCIA", "AGENCIA", "CONTA",
-                              "CHAVE", "TIPO", "CACC", "SVGS", "SOBRE A TRANSAÇÃO",
-                              "QUEM PAGOU", "DESCRIÇÃO", "DESCRICAO"]:
-                    continue
-                if any(x in lin_up for x in ["HTTPS://", "FALE COM", "CAPITAIS", "OUVIDORIA",
-                                              "DEFICIÊNCIA", "DEFICIENCIA", "DEMAIS LOCAL"]):
-                    continue
-                if re.match(r'^\d{2}/\d{2}/\d{4}', lin):
-                    continue
-                if re.match(r'^\d{1,2}h\d{2}', lin, re.IGNORECASE):
-                    continue
-                if re.match(r'^[ED]\d{10,}', lin):  # ID da transação Inter
-                    continue
-                if lin_up.startswith("PGTO"):
-                    continue
-                if re.fullmatch(r'R\$\s*[\d.,]+', lin_up):
-                    continue
-                if re.fullmatch(r'[\d.\-*/]+', lin):
-                    continue
-                if lin.startswith("Nome "):
-                    candidatos.append(lin[5:].strip())
-                    continue
-                candidatos.append(lin)
+    def _data_transacao_inter(self, texto):
+        """Escolhe a data da transação, não a de impressão ('1 of 1 17/07/2026')."""
+        m = re.search(
+            r'Data da transa[cç][aã]o.{0,80}?(\d{2}/\d{2}/\d{4})',
+            texto, re.IGNORECASE | re.DOTALL
+        )
+        if m:
+            return self.formatar_data(m.group(1))
 
-            # Pagador costuma ser COMAGRO; o recebedor é o nome seguinte "de pessoa/empresa"
-            pagador_idx = None
-            for i, c in enumerate(candidatos):
-                if "COMAGRO" in c.upper():
-                    pagador_idx = i
-                    break
-            if pagador_idx is not None:
-                # Após o pagador: CNPJ, BANCO INTER, conta, agência, depois o recebedor
-                for c in candidatos[pagador_idx + 1:]:
-                    cu = c.upper()
-                    if "BANCO INTER" in cu or "BCO " in cu or "ITAÚ" in cu or "ITAU" in cu:
-                        continue
-                    if "BRADESCO" in cu or "UNIBANCO" in cu:
-                        continue
-                    if re.match(r'^\d{2}\.\d{3}\.\d{3}/', c):
-                        continue
-                    if re.fullmatch(r'\*+\d{3}\.\d{3}-\*+', c.replace(" ", "")):
-                        continue
-                    # Nome do recebedor (pode vir com CPF na mesma linha)
-                    nome = re.sub(r'\s+\d{11}\s*$', '', c).strip()
-                    nome = re.split(r'\s+\d{2}\.\d{3}\.\d{3}/', nome)[0].strip()
-                    if nome and not re.fullmatch(r'[\d.\-]+', nome):
-                        dados["nome_recebedor"] = nome
-                        break
+        datas = list(re.finditer(r'(\d{2}/\d{2}/\d{4})', texto))
+        if not datas:
+            return ""
+
+        candidatas = []
+        for m in datas:
+            ini = max(0, m.start() - 30)
+            ctx = texto[ini:m.end() + 20].lower()
+            # Rodapé de impressão do browser/Inter
+            if "of 1" in ctx or "of1" in ctx.replace(" ", ""):
+                continue
+            candidatas.append(m.group(1))
+
+        if not candidatas:
+            candidatas = [m.group(1) for m in datas]
+
+        # Primeira data "boa" = transação; a última costuma ser impressão
+        return self.formatar_data(candidatas[0])
+
+    def _descricao_pgto_inter(self, texto):
+        """Monta descrição a partir de 'PGTO - ...' (1–2 linhas no OCR Windows)."""
+        m = re.search(r'PGTO\s*[-–]?\s*(.*)', texto, re.IGNORECASE)
+        if not m:
+            # Fallback: linha com MENSALIDADE / SISTEMA
+            m2 = re.search(r'(MENSALIDADE[^\n]*)', texto, re.IGNORECASE)
+            return m2.group(1).strip() if m2 else ""
+
+        resto = texto[m.start():]
+        linhas = [ln.strip() for ln in resto.split('\n')[:3] if ln.strip()]
+        if not linhas:
+            return ""
+        desc = linhas[0]
+        if len(linhas) > 1:
+            seg = linhas[1]
+            seg_up = seg.upper()
+            if (not re.match(r'^\d{2}/\d{2}/\d{4}', seg)
+                    and not re.match(r'^\d{1,2}h\d{2}', seg, re.I)
+                    and not seg_up.startswith("COMAGRO")
+                    and not seg_up.startswith("QUEM ")
+                    and "FALE COM" not in seg_up
+                    and len(seg) > 2):
+                limpa = re.sub(r'PGTO\s*[-–]?\s*', '', desc, flags=re.I).strip()
+                if self._descricao_inutil(limpa) or len(limpa) < 3:
+                    desc = f"PGTO - {seg}"
+                elif not self._descricao_inutil(seg) and not re.fullmatch(r'[\d.\-*/\s]+', seg):
+                    desc = f"{desc} {seg}".strip()
+        return desc
+
+    def _recebedor_inter(self, texto):
+        """Nome de quem recebeu — robusto ao layout do OCR Windows."""
+        tu = self._texto_sem_acento(texto)
+        if re.search(r'(?<![A-Z0-9])CAROLINE(?![A-Z0-9])', tu):
+            return "Caroline Martins Matos"
+
+        idx_recebedor = tu.find("QUEM RECEBEU")
+        if idx_recebedor == -1:
+            idx_recebedor = 0
+
+        bloco = texto[idx_recebedor:].split('\n')
+        candidatos = []
+        for linha in bloco[1:40]:
+            lin = linha.strip().replace('"', '')
+            if not lin:
+                continue
+            lin_up = self._texto_sem_acento(lin)
+            if lin_up in ["NOME", "QUEM RECEBEU", "DADOS DO RECEBEDOR", "CPF/CNPJ",
+                          "INSTITUICAO", "INSTITUIÇÃO", "AGENCIA", "AGÊNCIA", "CONTA",
+                          "CHAVE", "TIPO", "CACC", "SVGS", "SOBRE A TRANSACAO",
+                          "QUEM PAGOU", "DESCRICAO", "DESCRIÇÃO", "BANCO INTER"]:
+                continue
+            if any(x in lin_up for x in ["HTTPS://", "FALE COM", "CAPITAIS", "OUVIDORIA",
+                                          "DEFICIENCIA", "DEMAIS LOCAL", "CONTADIGITAL"]):
+                continue
+            if re.match(r'^\d{2}/\d{2}/\d{4}', lin):
+                continue
+            if re.match(r'^\d{1,2}h\d{2}', lin, re.IGNORECASE):
+                continue
+            if re.match(r'^[ED]\d{10,}', lin):
+                continue
+            if lin_up.startswith("PGTO") or self._descricao_inutil(lin):
+                continue
+            if re.fullmatch(r'R\$\s*[\d.,]+', lin_up):
+                continue
+            if re.fullmatch(r'[\d.\-*/]+', lin):
+                continue
+            if "COMAGRO" in lin_up and "PEC" in lin_up:
+                continue
+            if lin.startswith("Nome "):
+                candidatos.append(lin[5:].strip())
+                continue
+            candidatos.append(lin)
+
+        pagador_idx = None
+        for i, c in enumerate(candidatos):
+            if "COMAGRO" in c.upper():
+                pagador_idx = i
+                break
+        busca = candidatos[pagador_idx + 1:] if pagador_idx is not None else candidatos
+        for c in busca:
+            cu = self._texto_sem_acento(c)
+            if any(b in cu for b in ["BANCO INTER", "BCO ", "ITAU", "BRADESCO", "UNIBANCO", "BNB"]):
+                continue
+            if re.match(r'^\d{2}\.\d{3}\.\d{3}/', c):
+                continue
+            nome = re.sub(r'\s+\d{11}\s*$', '', c).strip()
+            nome = re.split(r'\s+\d{2}\.\d{3}\.\d{3}/', nome)[0].strip()
+            if nome and not re.fullmatch(r'[\d.\-]+', nome) and len(nome) > 2:
+                return nome
+        return ""
 
     def gerar_novo_nome(self, dados, original_filename):
         # Se data não foi achada, usa a data de hoje como fallback (ruim, mas evita crash)
@@ -970,9 +1128,19 @@ foreach ($line in $result.Lines) { Write-Output $line.Text }
             self.log(f"  OCR necessario: {os.path.basename(caminho_arq)} (Inter sem texto util)")
             ocr = self._ocr_primeira_pagina(caminho_arq)
             if ocr:
-                # OCR substitui o texto nativo: no Inter os valores vêm como curva/outline,
-                # e os labels nativos ainda têm "Ouvidoria:" que cortaria o OCR no rodapé.
+                # OCR substitui o texto nativo: no Inter os valores vêm como curva/outline.
                 texto_completo = ocr
+                # Diagnóstico: o log do Séculos mostrou 669 chars mas desc=0712026.
+                # Mostra se os âncoras chegaram no OCR (ajuda se voltar a falhar).
+                tu = ocr.upper()
+                self.log(
+                    "  OCR anchors: "
+                    f"SECULOS={'SECULOS' in tu or 'SECU' in tu} "
+                    f"CAROLINE={'CAROLINE' in tu} "
+                    f"MENSALIDADE={'MENSALIDADE' in tu} "
+                    f"PGTO={'PGTO' in tu} "
+                    f"014809={'014809' in re.sub(r'[^0-9]', '', ocr)}"
+                )
             else:
                 self.log(
                     "  AVISO: OCR falhou — comprovante Inter vai sair como PGTO generico. "

@@ -8,79 +8,10 @@
   hx-target="#cadastro-form"
   hx-swap="outerHTML"
   novalidate
-  x-data="{
+  x-data="cadastroForm({
     nome: {{ form.nome_completo.value|default:''|stringformat:'r' }},
-    igreja: {{ form.igreja.value|default:''|stringformat:'r' }},
-    confirmOpen: false,
-    nomeErro: '',
-    senhaErro: '',
-    get nomeValido() {
-      return this.nome.trim().split(/\s+/).filter(function (p) { return p.length >= 2; }).length >= 2;
-    },
-    abrirConfirmacao() {
-      this.nomeErro = '';
-      this.senhaErro = '';
-      var form = this.$el;
-      var user = (form.querySelector('[name=username]') || {}).value || '';
-      var tel = (form.querySelector('[name=telefone]') || {}).value || '';
-      var p1 = (form.querySelector('[name=password1]') || {}).value || '';
-      var p2 = (form.querySelector('[name=password2]') || {}).value || '';
-      var outra = (form.querySelector('[name=igreja_outra]') || {}).value || '';
-
-      // Ordem: campos vazios primeiro, so depois o popup do nome
-      if (!user.trim()) {
-        form.querySelector('[name=username]').reportValidity();
-        form.querySelector('[name=username]').focus();
-        return;
-      }
-      if (!this.nome.trim()) {
-        this.nomeErro = 'Escreva o nome completo';
-        form.querySelector('[name=nome_completo]').focus();
-        return;
-      }
-      if (!this.nomeValido) {
-        this.nomeErro = 'Escreva o nome completo';
-        form.querySelector('[name=nome_completo]').focus();
-        return;
-      }
-      var digitos = tel.replace(/\D/g, '');
-      if (digitos.length < 10) {
-        form.querySelector('[name=telefone]').setCustomValidity('Informe um telefone valido com DDD.');
-        form.querySelector('[name=telefone]').reportValidity();
-        form.querySelector('[name=telefone]').setCustomValidity('');
-        form.querySelector('[name=telefone]').focus();
-        return;
-      }
-      if (!this.igreja) {
-        form.querySelector('[name=igreja]').reportValidity();
-        form.querySelector('[name=igreja]').focus();
-        return;
-      }
-      if (this.igreja === '__outra__' && !outra.trim()) {
-        form.querySelector('[name=igreja_outra]').reportValidity();
-        form.querySelector('[name=igreja_outra]').focus();
-        return;
-      }
-      if (!p1 || p1.length < 6) {
-        form.querySelector('[name=password1]').reportValidity();
-        form.querySelector('[name=password1]').focus();
-        return;
-      }
-      if (!p2) {
-        form.querySelector('[name=password2]').reportValidity();
-        form.querySelector('[name=password2]').focus();
-        return;
-      }
-      if (p1 !== p2) {
-        this.senhaErro = 'As senhas nao coincidem.';
-        form.querySelector('[name=password2]').focus();
-        return;
-      }
-
-      // So chega aqui se tudo estiver preenchido e coerente
-      this.confirmOpen = true;
-    }
-  }"
+    igreja: {{ form.igreja.value|default:''|stringformat:'r' }}
+  })"
 >
   {% csrf_token %}
   {{ form.non_field_errors }}
@@ -111,6 +42,7 @@
     Telefone para contato
     {{ form.telefone }}
     {{ form.telefone.errors }}
+    <p class="field-error" x-show="telErro" x-text="telErro" x-cloak></p>
   </label>
 
   <label>
@@ -125,12 +57,14 @@
       <option value="__outra__">Outra (escrever)</option>
     </select>
     {{ form.igreja.errors }}
+    <p class="field-error" x-show="igrejaErro" x-text="igrejaErro" x-cloak></p>
   </label>
 
   <label x-show="igreja === '__outra__'" x-cloak>
     Qual igreja/congregacao?
     {{ form.igreja_outra }}
     {{ form.igreja_outra.errors }}
+    <p class="field-error" x-show="outraErro" x-text="outraErro" x-cloak></p>
   </label>
 
   <label>

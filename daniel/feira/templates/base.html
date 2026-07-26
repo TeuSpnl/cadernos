@@ -11,8 +11,107 @@
       href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,500;0,600;0,700;1,500&family=Source+Sans+3:wght@400;500;600;700&display=swap"
       rel="stylesheet"
     />
-    <link rel="stylesheet" href="/css/styles.css?v=7" />
-    <link rel="stylesheet" href="/css/app.css?v=7" />
+    <link rel="stylesheet" href="/css/styles.css?v=8" />
+    <link rel="stylesheet" href="/css/app.css?v=8" />
+    {# Factory do formulario de cadastro (usada pelo Alpine em cadastro_form.html) #}
+    <script>
+      window.cadastroForm = function (inicial) {
+        inicial = inicial || {};
+        return {
+          nome: inicial.nome || "",
+          igreja: inicial.igreja || "",
+          confirmOpen: false,
+          nomeErro: "",
+          telErro: "",
+          igrejaErro: "",
+          outraErro: "",
+          senhaErro: "",
+          get nomeValido() {
+            return this.nome
+              .trim()
+              .split(/\s+/)
+              .filter(function (p) {
+                return p.length >= 2;
+              }).length >= 2;
+          },
+          // Sempre busca no form pelo id — nao depende de this.$el (HTMX/Alpine)
+          campo: function (nome) {
+            var form = document.getElementById("cadastro-form");
+            if (!form) return null;
+            return form.querySelector('[name="' + nome + '"]');
+          },
+          focar: function (el) {
+            if (el && typeof el.focus === "function") el.focus();
+          },
+          abrirConfirmacao: function () {
+            this.nomeErro = "";
+            this.telErro = "";
+            this.igrejaErro = "";
+            this.outraErro = "";
+            this.senhaErro = "";
+
+            var userEl = this.campo("username");
+            var nomeEl = this.campo("nome_completo");
+            var telEl = this.campo("telefone");
+            var igrejaEl = this.campo("igreja");
+            var outraEl = this.campo("igreja_outra");
+            var p1El = this.campo("password1");
+            var p2El = this.campo("password2");
+
+            var user = (userEl && userEl.value) || "";
+            var tel = (telEl && telEl.value) || "";
+            var p1 = (p1El && p1El.value) || "";
+            var p2 = (p2El && p2El.value) || "";
+            var outra = (outraEl && outraEl.value) || "";
+
+            // Ordem: campos vazios primeiro; popup so no fim
+            if (!user.trim()) {
+              this.focar(userEl);
+              if (userEl && userEl.reportValidity) userEl.reportValidity();
+              return;
+            }
+            if (!this.nome.trim() || !this.nomeValido) {
+              this.nomeErro = "Escreva o nome completo";
+              this.focar(nomeEl);
+              return;
+            }
+            var digitos = tel.replace(/\D/g, "");
+            if (digitos.length < 10) {
+              this.telErro = "Informe um telefone valido com DDD.";
+              this.focar(telEl);
+              return;
+            }
+            if (!this.igreja) {
+              this.igrejaErro = "Selecione a sua igreja/congregacao.";
+              this.focar(igrejaEl);
+              return;
+            }
+            if (this.igreja === "__outra__" && !outra.trim()) {
+              this.outraErro = "Escreva o nome da igreja.";
+              this.focar(outraEl);
+              return;
+            }
+            if (!p1 || p1.length < 6) {
+              this.senhaErro = "A senha deve ter pelo menos 6 caracteres.";
+              this.focar(p1El);
+              return;
+            }
+            if (!p2) {
+              this.senhaErro = "Confirme a senha.";
+              this.focar(p2El);
+              return;
+            }
+            if (p1 !== p2) {
+              this.senhaErro = "As senhas nao coincidem.";
+              this.focar(p2El);
+              return;
+            }
+
+            this.confirmOpen = true;
+          },
+        };
+      };
+    </script>
     <script src="https://unpkg.com/htmx.org@2.0.4" defer></script>
     <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.14.8/dist/cdn.min.js"></script>
     {% block extra_head %}{% endblock %}

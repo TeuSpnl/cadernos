@@ -1,0 +1,56 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="320" height="380" viewBox="0 0 320 380" fill="none" role="img" aria-labelledby="t3">
+  <!-- Mockup camiseta PLANTAR  off-white com accent musgo -->
+  <title id="t3">Camiseta Plantar</title>
+  <defs>
+    <linearGradient id="cloth3" x1="160" y1="40" x2="160" y2="360" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#F7F2E8"/>
+      <stop offset="1" stop-color="#E8DFCC"/>
+    </linearGradient>
+    <linearGradient id="shade3" x1="90" y1="80" x2="240" y2="320" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#fff" stop-opacity="0.35"/>
+      <stop offset="0.45" stop-color="#fff" stop-opacity="0"/>
+      <stop offset="1" stop-color="#2F4632" stop-opacity="0.1"/>
+    </linearGradient>
+    <filter id="soft3" x="-10%" y="-10%" width="120%" height="120%">
+      <feDropShadow dx="0" dy="10" stdDeviation="12" flood-color="#1F3224" flood-opacity="0.2"/>
+    </filter>
+  </defs>
+
+  <ellipse cx="160" cy="352" rx="92" ry="12" fill="#1F3224" fill-opacity="0.1"/>
+
+  <g filter="url(#soft3)">
+    <path
+      d="M104 58c18-22 40-30 56-30s38 8 56 30l34 18-18 34-28-10v210c0 10-8 18-18 18H116c-10 0-18-8-18-18V100l-28 10-18-34 34-18z"
+      fill="url(#cloth3)"
+    />
+    <path
+      d="M104 58c18-22 40-30 56-30s38 8 56 30l34 18-18 34-28-10v210c0 10-8 18-18 18H116c-10 0-18-8-18-18V100l-28 10-18-34 34-18z"
+      fill="url(#shade3)"
+    />
+    <path d="M132 42c8 16 20 24 28 24s20-8 28-24" stroke="#A89878" stroke-width="3.5" stroke-linecap="round" fill="none"/>
+    <path d="M132 42c8 14 18 20 28 20s20-6 28-20" fill="#D4C8AE" fill-opacity="0.5"/>
+    <path d="M104 100l28-10M216 90l28 10" stroke="#A89878" stroke-opacity="0.35" stroke-width="1.5"/>
+  </g>
+
+  <!-- Estampa: broto / semente germinando + PLANTAR -->
+  <g transform="translate(160 170)">
+    <!-- Solo -->
+    <path d="M-42 28c14 8 28 10 42 10s28-2 42-10" stroke="#2F4632" stroke-width="2" stroke-linecap="round" fill="none" opacity="0.55"/>
+    <!-- Caule -->
+    <path d="M0 28c0-18 2-32 0-48" stroke="#2F4632" stroke-width="2.5" stroke-linecap="round"/>
+    <!-- Folhas -->
+    <path d="M0 -8c-18-4-28-16-30-32 18 4 28 16 30 32z" fill="#4A7A48"/>
+    <path d="M0 -4c18-4 28-16 30-32-18 4-28 16-30 32z" fill="#6B9A5C"/>
+    <!-- Semente -->
+    <ellipse cx="0" cy="22" rx="7" ry="5" fill="#D4B56A"/>
+    <text
+      y="62"
+      text-anchor="middle"
+      fill="#2F4632"
+      font-family="Georgia, 'Times New Roman', serif"
+      font-size="20"
+      font-weight="700"
+      letter-spacing="0.22em"
+    >PLANTAR</text>
+  </g>
+</svg>

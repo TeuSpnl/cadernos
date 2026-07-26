@@ -1,0 +1,104 @@
+{% extends "base.html" %}
+{% comment %}
+  Landing: secao adulto (R$ 50) + secao infantil (R$ 40).
+  Design/CSS preservados — botoes de compra com HTMX.
+{% endcomment %}
+
+{% block title %}Feira Missionaria · Camisetas Exclusivas{% endblock %}
+
+{% block content %}
+<div class="page">
+  <header class="hero">
+    <a class="brand" href="#topo" id="topo">
+      <img
+        class="brand__logo"
+        src="/images/Feira-logo-no_bg.png"
+        alt="Feira Missionaria Presbiteriana"
+        width="200"
+        height="240"
+      />
+    </a>
+    <h1 class="hero__title">Camisetas da Feira</h1>
+  </header>
+
+  <main>
+    <section class="products" aria-labelledby="adulto-heading" id="camisetas">
+      <h2 id="adulto-heading" class="products__heading">Adulto</h2>
+      <ul class="product-grid">
+        {% for camiseta in camisetas_adulto %}
+          {% include "loja/partials/produto_card.html" %}
+        {% empty %}
+          <li class="product-card">
+            <p>Nenhuma camiseta adulta. Rode: <code>python manage.py seed_camisetas</code></p>
+          </li>
+        {% endfor %}
+      </ul>
+    </section>
+
+    <section class="products products--infantil" aria-labelledby="infantil-heading" id="camisetas-infantil">
+      <h2 id="infantil-heading" class="products__heading">Infantil</h2>
+      <ul class="product-grid">
+        {% for camiseta in camisetas_infantil %}
+          {% include "loja/partials/produto_card.html" %}
+        {% empty %}
+          <li class="product-card">
+            <p>Nenhuma camiseta infantil. Rode: <code>python manage.py seed_camisetas</code></p>
+          </li>
+        {% endfor %}
+      </ul>
+    </section>
+
+    <section class="contact" id="contato" aria-labelledby="contato-heading">
+      <h2 id="contato-heading">Contato</h2>
+      <p>
+        Adicione ao carrinho, finalize o pedido e pague via PIX ou em
+        dinheiro/cartao com o Diac. Thiago - envie o comprovante pelo WhatsApp
+        dele apos a compra.
+      </p>
+    </section>
+  </main>
+
+  <footer class="site-footer">
+    <nav class="site-footer__nav" aria-label="Rodape">
+      <a
+        href="https://api.whatsapp.com/send?phone=5577991245010&text=Ol%C3%A1%2C%20Thiago!%20Quero%20falar%20sobre%20a%20feira."
+        target="_blank"
+        rel="noopener noreferrer"
+      >Contato</a>
+      {% if user.is_authenticated %}
+        <a href="{% url 'loja:meus_pedidos' %}">Meus Pedidos</a>
+      {% endif %}
+    </nav>
+    <p class="site-footer__note">
+      &copy; <span id="year"></span> Feira Missionaria.
+    </p>
+  </footer>
+</div>
+
+<div
+  class="lightbox"
+  id="lightbox"
+  hidden
+  role="dialog"
+  aria-modal="true"
+  aria-label="Foto ampliada da camiseta"
+>
+  <button type="button" class="lightbox__close" id="lightbox-close" aria-label="Fechar foto">&times;</button>
+  <img class="lightbox__img" id="lightbox-img" alt="" />
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+  document.body.addEventListener("htmx:afterOnLoad", function (evt) {
+    const trigger = evt.detail.xhr.getResponseHeader("HX-Trigger");
+    if (!trigger) return;
+    try {
+      const data = JSON.parse(trigger);
+      if (data.toast) {
+        window.dispatchEvent(new CustomEvent("toast", { detail: { value: data.toast } }));
+      }
+    } catch (e) { /* ignore */ }
+  });
+</script>
+{% endblock %}

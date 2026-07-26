@@ -1,0 +1,16 @@
+{% extends "base.html" %}
+{% block title %}Acesso negado{% endblock %}
+{% block content %}
+<div class="page app-page">
+  <h1 class="app-heading">403 - Acesso negado</h1>
+  <p class="app-lead">
+    Esta area e exclusiva para administradores. Se voce e cliente, volte as
+    camisetas ou aos seus pedidos.
+  </p>
+  <p style="text-align:center">
+    <a href="{% url 'loja:landing' %}">Voltar ao inicio</a>
+    &middot;
+    <a href="{% url 'loja:meus_pedidos' %}">Meus Pedidos</a>
+  </p>
+</div>
+{% endblock %}

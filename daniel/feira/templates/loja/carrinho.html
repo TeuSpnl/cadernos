@@ -1,0 +1,11 @@
+{% extends "base.html" %}
+{% block title %}Carrinho - Feira Missionaria{% endblock %}
+
+{% block content %}
+<div class="page app-page">
+  <h1 class="app-heading app-heading--accent">Carrinho</h1>
+  <div id="carrinho-wrap">
+    {% include "loja/partials/carrinho_tabela.html" %}
+  </div>
+</div>
+{% endblock %}

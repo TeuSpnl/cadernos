@@ -1,0 +1,34 @@
+{% extends "base.html" %}
+{% block title %}Painel - Pedidos{% endblock %}
+
+{% block content %}
+<div class="page app-page">
+  {% include "loja/admin/_nav.html" %}
+  <h1 class="app-heading app-heading--accent">Visao de Pedidos</h1>
+  <p class="app-lead">Atualize pagamentos e entregas.</p>
+
+  <div class="app-table-scroll">
+  <table class="app-table">
+    <thead>
+      <tr>
+        <th>ID</th>
+        <th>Cliente</th>
+        <th>Itens</th>
+        <th>Observacao</th>
+        <th>Total</th>
+        <th>Pagamento</th>
+        <th>Entrega</th>
+        <th>Data</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for pedido in pedidos %}
+        {% include "loja/partials/pedido_row.html" %}
+      {% empty %}
+        <tr><td colspan="8">Nenhum pedido ainda.</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  </div>
+</div>
+{% endblock %}

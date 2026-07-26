@@ -1,0 +1,626 @@
+/* =========================================================
+   Feira Missionária — Landing de camisetas
+   Paleta: verde-musgo profundo + bege-creme texturizado
+   ========================================================= */
+
+:root {
+  /* Cores principais (cartaz de referência) */
+  --musgo: #2f4632;
+  --musgo-profundo: #1f3224;
+  --musgo-vivo: #3f5c42;
+  --folha: #4a7a48;
+  --folha-clara: #6b9a5c;
+  --creme: #efe6d4;
+  --creme-escuro: #e2d4bc;
+  --papel: #f4ecde;
+  --dourado: #d4b56a;
+  --dourado-suave: #e8d49a;
+  --tinta: #243028;
+  --sombra: rgba(31, 50, 36, 0.14);
+
+  /* Tipografia */
+  --font-display: "Cormorant Garamond", "Palatino Linotype", Palatino, serif;
+  --font-body: "Source Sans 3", "Segoe UI", sans-serif;
+
+  /* Espaçamento e ritmo */
+  --space-xs: 0.5rem;
+  --space-sm: 0.85rem;
+  --space-md: 1.5rem;
+  --space-lg: 2.75rem;
+  --space-xl: 4.5rem;
+  --radius: 14px;
+  --max: 1100px;
+  /* Altura padrão das fotos nos cards (desktop) */
+  --media-h: 402px;
+}
+
+/* Reset leve */
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  color: var(--tinta);
+  font-family: var(--font-body);
+  font-weight: 400;
+  line-height: 1.65;
+  /* Fundo papel suave — sem SVG azulejado (evita “quadrados” fantasmas) */
+  background-color: var(--papel);
+  background-image:
+    radial-gradient(
+      ellipse 120% 70% at 50% -20%,
+      rgba(255, 252, 245, 0.9),
+      transparent 55%
+    ),
+    radial-gradient(
+      ellipse 80% 50% at 50% 120%,
+      rgba(47, 70, 50, 0.06),
+      transparent 55%
+    );
+  overflow-x: hidden;
+}
+
+body.lightbox-open {
+  overflow: hidden;
+}
+
+img {
+  max-width: 100%;
+  height: auto;
+  display: block;
+}
+
+a {
+  color: inherit;
+}
+
+button {
+  font: inherit;
+}
+
+/* Acessibilidade: rótulos só para leitores de tela */
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* ---------- Moldura de folhas nos cantos ---------- */
+.leaf-frame {
+  pointer-events: none;
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+}
+
+.leaf {
+  position: absolute;
+  opacity: 0.72;
+  animation: leaf-breathe 8s ease-in-out infinite;
+}
+
+.leaf--tl {
+  top: -1.5rem;
+  left: -1.5rem;
+  width: clamp(100px, 16vw, 180px);
+}
+
+.leaf--tr {
+  top: -1.5rem;
+  right: -1.5rem;
+  width: clamp(100px, 16vw, 180px);
+  transform: scaleX(-1);
+  animation-delay: -2s;
+}
+
+.leaf--bl {
+  bottom: -1.2rem;
+  left: -1.2rem;
+  width: clamp(90px, 14vw, 160px);
+  transform: scaleY(-1);
+  animation-delay: -4s;
+}
+
+.leaf--br {
+  bottom: -1.2rem;
+  right: -1.2rem;
+  width: clamp(90px, 14vw, 160px);
+  transform: scale(-1);
+  animation-delay: -6s;
+}
+
+@keyframes leaf-breathe {
+  0%,
+  100% {
+    filter: saturate(1);
+    opacity: 0.68;
+  }
+  50% {
+    filter: saturate(1.1);
+    opacity: 0.82;
+  }
+}
+
+/* Conteúdo acima das folhas */
+.page {
+  position: relative;
+  z-index: 1;
+  width: min(100% - 2rem, var(--max));
+  margin: 0 auto;
+  padding: 0.85rem 0 var(--space-xl);
+}
+
+/* ---------- Hero compacto — marca primeiro, camisetas logo abaixo ---------- */
+.hero {
+  text-align: center;
+  padding: 0.35rem 0 0.75rem;
+  animation: hero-rise 0.8s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+@keyframes hero-rise {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.brand {
+  display: inline-block;
+  text-decoration: none;
+  line-height: 0;
+}
+
+.brand__logo {
+  /* Logo real da feira — proporção vertical enxuta no topo */
+  width: auto;
+  height: clamp(88px, 14vw, 120px);
+  max-width: min(160px, 42vw);
+  object-fit: contain;
+  border-radius: 6px;
+  filter: drop-shadow(0 6px 14px var(--sombra));
+  transition: transform 0.4s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.brand:hover .brand__logo,
+.brand:focus-visible .brand__logo {
+  transform: scale(1.03);
+}
+
+.hero__title {
+  margin: 0.45rem auto 0;
+  font-family: var(--font-display);
+  font-size: clamp(1.15rem, 2.8vw, 1.55rem);
+  font-weight: 600;
+  line-height: 1.2;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--musgo);
+}
+
+/* ---------- Grade de produtos ---------- */
+.products {
+  margin-top: 0.25rem;
+  padding: 0.35rem 0 0;
+}
+
+.product-grid {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: clamp(0.85rem, 2vw, 1.5rem);
+  align-items: stretch;
+}
+
+/* Titulo das secoes Adulto / Infantil na vitrine */
+.products__heading {
+  margin: 0 0 1rem;
+  text-align: center;
+  font-family: var(--font-display);
+  font-size: clamp(1.15rem, 2.5vw, 1.45rem);
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--musgo);
+}
+.products--infantil {
+  margin-top: clamp(1.75rem, 4vw, 2.75rem);
+}
+
+/* Card vertical: clique em qualquer lugar (exceto a foto) → formulário */
+.product-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  padding: 1.1rem 1rem 1.25rem;
+  border-radius: var(--radius);
+  border: 1px solid color-mix(in srgb, var(--musgo) 18%, transparent);
+  background:
+    linear-gradient(
+      165deg,
+      color-mix(in srgb, var(--creme) 92%, white),
+      color-mix(in srgb, var(--creme-escuro) 85%, var(--musgo) 8%)
+    );
+  box-shadow: 0 10px 28px var(--sombra);
+  /* Card em si nao e clicavel — so botoes/imagem */
+  cursor: default;
+  opacity: 0;
+  transform: translateY(24px);
+  transition:
+    opacity 0.7s cubic-bezier(0.22, 1, 0.36, 1),
+    transform 0.7s cubic-bezier(0.22, 1, 0.36, 1),
+    box-shadow 0.35s ease;
+}
+
+.product-card.is-visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.product-card:hover {
+  box-shadow: 0 16px 36px rgba(31, 50, 36, 0.2);
+}
+
+/* Destaque da peça principal (Verde Militar) */
+.product-card--featured {
+  border-color: color-mix(in srgb, var(--musgo) 40%, transparent);
+  box-shadow: 0 14px 34px rgba(31, 50, 36, 0.22);
+  /* No celular (coluna única): principal primeiro — já é o 1º no HTML */
+  order: -1;
+}
+
+/* No PC: principal no centro (Branca | Verde | Bege) */
+@media (min-width: 961px) {
+  .product-card--featured {
+    order: 2;
+  }
+
+  /* Branca Classic à esquerda */
+  .product-card:nth-child(2) {
+    order: 1;
+  }
+
+  /* Bege Areia à direita */
+  .product-card:nth-child(3) {
+    order: 3;
+  }
+}
+
+.product-card__eyebrow {
+  margin: 0 0 0.25rem;
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--folha);
+}
+
+.product-card__title {
+  margin: 0 0 0.65rem;
+  font-family: var(--font-display);
+  font-size: clamp(1.1rem, 2.2vw, 1.35rem);
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--musgo-profundo);
+}
+
+.product-card__media {
+  margin: 0 0 0.85rem;
+  width: 100%;
+  display: flex;
+  justify-content: center;
+}
+
+/* Botão transparente em volta da foto (abre lightbox) */
+.product-card__zoom {
+  display: block;
+  width: 100%;
+  padding: 0;
+  margin: 0;
+  border: 0;
+  background: transparent;
+  cursor: zoom-in;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.product-card__zoom:focus-visible {
+  outline: 2px solid var(--musgo);
+  outline-offset: 3px;
+}
+
+/* Fotos nos cards — altura fixa no desktop */
+.product-card__media img {
+  width: 100%;
+  height: 402px;
+  border-radius: 8px;
+  object-fit: contain;
+  background: color-mix(in srgb, var(--creme) 55%, white);
+  transition: transform 0.3s ease;
+}
+
+.product-card__zoom:hover img {
+  transform: scale(1.02);
+}
+
+.product-card__price {
+  margin: 0 0 0.85rem;
+  font-family: var(--font-display);
+  font-size: clamp(1.45rem, 2.8vw, 1.8rem);
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  color: var(--musgo);
+}
+
+/* Botão COMPRAR AGORA — verde-escuro + texto dourado/branco */
+.btn-buy {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  max-width: 220px;
+  padding: 0.75rem 1.25rem;
+  border-radius: 4px;
+  border: 1px solid color-mix(in srgb, var(--dourado) 45%, var(--musgo-profundo));
+  background: linear-gradient(
+    180deg,
+    var(--musgo-vivo) 0%,
+    var(--musgo-profundo) 100%
+  );
+  color: var(--dourado-suave);
+  font-family: var(--font-body);
+  font-size: 0.8rem;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  text-decoration: none;
+  cursor: pointer;
+  transition:
+    transform 0.25s ease,
+    background 0.25s ease,
+    color 0.25s ease,
+    box-shadow 0.25s ease;
+}
+
+.btn-buy:hover,
+.btn-buy:focus-visible {
+  color: #fffaf0;
+  transform: translateY(-2px);
+  box-shadow: 0 8px 18px rgba(31, 50, 36, 0.28);
+  outline: none;
+}
+
+.btn-buy:focus-visible {
+  outline: 2px solid var(--dourado);
+  outline-offset: 3px;
+}
+
+.btn-buy.is-pressed {
+  transform: scale(0.97);
+}
+
+/* ---------- Contato ---------- */
+.contact {
+  max-width: 48ch;
+  margin: var(--space-lg) auto 0;
+  text-align: center;
+}
+
+.contact h2 {
+  margin: 0 0 var(--space-sm);
+  font-family: var(--font-display);
+  font-size: clamp(1.35rem, 3vw, 1.75rem);
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--musgo);
+}
+
+.contact p {
+  margin: 0;
+  font-size: 1rem;
+}
+
+/* ---------- Rodapé ---------- */
+.site-footer {
+  margin-top: var(--space-lg);
+  padding-top: var(--space-md);
+  border-top: 1px solid color-mix(in srgb, var(--musgo) 16%, transparent);
+  text-align: center;
+}
+
+.site-footer__nav {
+  display: flex;
+  justify-content: center;
+  gap: 1.75rem;
+  margin-bottom: 0.75rem;
+}
+
+.site-footer__nav a {
+  font-size: 0.85rem;
+  font-weight: 600;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  text-decoration: none;
+  color: var(--musgo);
+  transition: color 0.2s ease;
+}
+
+.site-footer__nav a:hover,
+.site-footer__nav a:focus-visible {
+  color: var(--folha);
+}
+
+.site-footer__note {
+  margin: 0;
+  font-size: 0.9rem;
+  color: color-mix(in srgb, var(--tinta) 70%, var(--musgo));
+}
+
+/* ---------- Lightbox (foto em tela cheia) ---------- */
+.lightbox {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1.25rem;
+  background: rgba(20, 30, 22, 0.88);
+  backdrop-filter: blur(4px);
+  cursor: zoom-out;
+  animation: lightbox-in 0.25s ease both;
+}
+
+.lightbox[hidden] {
+  display: none;
+}
+
+@keyframes lightbox-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.lightbox__img {
+  max-width: min(96vw, 1100px);
+  max-height: 90vh;
+  width: auto;
+  height: auto;
+  object-fit: contain;
+  border-radius: 8px;
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.45);
+  cursor: default;
+  background: var(--papel);
+}
+
+.lightbox__close {
+  position: absolute;
+  top: 0.75rem;
+  right: 0.9rem;
+  z-index: 2;
+  width: 2.6rem;
+  height: 2.6rem;
+  border: 0;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--papel) 90%, white);
+  color: var(--musgo-profundo);
+  font-size: 1.75rem;
+  line-height: 1;
+  cursor: pointer;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.25);
+  transition:
+    transform 0.2s ease,
+    background 0.2s ease;
+}
+
+.lightbox__close:hover,
+.lightbox__close:focus-visible {
+  transform: scale(1.06);
+  background: #fff;
+  outline: none;
+}
+
+/* ---------- Responsivo ---------- */
+@media (max-width: 960px) {
+  .product-grid {
+    grid-template-columns: 1fr;
+    max-width: 420px;
+    margin-inline: auto;
+  }
+
+  /* Proporção confortável no tablet/celular */
+  .product-card__media img {
+    height: clamp(240px, 58vw, 340px);
+  }
+
+  .leaf--bl,
+  .leaf--br {
+    opacity: 0.45;
+  }
+}
+
+@media (max-width: 520px) {
+  .page {
+    width: min(100% - 1.1rem, var(--max));
+    padding-top: 0.55rem;
+  }
+
+  .brand__logo {
+    height: 78px;
+    max-width: 110px;
+  }
+
+  .hero__title {
+    font-size: 1.05rem;
+    letter-spacing: 0.08em;
+  }
+
+  .product-card {
+    padding: 1rem 0.85rem 1.15rem;
+  }
+
+  .product-card__media img {
+    height: clamp(210px, 62vw, 280px);
+  }
+
+  .leaf--tl,
+  .leaf--tr {
+    width: 88px;
+    opacity: 0.55;
+  }
+
+  .leaf--bl,
+  .leaf--br {
+    display: none;
+  }
+
+  .lightbox {
+    padding: 0.75rem;
+  }
+
+  .lightbox__img {
+    max-height: 82vh;
+  }
+}
+
+/* Preferência: menos movimento */
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+
+  .hero,
+  .leaf,
+  .product-card,
+  .lightbox {
+    animation: none !important;
+    transition: none !important;
+    opacity: 1 !important;
+    transform: none !important;
+  }
+}

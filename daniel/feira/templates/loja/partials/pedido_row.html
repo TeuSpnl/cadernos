@@ -1,0 +1,53 @@
+{# Linha de pedido com itens + selects HTMX #}
+<tr id="pedido-row-{{ pedido.id }}">
+  <td><code>{{ pedido.codigo_curto }}</code></td>
+  <td>{{ pedido.cliente.nome_completo }}</td>
+  <td>
+    <ul class="app-item-list">
+      {% for item in pedido.itens.all %}
+        <li>
+          {{ item.quantidade }}x {{ item.nome_camiseta }}
+          ({{ item.get_tamanho_display }})
+        </li>
+      {% empty %}
+        <li>—</li>
+      {% endfor %}
+    </ul>
+  </td>
+  {# div interna: max-width em td e ignorado no layout de tabela #}
+  <td><div class="app-obs">{{ pedido.observacoes|default:"—" }}</div></td>
+  <td>R$ {{ pedido.valor_total }}</td>
+  <td>
+    <select
+      name="status_pagamento"
+      class="product-card__select"
+      hx-post="{% url 'loja:atualizar_status_pedido' pedido.id %}"
+      hx-target="#pedido-row-{{ pedido.id }}"
+      hx-swap="outerHTML"
+      hx-include="closest tr"
+    >
+      {% for value, label in status_pagamento_choices %}
+        <option value="{{ value }}" {% if pedido.status_pagamento == value %}selected{% endif %}>
+          {{ label }}
+        </option>
+      {% endfor %}
+    </select>
+  </td>
+  <td>
+    <select
+      name="status_entrega"
+      class="product-card__select"
+      hx-post="{% url 'loja:atualizar_status_pedido' pedido.id %}"
+      hx-target="#pedido-row-{{ pedido.id }}"
+      hx-swap="outerHTML"
+      hx-include="closest tr"
+    >
+      {% for value, label in status_entrega_choices %}
+        <option value="{{ value }}" {% if pedido.status_entrega == value %}selected{% endif %}>
+          {{ label }}
+        </option>
+      {% endfor %}
+    </select>
+  </td>
+  <td>{{ pedido.criado_em|date:"d/m/Y H:i" }}</td>
+</tr>

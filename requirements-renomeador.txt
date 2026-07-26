@@ -1,0 +1,7 @@
+# Dependencias do renomeador.py (Windows)
+# pypdfium2  -> renderiza PDF em imagem
+# rapidocr-onnxruntime -> OCR dos comprovantes Inter (valores em curva/outline)
+pdfplumber
+pypdfium2
+rapidocr-onnxruntime
+Pillow

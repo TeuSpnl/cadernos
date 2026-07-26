@@ -1,0 +1,30 @@
+{% extends "base.html" %}
+{% block title %}Painel - Visao Geral{% endblock %}
+
+{% block content %}
+<div class="page app-page">
+  {% include "loja/admin/_nav.html" %}
+  <h1 class="app-heading app-heading--accent">Visao Geral</h1>
+  <p class="app-lead">Quantidade total pedida para cada tipo de camiseta.</p>
+
+  <div class="app-table-scroll">
+    {# --fill: no celular ocupa 100% e espalha as 2 colunas (sem vao a direita) #}
+    <table class="app-table app-table--fill">
+      <thead>
+        <tr>
+          <th>Camiseta</th>
+          <th>Total pedida</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for row in resumo %}
+          <tr>
+            <td>{{ row.nome }}</td>
+            <td><strong>{{ row.total_pedida }}</strong></td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

@@ -1,0 +1,101 @@
+{# Partial HTMX: tabela do carrinho + modal de observacao #}
+<div id="carrinho-wrap" x-data="{ obsOpen: false, observacoes: '' }">
+  {% if itens %}
+    <div class="app-table-scroll">
+    <table class="app-table">
+      <thead>
+        <tr>
+          <th>Camiseta</th>
+          <th>Tamanho</th>
+          <th>Qtd</th>
+          <th>Subtotal</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for item in itens %}
+          <tr>
+            <td>{{ item.camiseta.nome }}</td>
+            <td>{{ item.get_tamanho_display }}</td>
+            <td>
+              <input
+                type="number"
+                min="1"
+                max="20"
+                name="quantidade"
+                value="{{ item.quantidade }}"
+                class="product-card__qty"
+                hx-post="{% url 'loja:atualizar_item' item.id %}"
+                hx-target="#carrinho-wrap"
+                hx-swap="outerHTML"
+                hx-trigger="change delay:300ms"
+                hx-include="this"
+              />
+            </td>
+            <td>R$ {{ item.subtotal }}</td>
+            <td>
+              <button
+                type="button"
+                class="app-btn app-btn--ghost"
+                hx-post="{% url 'loja:remover_item' item.id %}"
+                hx-target="#carrinho-wrap"
+                hx-swap="outerHTML"
+                hx-confirm="Remover este item?"
+              >
+                Remover
+              </button>
+            </td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    </div>
+
+    <p class="app-total"><strong>Total:</strong> R$ {{ carrinho.valor_total }}</p>
+
+    <div class="carrinho-checkout">
+      <button type="button" class="btn-buy" @click="obsOpen = true">
+        Finalizar pedido
+      </button>
+    </div>
+
+    {# Popup central: observacao opcional antes de concluir #}
+    <div
+      class="obs-modal"
+      x-show="obsOpen"
+      x-cloak
+      x-transition.opacity
+      @keydown.escape.window="obsOpen = false"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="obs-modal-title"
+    >
+      <div class="obs-modal__backdrop" @click="obsOpen = false"></div>
+      <div class="obs-modal__panel" @click.stop>
+        <h2 id="obs-modal-title" class="obs-modal__title">Alguma observacao? (opcional)</h2>
+        <p class="obs-modal__hint">
+          Ex.: tamanho infantil especifico, retirada, lembrete para o Diac. Thiago...
+        </p>
+        <form method="post" action="{% url 'loja:checkout' %}" class="obs-modal__form">
+          {% csrf_token %}
+          <textarea
+            name="observacoes"
+            rows="4"
+            maxlength="1000"
+            placeholder="Digite aqui (ou deixe em branco)"
+            x-model="observacoes"
+            class="obs-modal__textarea"
+          ></textarea>
+          <div class="obs-modal__actions">
+            <button type="button" class="app-btn obs-modal__cancel" @click="obsOpen = false">
+              Voltar
+            </button>
+            <button type="submit" class="btn-buy">Confirmar pedido</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  {% else %}
+    <p>Seu carrinho esta vazio. <a href="{% url 'loja:landing' %}">Ver camisetas</a></p>
+  {% endif %}
+</div>

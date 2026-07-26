@@ -1,0 +1,37 @@
+{% extends "base.html" %}
+{% block title %}Entrar - Feira Missionaria{% endblock %}
+
+{% block content %}
+<div class="page app-page app-auth">
+  <h1 class="app-heading">Entrar</h1>
+  <p class="app-lead">Use seu usuario e a senha.</p>
+
+  <form method="post" class="app-form">
+    {% csrf_token %}
+    {{ form.non_field_errors }}
+    <label>
+      Usuario
+      {{ form.username }}
+    </label>
+    <label>
+      Senha
+      {{ form.password }}
+    </label>
+    <button type="submit" class="btn-buy">Entrar</button>
+  </form>
+
+  <p class="app-auth__forgot">
+    Esqueceu sua senha?
+    <a
+      href="https://api.whatsapp.com/send?phone=5577988118493&text=Ol%C3%A1%2C%20Daniel!%20Esqueci%20minha%20senha%20do%20site%20da%20feira."
+      target="_blank"
+      rel="noopener noreferrer"
+    >Fale conosco</a>
+  </p>
+
+  <p class="app-auth__alt">
+    Nao tem conta?
+    <a href="{% url 'loja:cadastro' %}{% if request.GET.next %}?next={{ request.GET.next|urlencode }}{% endif %}">Cadastre-se</a>
+  </p>
+</div>
+{% endblock %}

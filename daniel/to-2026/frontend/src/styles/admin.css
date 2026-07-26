@@ -1,0 +1,151 @@
+/* Painel administrativo */
+
+.admin-shell {
+  min-height: 100vh;
+  padding: 2rem clamp(1.25rem, 4vw, 3rem) 3rem;
+  max-width: 1100px;
+  margin: 0 auto;
+}
+
+.admin-header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 1.25rem;
+  margin-bottom: 2rem;
+}
+
+.admin-header h1 {
+  font-family: var(--font-display);
+  font-size: clamp(1.85rem, 4vw, 2.75rem);
+  font-weight: 400;
+  margin: 0 0 0.35rem;
+}
+
+.admin-header p {
+  margin: 0;
+  color: var(--text-muted);
+  font-size: 1rem;
+}
+
+.admin-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+}
+
+.admin-table-wrap {
+  overflow-x: auto;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--bg-elevated);
+}
+
+.admin-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.95rem;
+}
+
+.admin-table th,
+.admin-table td {
+  text-align: left;
+  padding: 0.9rem 1rem;
+  border-bottom: 1px solid var(--border);
+  white-space: nowrap;
+}
+
+.admin-table th {
+  color: var(--accent);
+  font-weight: 600;
+  font-size: 0.8rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  background: rgba(0, 0, 0, 0.25);
+}
+
+.admin-table tr:last-child td {
+  border-bottom: none;
+}
+
+.admin-table tbody tr:hover {
+  background: rgba(243, 192, 68, 0.05);
+}
+
+.admin-empty,
+.admin-status {
+  padding: 2.5rem 1rem;
+  text-align: center;
+  color: var(--text-muted);
+  font-size: 1.1rem;
+}
+
+.admin-error {
+  color: var(--error);
+  margin-bottom: 1rem;
+}
+
+.admin-count {
+  color: var(--accent);
+  font-weight: 600;
+}
+
+.admin-user {
+  color: var(--text-muted);
+  font-weight: 400;
+}
+
+.admin-shell--login {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.admin-login {
+  width: 100%;
+  max-width: 420px;
+}
+
+.admin-login h1 {
+  font-family: var(--font-display);
+  font-size: clamp(1.85rem, 4vw, 2.5rem);
+  font-weight: 400;
+  margin: 0 0 0.5rem;
+}
+
+.admin-login__hint {
+  color: var(--text-muted);
+  margin: 0 0 1.75rem;
+  line-height: 1.45;
+}
+
+.admin-login__form {
+  display: flex;
+  flex-direction: column;
+  gap: 0.65rem;
+}
+
+.admin-login__label {
+  font-size: 0.9rem;
+  color: var(--accent);
+  font-weight: 500;
+  margin-top: 0.35rem;
+}
+
+.admin-login__form .btn {
+  margin-top: 1rem;
+  width: 100%;
+}
+
+.admin-login__back {
+  display: inline-block;
+  margin-top: 1.5rem;
+  color: var(--text-muted);
+  text-decoration: none;
+  font-size: 0.95rem;
+}
+
+.admin-login__back:hover {
+  color: var(--accent);
+}

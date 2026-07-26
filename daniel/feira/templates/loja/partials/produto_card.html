@@ -1,0 +1,84 @@
+{# Card de produto - tamanhos dependem da categoria (adulto x infantil) #}
+<li
+  class="product-card{% if camiseta.destaque %} product-card--featured{% endif %}"
+  data-reveal
+  x-data="{ tamanho: '{{ camiseta.tamanho_padrao }}', quantidade: 1 }"
+>
+  {% if camiseta.destaque %}
+  {% elif camiseta.is_infantil %}
+    <p class="product-card__eyebrow">Infantil</p>
+  {% endif %}
+  <h3 class="product-card__title">{{ camiseta.nome }}</h3>
+  <figure class="product-card__media">
+    <button
+      type="button"
+      class="product-card__zoom"
+      aria-label="Ampliar foto da camisa {{ camiseta.nome }}"
+    >
+      <img
+        src="/images/{{ camiseta.imagem }}"
+        alt="Camisa {{ camiseta.nome }} - frente e costas"
+        width="640"
+        height="480"
+        loading="{% if camiseta.destaque %}eager{% else %}lazy{% endif %}"
+      />
+    </button>
+  </figure>
+  <p class="product-card__price">
+    <span class="visually-hidden">Preco:</span>
+    R$&nbsp;{{ camiseta.preco }}
+  </p>
+
+  {# Visitante: vai ao login. Logado: HTMX adiciona ao carrinho. #}
+  <div class="product-card__buy-form" @click.stop>
+    <div class="product-card__opts">
+      <label class="visually-hidden" for="tam-{{ camiseta.slug }}">Tamanho</label>
+      <select
+        id="tam-{{ camiseta.slug }}"
+        name="tamanho"
+        form="buy-form-{{ camiseta.slug }}"
+        x-model="tamanho"
+        class="product-card__select"
+      >
+        {% for value, label in camiseta.tamanhos_disponiveis %}
+          <option value="{{ value }}" {% if value == camiseta.tamanho_padrao %}selected{% endif %}>
+            {{ label }}
+          </option>
+        {% endfor %}
+      </select>
+      <label class="visually-hidden" for="qtd-{{ camiseta.slug }}">Quantidade</label>
+      <input
+        id="qtd-{{ camiseta.slug }}"
+        type="number"
+        name="quantidade"
+        form="buy-form-{{ camiseta.slug }}"
+        min="1"
+        max="20"
+        value="1"
+        x-model.number="quantidade"
+        class="product-card__qty"
+      />
+    </div>
+    {% if user.is_authenticated %}
+      <form
+        id="buy-form-{{ camiseta.slug }}"
+        hx-post="{% url 'loja:adicionar_carrinho' camiseta.slug %}"
+        hx-target="#cart-badge"
+        hx-swap="outerHTML"
+        hx-disabled-elt="find .btn-buy"
+      >
+        <button type="submit" class="btn-buy">Adicionar ao carrinho</button>
+      </form>
+    {% else %}
+      {# Guarda tamanho/qtd na sessao e manda ao login #}
+      <form
+        id="buy-form-{{ camiseta.slug }}"
+        method="post"
+        action="{% url 'loja:intencao_carrinho' camiseta.slug %}"
+      >
+        {% csrf_token %}
+        <button type="submit" class="btn-buy">Adicionar ao carrinho</button>
+      </form>
+    {% endif %}
+  </div>
+</li>

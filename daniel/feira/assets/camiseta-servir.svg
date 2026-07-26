@@ -1,0 +1,58 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="320" height="380" viewBox="0 0 320 380" fill="none" role="img" aria-labelledby="t1">
+  <!-- Mockup camiseta SERVIR  verde-musgo profundo -->
+  <title id="t1">Camiseta Servir</title>
+  <defs>
+    <linearGradient id="cloth" x1="160" y1="40" x2="160" y2="360" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#3F5C42"/>
+      <stop offset="1" stop-color="#243528"/>
+    </linearGradient>
+    <linearGradient id="shade" x1="90" y1="80" x2="240" y2="320" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#fff" stop-opacity="0.08"/>
+      <stop offset="0.5" stop-color="#fff" stop-opacity="0"/>
+      <stop offset="1" stop-color="#000" stop-opacity="0.18"/>
+    </linearGradient>
+    <filter id="soft" x="-10%" y="-10%" width="120%" height="120%">
+      <feDropShadow dx="0" dy="10" stdDeviation="12" flood-color="#1F3224" flood-opacity="0.28"/>
+    </filter>
+  </defs>
+
+  <!-- Sombra no chão -->
+  <ellipse cx="160" cy="352" rx="92" ry="12" fill="#1F3224" fill-opacity="0.12"/>
+
+  <!-- Corpo da camiseta -->
+  <g filter="url(#soft)">
+    <path
+      d="M104 58c18-22 40-30 56-30s38 8 56 30l34 18-18 34-28-10v210c0 10-8 18-18 18H116c-10 0-18-8-18-18V100l-28 10-18-34 34-18z"
+      fill="url(#cloth)"
+    />
+    <path
+      d="M104 58c18-22 40-30 56-30s38 8 56 30l34 18-18 34-28-10v210c0 10-8 18-18 18H116c-10 0-18-8-18-18V100l-28 10-18-34 34-18z"
+      fill="url(#shade)"
+    />
+    <!-- Gola -->
+    <path d="M132 42c8 16 20 24 28 24s20-8 28-24" stroke="#1A2A1E" stroke-width="3.5" stroke-linecap="round" fill="none"/>
+    <path d="M132 42c8 14 18 20 28 20s20-6 28-20" fill="#1F3224" fill-opacity="0.35"/>
+    <!-- Costuras leves -->
+    <path d="M104 100l28-10M216 90l28 10" stroke="#1A2A1E" stroke-opacity="0.25" stroke-width="1.5"/>
+  </g>
+
+  <!-- Estampa: árvore pequena + palavra SERVIR -->
+  <g transform="translate(160 175)">
+    <ellipse cx="0" cy="-28" rx="22" ry="20" fill="#EFE6D4" fill-opacity="0.92"/>
+    <ellipse cx="-12" cy="-18" rx="12" ry="11" fill="#E8D49A" fill-opacity="0.85"/>
+    <ellipse cx="12" cy="-18" rx="12" ry="11" fill="#E8D49A" fill-opacity="0.85"/>
+    <rect x="-2.5" y="-14" width="5" height="28" rx="1.5" fill="#EFE6D4"/>
+    <!-- Livro miniatura -->
+    <path d="M-16 18c6-3 12-3 16 0v10c-4-3-10-3-16 0V18z" fill="#EFE6D4" opacity="0.9"/>
+    <path d="M16 18c-6-3-12-3-16 0v10c4-3 10-3 16 0V18z" fill="#EFE6D4" opacity="0.9"/>
+    <text
+      y="52"
+      text-anchor="middle"
+      fill="#EFE6D4"
+      font-family="Georgia, 'Times New Roman', serif"
+      font-size="22"
+      font-weight="700"
+      letter-spacing="0.28em"
+    >SERVIR</text>
+  </g>
+</svg>

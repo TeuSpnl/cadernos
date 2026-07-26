@@ -1,0 +1,37 @@
+{% extends "base.html" %}
+{% block title %}Painel - Por Cliente{% endblock %}
+
+{% block content %}
+<div class="page app-page">
+  {% include "loja/admin/_nav.html" %}
+  <h1 class="app-heading app-heading--accent">Visao por Cliente</h1>
+  <p class="app-lead">Valor total gasto por cada cliente.</p>
+
+  <div class="app-table-scroll">
+  <table class="app-table">
+    <thead>
+      <tr>
+        <th>Cliente</th>
+        <th>Telefone</th>
+        <th>Igreja</th>
+        <th>Pedidos</th>
+        <th>Total gasto</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for c in clientes %}
+        <tr>
+          <td>{{ c.nome_completo }}</td>
+          <td>{{ c.telefone|default:"—" }}</td>
+          <td>{{ c.igreja|default:"—" }}</td>
+          <td>{{ c.qtd_pedidos }}</td>
+          <td>R$ {{ c.total_gasto|default_if_none:"0.00" }}</td>
+        </tr>
+      {% empty %}
+        <tr><td colspan="5">Nenhum cliente cadastrado.</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  </div>
+</div>
+{% endblock %}

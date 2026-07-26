@@ -1,0 +1,63 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="320" height="380" viewBox="0 0 320 380" fill="none" role="img" aria-labelledby="t2">
+  <!-- Mockup camiseta IR  bege natural / croqui -->
+  <title id="t2">Camiseta Ir</title>
+  <defs>
+    <linearGradient id="cloth2" x1="160" y1="40" x2="160" y2="360" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#EFE6D4"/>
+      <stop offset="1" stop-color="#D9C9A8"/>
+    </linearGradient>
+    <linearGradient id="shade2" x1="90" y1="80" x2="240" y2="320" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#fff" stop-opacity="0.2"/>
+      <stop offset="0.45" stop-color="#fff" stop-opacity="0"/>
+      <stop offset="1" stop-color="#2F4632" stop-opacity="0.12"/>
+    </linearGradient>
+    <filter id="soft2" x="-10%" y="-10%" width="120%" height="120%">
+      <feDropShadow dx="0" dy="10" stdDeviation="12" flood-color="#1F3224" flood-opacity="0.22"/>
+    </filter>
+  </defs>
+
+  <ellipse cx="160" cy="352" rx="92" ry="12" fill="#1F3224" fill-opacity="0.1"/>
+
+  <g filter="url(#soft2)">
+    <path
+      d="M104 58c18-22 40-30 56-30s38 8 56 30l34 18-18 34-28-10v210c0 10-8 18-18 18H116c-10 0-18-8-18-18V100l-28 10-18-34 34-18z"
+      fill="url(#cloth2)"
+    />
+    <path
+      d="M104 58c18-22 40-30 56-30s38 8 56 30l34 18-18 34-28-10v210c0 10-8 18-18 18H116c-10 0-18-8-18-18V100l-28 10-18-34 34-18z"
+      fill="url(#shade2)"
+    />
+    <path d="M132 42c8 16 20 24 28 24s20-8 28-24" stroke="#8A7A5C" stroke-width="3.5" stroke-linecap="round" fill="none"/>
+    <path d="M132 42c8 14 18 20 28 20s20-6 28-20" fill="#C9B896" fill-opacity="0.55"/>
+    <path d="M104 100l28-10M216 90l28 10" stroke="#8A7A5C" stroke-opacity="0.3" stroke-width="1.5"/>
+  </g>
+
+  <!-- Estampa: bússola / caminho + IR -->
+  <g transform="translate(160 168)">
+    <circle cx="0" cy="-8" r="36" stroke="#2F4632" stroke-width="2.5" fill="none"/>
+    <circle cx="0" cy="-8" r="28" stroke="#2F4632" stroke-opacity="0.35" stroke-width="1.2" fill="none"/>
+    <!-- Agulha da bússola -->
+    <path d="M0 -30l8 22-8-4-8 4 8-22z" fill="#2F4632"/>
+    <path d="M0 14l8-22-8 4-8-4 8 22z" fill="#4A7A48"/>
+    <circle cx="0" cy="-8" r="4" fill="#D4B56A"/>
+    <text
+      y="58"
+      text-anchor="middle"
+      fill="#2F4632"
+      font-family="Georgia, 'Times New Roman', serif"
+      font-size="28"
+      font-weight="700"
+      letter-spacing="0.42em"
+    >IR</text>
+    <text
+      y="78"
+      text-anchor="middle"
+      fill="#3F5C42"
+      font-family="Georgia, 'Times New Roman', serif"
+      font-size="11"
+      font-style="italic"
+      letter-spacing="0.2em"
+      opacity="0.85"
+    >até onde houver necessidade</text>
+  </g>
+</svg>

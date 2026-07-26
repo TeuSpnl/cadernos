@@ -1,0 +1,70 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>{% block title %}Feira Missionaria · Camisetas{% endblock %}</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,500;0,600;0,700;1,500&family=Source+Sans+3:wght@400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="/css/styles.css?v=7" />
+    <link rel="stylesheet" href="/css/app.css?v=7" />
+    <script src="https://unpkg.com/htmx.org@2.0.4" defer></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.14.8/dist/cdn.min.js"></script>
+    {% block extra_head %}{% endblock %}
+  </head>
+  <body
+    hx-headers='{"X-CSRFToken": "{{ csrf_token }}"}'
+    x-data="{ toast: '' }"
+    @toast.window="toast = $event.detail.value || $event.detail; setTimeout(() => toast = '', 2800)"
+  >
+    <nav class="app-nav" aria-label="Principal">
+      <a href="{% url 'loja:landing' %}">Inicio</a>
+      {% if user.is_authenticated %}
+        <a href="{% url 'loja:carrinho' %}">
+          Carrinho
+          {% include "loja/partials/cart_badge.html" %}
+        </a>
+        <a href="{% url 'loja:meus_pedidos' %}">Meus Pedidos</a>
+        {% if user.is_staff or user.is_superuser %}
+          <a href="{% url 'loja:painel_visao_geral' %}">Painel</a>
+        {% endif %}
+        <span class="app-nav__user">{{ user.nome_completo }}</span>
+        <form action="{% url 'loja:logout' %}" method="post" class="app-nav__logout">
+          {% csrf_token %}
+          <button type="submit">Sair</button>
+        </form>
+      {% else %}
+        <a href="{% url 'loja:login' %}">Entrar</a>
+        <a href="{% url 'loja:cadastro' %}">Cadastrar</a>
+      {% endif %}
+    </nav>
+
+    {% if messages %}
+      <ul class="app-messages">
+        {% for message in messages %}
+          <li class="app-messages__item">{{ message }}</li>
+        {% endfor %}
+      </ul>
+    {% endif %}
+
+    <div class="app-toast" x-show="toast" x-transition x-text="toast" x-cloak></div>
+
+    {% block content %}{% endblock %}
+
+    <script src="/js/main.js"></script>
+    {# Apos swap HTMX, reinicia Alpine no pedaco novo (senao o popup do cadastro morre) #}
+    <script>
+      document.body.addEventListener("htmx:afterSwap", function (evt) {
+        if (window.Alpine && evt.detail && evt.detail.elt) {
+          Alpine.initTree(evt.detail.elt);
+        }
+      });
+    </script>
+    {% block extra_js %}{% endblock %}
+  </body>
+</html>

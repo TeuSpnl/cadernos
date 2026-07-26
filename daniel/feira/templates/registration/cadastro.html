@@ -1,0 +1,15 @@
+{% extends "base.html" %}
+{% block title %}Cadastrar - Feira Missionaria{% endblock %}
+
+{% block content %}
+<div class="page app-page app-auth">
+  <h1 class="app-heading app-heading--accent">Criar conta</h1>
+  <p class="app-lead">Precisamos dos seus dados para contato e entrega das camisetas.</p>
+
+  {% include "registration/partials/cadastro_form.html" %}
+
+  <p class="app-auth__alt">
+    Ja tem conta? <a href="{% url 'loja:login' %}">Entrar</a>
+  </p>
+</div>
+{% endblock %}

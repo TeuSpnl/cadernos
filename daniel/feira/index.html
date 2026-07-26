@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <!-- Feira Missionária — camisetas em benefício da causa -->
+    <title>Feira Missionária · Camisetas Exclusivas</title>
+    <meta
+      name="description"
+      content="Camisetas exclusivas da Feira Missionária Presbiteriana 2026."
+    />
+    <!-- Tipografia expressiva: display serif + corpo humanista -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,500;0,600;0,700;1,500&family=Source+Sans+3:wght@400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="css/styles.css" />
+  </head>
+  <body>
+    <div class="page">
+      <!-- Cabeçalho compacto: logo + título curto — as camisetas vêm em seguida -->
+      <header class="hero">
+        <a class="brand" href="#topo" id="topo">
+          <img
+            class="brand__logo"
+            src="images/Feira-logo-no_bg.png"
+            alt="Feira Missionária Presbiteriana"
+            width="200"
+            height="240"
+          />
+        </a>
+        <h1 class="hero__title">Camisetas da Feira</h1>
+      </header>
+
+      <main>
+        <section
+          class="products"
+          aria-labelledby="products-heading"
+          id="camisetas"
+        >
+          <h2 id="products-heading" class="visually-hidden">
+            Camisetas disponíveis
+          </h2>
+
+          <ul class="product-grid">
+            <!-- Principal: Verde Militar — card inteiro leva ao formulário -->
+            <li
+              class="product-card product-card--featured"
+              data-reveal
+              data-form-url="https://docs.google.com/forms/d/1fZnaeyeAavhkcCVMnsp_YhWUm5xvXLvCY6it983aSeI/viewform"
+            >
+              <p class="product-card__eyebrow">Principal</p>
+              <h3 class="product-card__title">Verde Militar</h3>
+              <figure class="product-card__media">
+                <!-- Botão: amplia a foto sem sair da página -->
+                <button
+                  type="button"
+                  class="product-card__zoom"
+                  aria-label="Ampliar foto da camisa Verde Militar"
+                >
+                  <img
+                    src="images/verde-militar.jpeg"
+                    alt="Camisa Verde Militar — frente e costas"
+                    width="640"
+                    height="480"
+                    loading="eager"
+                  />
+                </button>
+              </figure>
+              <p class="product-card__price">
+                <span class="visually-hidden">Preço:</span> R$&nbsp;50,00
+              </p>
+              <a
+                class="btn-buy"
+                href="https://docs.google.com/forms/d/1fZnaeyeAavhkcCVMnsp_YhWUm5xvXLvCY6it983aSeI/viewform"
+                target="_blank"
+                rel="noopener noreferrer"
+                >Comprar agora</a
+              >
+            </li>
+
+            <!-- Branca Classic -->
+            <li
+              class="product-card"
+              data-reveal
+              data-form-url="https://docs.google.com/forms/d/1UauUSfjwPcdHNbFfFbS4-tvb3JjlsAc7DJ6Za7sNTYA/viewform"
+            >
+              <h3 class="product-card__title">Branca Classic</h3>
+              <figure class="product-card__media">
+                <button
+                  type="button"
+                  class="product-card__zoom"
+                  aria-label="Ampliar foto da camisa Branca Classic"
+                >
+                  <img
+                    src="images/branca-classic.jpeg"
+                    alt="Camisa Branca Classic — frente e costas"
+                    width="640"
+                    height="480"
+                    loading="lazy"
+                  />
+                </button>
+              </figure>
+              <p class="product-card__price">
+                <span class="visually-hidden">Preço:</span> R$&nbsp;50,00
+              </p>
+              <a
+                class="btn-buy"
+                href="https://docs.google.com/forms/d/1UauUSfjwPcdHNbFfFbS4-tvb3JjlsAc7DJ6Za7sNTYA/viewform"
+                target="_blank"
+                rel="noopener noreferrer"
+                >Comprar agora</a
+              >
+            </li>
+
+            <!-- Bege Areia Elegance -->
+            <li
+              class="product-card"
+              data-reveal
+              data-form-url="https://docs.google.com/forms/d/1uNrc5h5ADgseIPLeR84uSzVEEhx4IoPofXoOBry8GsQ/viewform"
+            >
+              <h3 class="product-card__title">Bege Areia Elegance</h3>
+              <figure class="product-card__media">
+                <button
+                  type="button"
+                  class="product-card__zoom"
+                  aria-label="Ampliar foto da camisa Bege Areia Elegance"
+                >
+                  <img
+                    src="images/bege-areia.jpeg"
+                    alt="Camisa Bege Areia Elegance — frente e costas"
+                    width="640"
+                    height="480"
+                    loading="lazy"
+                  />
+                </button>
+              </figure>
+              <p class="product-card__price">
+                <span class="visually-hidden">Preço:</span> R$&nbsp;50,00
+              </p>
+              <a
+                class="btn-buy"
+                href="https://docs.google.com/forms/d/1uNrc5h5ADgseIPLeR84uSzVEEhx4IoPofXoOBry8GsQ/viewform"
+                target="_blank"
+                rel="noopener noreferrer"
+                >Comprar agora</a
+              >
+            </li>
+          </ul>
+        </section>
+
+        <!-- Contato / pagamento -->
+        <section class="contact" id="contato" aria-labelledby="contato-heading">
+          <h2 id="contato-heading">Contato</h2>
+          <p>
+            Preencha o formulário de pedido. Pagamento via PIX ou em
+            dinheiro/cartão com o Diác. Thiago — envie o comprovante pelo
+            WhatsApp dele após a compra.
+          </p>
+        </section>
+      </main>
+
+      <footer class="site-footer">
+        <nav class="site-footer__nav" aria-label="Rodapé">
+          <a href="#contato">Contato</a>
+        </nav>
+        <p class="site-footer__note">
+          © <span id="year"></span> Feira Missionária.
+        </p>
+      </footer>
+    </div>
+
+    <!-- Lightbox: foto em tela cheia sem sair da página -->
+    <div
+      class="lightbox"
+      id="lightbox"
+      hidden
+      role="dialog"
+      aria-modal="true"
+      aria-label="Foto ampliada da camiseta"
+    >
+      <button
+        type="button"
+        class="lightbox__close"
+        id="lightbox-close"
+        aria-label="Fechar foto"
+      >
+        ×
+      </button>
+      <img class="lightbox__img" id="lightbox-img" alt="" />
+    </div>
+
+    <script src="js/main.js"></script>
+  </body>
+</html>

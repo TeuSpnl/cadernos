@@ -1,0 +1,103 @@
+{% extends "base.html" %}
+{% block title %}Meus Pedidos - Feira Missionaria{% endblock %}
+
+{% block content %}
+<div class="page app-page">
+  <h1 class="app-heading app-heading--accent">Meus Pedidos</h1>
+
+  {# Pagamento via PIX — QR + copia e cola + aviso do Diac. Thiago #}
+  <section class="pix-box" x-data="{ copiado: false }">
+    <h2 class="pix-box__title">Pagamento via PIX</h2>
+    <div class="pix-box__grid">
+      <div class="pix-box__qr">
+        <img src="/images/pix-qrcode.png" alt="QR-Code do PIX da Feira Missionaria" width="220" height="220" />
+      </div>
+      <div class="pix-box__info">
+        <p class="pix-box__recebedor">
+          <span>Recebedor</span>
+          <strong>Igreja Presbiteriana de Vitoria da Conquista</strong>
+        </p>
+
+        <label class="pix-box__copy-label" for="pix-code">PIX copia e cola</label>
+        <div class="pix-box__copy">
+          <input
+            id="pix-code"
+            type="text"
+            readonly
+            value="00020126560014br.gov.bcb.pix0134feiramissionariaipvc2024@gmail.com5204000053039865802BR5925IGREJA PRESBITERIANA DE V6015VITORIA DA CONQ622605226CWbevZejxP7pctw2rZbCC6304B241"
+            x-ref="pixcode"
+          />
+          <button
+            type="button"
+            class="btn-buy pix-box__copy-btn"
+            @click="navigator.clipboard.writeText($refs.pixcode.value); copiado = true; setTimeout(() => copiado = false, 2000)"
+          >
+            <span x-show="!copiado">Copiar</span>
+            <span x-show="copiado" x-cloak>Copiado!</span>
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <p class="pix-box__aviso">
+      <strong>IMPORTANTE:</strong> após o pagamento, envie o comprovante para o
+      <strong>Diac. Thiago (IPVC)</strong> pelo
+      
+      <a
+        href="https://api.whatsapp.com/send?phone=5577991245010&text=Ol%C3%A1%2C%20Thiago!%20Fiz%20um%20pedido%20na%20feira."
+        target="_blank"
+        rel="noopener noreferrer"
+      >WhatsApp</a>
+      ou combine o pagamento (cartão, dinheiro etc.) diretamente com ele.
+    </p>
+  </section>
+
+  {% if pedidos %}
+    <div class="app-table-scroll">
+    <table class="app-table">
+      <thead>
+        <tr>
+          <th>ID</th>
+          <th>Data</th>
+          <th>Total</th>
+          <th>Pagamento</th>
+          <th>Entrega</th>
+          <th>Itens</th>
+          <th>Observacao</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for pedido in pedidos %}
+          <tr>
+            <td><code>{{ pedido.codigo_curto }}</code></td>
+            <td>{{ pedido.criado_em|date:"d/m/Y H:i" }}</td>
+            <td>R$ {{ pedido.valor_total }}</td>
+            <td>
+              <span class="status-badge status-badge--{{ pedido.status_pagamento }}">
+                {{ pedido.get_status_pagamento_display }}
+              </span>
+            </td>
+            <td>
+              <span class="status-badge status-badge--{{ pedido.status_entrega }}">
+                {{ pedido.get_status_entrega_display }}
+              </span>
+            </td>
+            <td>
+              <ul class="app-item-list">
+                {% for item in pedido.itens.all %}
+                  <li>{{ item.quantidade }}x {{ item.nome_camiseta }} ({{ item.get_tamanho_display }})</li>
+                {% endfor %}
+              </ul>
+            </td>
+            {# div interna: max-width em td e ignorado no layout de tabela #}
+            <td><div class="app-obs">{{ pedido.observacoes|default:"—" }}</div></td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    </div>
+  {% else %}
+    <p>Voce ainda nao fez pedidos. <a href="{% url 'loja:landing' %}">Ir as camisetas</a></p>
+  {% endif %}
+</div>
+{% endblock %}

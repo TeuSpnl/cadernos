@@ -1,0 +1,664 @@
+/* Estilos auxiliares do app Django (nav, tabelas, auth) */
+[x-cloak] { display: none !important; }
+
+/*
+  Maozinha (cursor: pointer) nos elementos clicaveis.
+  !important para nao herdar o cursor:default do .product-card
+  nem perder a briga de especificidade.
+*/
+a[href],
+button:not(:disabled),
+input[type="submit"],
+input[type="button"],
+select,
+.btn-buy,
+.app-btn,
+.app-nav a,
+.app-admin-nav a,
+.app-auth__alt a,
+.app-auth__forgot,
+.product-card__select,
+.product-card__buy-form .btn-buy,
+.app-form select,
+.app-select,
+.app-table select,
+.pix-box__aviso a,
+.pix-box__copy-btn {
+  cursor: pointer !important;
+}
+
+/*
+  .btn-buy sobe 2px no hover e escapa do cursor na borda de baixo,
+  causando piscada. Este pseudo-elemento invisivel estabiliza a area.
+*/
+.btn-buy { position: relative; }
+.btn-buy::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: -4px;
+  bottom: -4px;
+}
+
+.app-nav {
+  position: sticky;
+  top: 0;
+  z-index: 40;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem 1.15rem;
+  align-items: center;
+  justify-content: center;
+  padding: 0.65rem 1rem;
+  background: color-mix(in srgb, var(--papel, #f4ecde) 92%, white);
+  border-bottom: 1px solid color-mix(in srgb, var(--musgo, #2f4632) 14%, transparent);
+  font-size: 0.85rem;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+/*
+  Links da barra viram alvos "de verdade": area clicavel com padding,
+  senao a maozinha so aparece em cima das letras e some nos vaos.
+*/
+.app-nav a,
+.app-nav__logout button {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 0.4rem 0.7rem;
+  border-radius: 8px;
+  text-decoration: none;
+  color: var(--musgo, #2f4632);
+  transition: background 0.18s ease, color 0.18s ease;
+}
+.app-nav a:hover,
+.app-nav a:focus-visible,
+.app-nav__logout button:hover,
+.app-nav__logout button:focus-visible {
+  color: var(--musgo-profundo, #1f3224);
+  background: color-mix(in srgb, var(--folha, #4a7a48) 16%, transparent);
+  outline: none;
+}
+.app-nav__user {
+  font-weight: 500; text-transform: none; letter-spacing: 0; opacity: 0.8;
+  cursor: default; padding: 0.4rem 0.2rem;
+}
+.app-nav__logout { display: inline-flex; margin: 0; }
+.app-nav__logout button {
+  border: 0; background: transparent;
+  font: inherit; font-weight: 600; letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+.cart-badge {
+  display: inline-flex; align-items: center; justify-content: center;
+  min-width: 1.35rem; height: 1.35rem; margin-left: 0.25rem;
+  padding: 0 0.35rem; border-radius: 999px;
+  background: var(--musgo-profundo, #1f3224);
+  color: var(--dourado-suave, #e8d49a); font-size: 0.72rem; vertical-align: middle;
+}
+.app-messages { list-style: none; margin: 0.75rem auto 0; padding: 0; width: min(100% - 2rem, 640px); }
+.app-messages__item {
+  padding: 0.65rem 0.9rem; border-radius: 8px;
+  background: color-mix(in srgb, var(--folha, #4a7a48) 18%, white);
+  color: var(--musgo-profundo, #1f3224); font-size: 0.95rem;
+}
+.app-toast {
+  position: fixed; bottom: 1.25rem; left: 50%; transform: translateX(-50%);
+  z-index: 80; padding: 0.7rem 1.2rem; border-radius: 8px;
+  background: var(--musgo-profundo, #1f3224); color: #fffaf0;
+  font-size: 0.9rem; box-shadow: 0 10px 28px rgba(0,0,0,0.25);
+}
+.app-page { padding-top: 1.5rem; }
+.app-heading {
+  margin: 0 0 0.5rem; font-family: var(--font-display, Georgia, serif);
+  font-size: clamp(1.75rem, 4vw, 2.5rem); font-weight: 700; letter-spacing: 0.06em;
+  text-transform: uppercase; color: var(--musgo-profundo, #1f3224); text-align: center;
+  line-height: 1.1;
+}
+/* Titulo com detalhe: linha dourada + folha central */
+.app-heading--accent {
+  position: relative;
+  padding-bottom: 0.7rem;
+  margin-bottom: 1.4rem;
+}
+.app-heading--accent::after {
+  content: "";
+  position: absolute;
+  left: 50%;
+  bottom: 0;
+  transform: translateX(-50%);
+  width: 96px;
+  height: 3px;
+  border-radius: 3px;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    var(--dourado, #d4b56a) 20%,
+    var(--folha, #4a7a48) 50%,
+    var(--dourado, #d4b56a) 80%,
+    transparent
+  );
+}
+.app-lead { text-align: center; margin: 0 auto 1.25rem; max-width: 42ch; }
+/*
+  Tabelas largas rolam na horizontal em vez de estourar a tela do celular.
+*/
+.app-table-scroll {
+  width: 100%;
+  max-width: 100%;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior-x: contain;
+}
+.app-table {
+  width: 100%; border-collapse: collapse; margin: 1rem 0; font-size: 0.95rem;
+  background: color-mix(in srgb, var(--creme, #efe6d4) 80%, white);
+  border-radius: 10px; overflow: hidden;
+}
+/*
+  Dentro do wrapper rolavel a tabela dimensiona pelo conteudo:
+  - width: max-content -> colunas no tamanho natural, sem encolher
+    nem sobrar espaco vazio no fim;
+  - min-width: 100% -> tabelas pequenas ainda preenchem a tela toda.
+*/
+.app-table-scroll .app-table {
+  width: max-content;
+  min-width: 100%;
+}
+/* Visao Geral (poucas colunas): forca 100% e distribui o espaco */
+.app-table-scroll .app-table--fill {
+  width: 100%;
+  min-width: 100%;
+  table-layout: fixed;
+}
+.app-table--fill th:last-child,
+.app-table--fill td:last-child {
+  text-align: right;
+  width: 40%;
+}
+.app-table th, .app-table td {
+  padding: 0.7rem 0.75rem;
+  border-bottom: 1px solid color-mix(in srgb, var(--musgo, #2f4632) 12%, transparent);
+  text-align: left; vertical-align: middle;
+}
+.app-table th {
+  background: color-mix(in srgb, var(--musgo, #2f4632) 10%, transparent);
+  font-size: 0.78rem; letter-spacing: 0.08em; text-transform: uppercase;
+}
+.app-total { text-align: right; font-size: 1.15rem; }
+.app-item-list { margin: 0; padding-left: 1.1rem; font-size: 0.88rem; }
+.app-btn { border: 0; background: transparent; color: var(--musgo, #2f4632); cursor: pointer; text-decoration: underline; font: inherit; }
+.app-btn--ghost { text-decoration: none; font-size: 0.85rem; opacity: 0.85; }
+.app-admin-nav { display: flex; flex-wrap: wrap; gap: 0.6rem; justify-content: center; margin-bottom: 1.25rem; }
+/* Visoes do painel como "pills": alvo maior e clicabilidade obvia */
+.app-admin-nav a {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.5rem 1.05rem;
+  border-radius: 999px;
+  border: 1.5px solid color-mix(in srgb, var(--musgo, #2f4632) 25%, transparent);
+  background: color-mix(in srgb, var(--creme, #efe6d4) 70%, white);
+  font-size: 0.82rem; font-weight: 700; letter-spacing: 0.12em;
+  text-transform: uppercase; text-decoration: none; color: var(--musgo, #2f4632);
+  transition: background 0.18s ease, color 0.18s ease, border-color 0.18s ease;
+}
+/* Hover discreto: so escurece o fundo, sem inverter as cores */
+.app-admin-nav a:hover,
+.app-admin-nav a:focus-visible {
+  background: color-mix(in srgb, var(--musgo, #2f4632) 14%, var(--creme, #efe6d4));
+  border-color: color-mix(in srgb, var(--musgo, #2f4632) 45%, transparent);
+  color: var(--musgo-profundo, #1f3224);
+  outline: none;
+}
+.app-auth { max-width: 420px; margin-inline: auto; }
+.app-form {
+  display: flex;
+  flex-direction: column;
+  gap: 0.85rem;
+  margin: 1rem auto;
+  max-width: 360px;
+  align-items: stretch;
+}
+.app-form label { display: flex; flex-direction: column; gap: 0.35rem; font-size: 0.9rem; font-weight: 600; }
+.app-form input {
+  padding: 0.55rem 0.7rem;
+  border: 1px solid color-mix(in srgb, var(--musgo, #2f4632) 25%, transparent);
+  border-radius: 6px; font: inherit; background: #fff;
+}
+/* Botao Entrar / Cadastrar centralizado */
+.app-form .btn-buy {
+  align-self: center;
+  margin-top: 0.35rem;
+  width: auto;
+  min-width: 180px;
+}
+.app-auth__alt { text-align: center; }
+
+/* Opcoes tamanho + quantidade */
+.product-card__opts {
+  display: flex;
+  gap: 0.65rem;
+  justify-content: center;
+  align-items: stretch;
+  margin: 0 0 0.9rem;
+  width: 100%;
+  max-width: 280px;
+}
+.product-card__select,
+.product-card__qty {
+  appearance: none;
+  -webkit-appearance: none;
+  margin: 0;
+  padding: 0.55rem 0.75rem;
+  border-radius: 8px;
+  border: 1.5px solid color-mix(in srgb, var(--musgo, #2f4632) 28%, transparent);
+  background-color: #fffdf8;
+  color: var(--musgo-profundo, #1f3224);
+  font: inherit;
+  font-size: 0.88rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  cursor: pointer;
+  box-shadow: 0 1px 2px color-mix(in srgb, var(--musgo, #2f4632) 8%, transparent);
+  transition: border-color 0.2s ease, box-shadow 0.2s ease, background 0.2s ease;
+}
+.product-card__select {
+  flex: 1 1 auto;
+  min-width: 0;
+  padding-right: 2rem;
+  background-image:
+    linear-gradient(45deg, transparent 50%, var(--musgo, #2f4632) 50%),
+    linear-gradient(135deg, var(--musgo, #2f4632) 50%, transparent 50%);
+  background-position:
+    calc(100% - 14px) calc(50% - 2px),
+    calc(100% - 9px) calc(50% - 2px);
+  background-size: 5px 5px, 5px 5px;
+  background-repeat: no-repeat;
+}
+.product-card__qty {
+  flex: 0 0 4.5rem;
+  width: 4.5rem;
+  text-align: center;
+  cursor: text;
+}
+.product-card__select:hover,
+.product-card__qty:hover {
+  border-color: var(--folha, #4a7a48);
+  background-color: #fff;
+}
+.product-card__select:focus,
+.product-card__qty:focus {
+  outline: none;
+  border-color: var(--musgo, #2f4632);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--folha, #4a7a48) 28%, transparent);
+  background-color: #fff;
+}
+.product-card__buy-form {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+.product-card__buy-form form {
+  width: 100%;
+  display: flex;
+  justify-content: center;
+}
+@media (max-width: 720px) {
+  .app-table { display: block; overflow-x: auto; }
+}
+
+.app-auth__forgot {
+  text-align: center;
+  margin: 0.85rem auto 0;
+  font-size: 0.92rem;
+  color: color-mix(in srgb, var(--tinta, #243028) 80%, var(--musgo, #2f4632));
+}
+.app-auth__forgot a {
+  font-weight: 700;
+  color: var(--musgo, #2f4632);
+  text-underline-offset: 0.15em;
+}
+.app-auth__forgot a:hover {
+  color: var(--folha, #4a7a48);
+}
+
+/* Modal de observacao no checkout */
+.carrinho-checkout {
+  display: flex;
+  justify-content: center;
+  margin: 1rem 0 0.5rem;
+}
+.obs-modal {
+  position: fixed;
+  inset: 0;
+  z-index: 90;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+}
+.obs-modal__backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(20, 30, 22, 0.72);
+  backdrop-filter: blur(3px);
+}
+.obs-modal__panel {
+  position: relative;
+  z-index: 1;
+  width: min(100%, 420px);
+  padding: 1.35rem 1.25rem 1.2rem;
+  border-radius: 14px;
+  background: var(--papel, #f4ecde);
+  border: 1px solid color-mix(in srgb, var(--musgo, #2f4632) 18%, transparent);
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.28);
+  text-align: center;
+}
+.obs-modal__title {
+  margin: 0 0 0.4rem;
+  font-family: var(--font-display, Georgia, serif);
+  font-size: 1.35rem;
+  letter-spacing: 0.04em;
+  color: var(--musgo, #2f4632);
+}
+.obs-modal__hint {
+  margin: 0 0 0.85rem;
+  font-size: 0.9rem;
+  opacity: 0.85;
+}
+.obs-modal__textarea {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 0.7rem 0.8rem;
+  border-radius: 8px;
+  border: 1.5px solid color-mix(in srgb, var(--musgo, #2f4632) 28%, transparent);
+  background: #fffdf8;
+  font: inherit;
+  font-size: 0.95rem;
+  resize: vertical;
+  min-height: 96px;
+}
+.obs-modal__textarea:focus {
+  outline: none;
+  border-color: var(--musgo, #2f4632);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--folha, #4a7a48) 28%, transparent);
+}
+.obs-modal__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  justify-content: center;
+  align-items: center;
+  margin-top: 1rem;
+}
+.obs-modal__cancel {
+  text-decoration: none;
+  font-weight: 600;
+  padding: 0.5rem 0.75rem;
+}
+.app-obs {
+  max-width: 18ch;
+  font-size: 0.88rem;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+/* ---------- Erros de formulario em vermelho ---------- */
+.field-error,
+.app-form .errorlist,
+ul.errorlist {
+  margin: 0.15rem 0 0;
+  padding: 0;
+  list-style: none;
+  color: #b3261e;
+  font-size: 0.82rem;
+  font-weight: 700;
+}
+.app-form .app-select,
+.app-form select {
+  padding: 0.55rem 0.7rem;
+  border: 1px solid color-mix(in srgb, var(--musgo, #2f4632) 25%, transparent);
+  border-radius: 6px;
+  font: inherit;
+  background: #fff;
+}
+.app-form small { font-weight: 500; opacity: 0.75; font-size: 0.78rem; }
+
+/* Nome em destaque no popup de confirmacao */
+.confirm-nome {
+  margin: 0.35rem 0 0;
+  font-family: var(--font-display, Georgia, serif);
+  font-size: 1.4rem;
+  font-weight: 700;
+  color: var(--musgo-profundo, #1f3224);
+  letter-spacing: 0.02em;
+}
+
+/* ---------- Tags / badges de status ---------- */
+.status-badge {
+  display: inline-block;
+  padding: 0.3rem 0.7rem;
+  border-radius: 999px;
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  line-height: 1.2;
+  white-space: nowrap;
+  border: 1.5px solid transparent;
+}
+/* Pagamento */
+.status-badge--em_espera {
+  background: #fbeecb;
+  color: #8a5a00;
+  border-color: #e6c268;
+}
+.status-badge--pago {
+  background: #d8ecd8;
+  color: #1f5c2a;
+  border-color: #67a86b;
+}
+.status-badge--cancelado {
+  background: #f7d9d6;
+  color: #9c241b;
+  border-color: #db8078;
+}
+/* Entrega */
+.status-badge--entregue {
+  background: #d8ecd8;
+  color: #1f5c2a;
+  border-color: #67a86b;
+}
+.status-badge--nao_entregue {
+  background: #e7e2d5;
+  color: #5c5340;
+  border-color: #bcae90;
+}
+
+/* ---------- Bloco de pagamento PIX ---------- */
+.pix-box {
+  margin: 0 auto 2rem;
+  max-width: 760px;
+  padding: 1.35rem 1.35rem 1.15rem;
+  border-radius: 16px;
+  background: color-mix(in srgb, var(--creme, #efe6d4) 78%, white);
+  border: 1px solid color-mix(in srgb, var(--musgo, #2f4632) 16%, transparent);
+  box-shadow: 0 10px 30px rgba(31, 50, 36, 0.12);
+}
+.pix-box__title {
+  margin: 0 0 1rem;
+  text-align: center;
+  font-family: var(--font-display, Georgia, serif);
+  font-size: 1.4rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--musgo, #2f4632);
+}
+.pix-box__grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1.5rem;
+  align-items: center;
+  justify-content: center;
+}
+.pix-box__qr {
+  flex: 0 0 auto;
+  background: #fff;
+  padding: 0.6rem;
+  border-radius: 12px;
+  box-shadow: 0 4px 14px rgba(31, 50, 36, 0.14);
+}
+.pix-box__qr img { display: block; width: 200px; height: 200px; }
+.pix-box__info { flex: 1 1 280px; min-width: 260px; }
+.pix-box__recebedor {
+  margin: 0 0 0.9rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+}
+.pix-box__recebedor span {
+  font-size: 0.72rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  opacity: 0.7;
+}
+.pix-box__recebedor strong { font-size: 1.02rem; color: var(--musgo-profundo, #1f3224); }
+.pix-box__copy-label {
+  display: block;
+  font-size: 0.72rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  opacity: 0.7;
+  margin-bottom: 0.3rem;
+}
+.pix-box__copy { display: flex; gap: 0.5rem; align-items: stretch; }
+.pix-box__copy input {
+  flex: 1 1 auto;
+  min-width: 0;
+  padding: 0.5rem 0.6rem;
+  border: 1px solid color-mix(in srgb, var(--musgo, #2f4632) 22%, transparent);
+  border-radius: 6px;
+  background: #fff;
+  font-size: 0.8rem;
+  color: var(--tinta, #243028);
+}
+.pix-box__copy-btn {
+  flex: 0 0 auto;
+  width: auto;
+  min-width: 0;
+  margin: 0;
+  padding: 0.5rem 1rem;
+}
+/* Aviso com muito destaque */
+.pix-box__aviso {
+  margin: 1.2rem 0 0;
+  padding: 0.9rem 1.1rem;
+  border-radius: 10px;
+  background: color-mix(in srgb, var(--musgo-profundo, #1f3224) 92%, black);
+  color: #fffaf0;
+  font-size: 1rem;
+  line-height: 1.5;
+  text-align: center;
+  border: 2px solid var(--dourado, #d4b56a);
+  box-shadow: 0 8px 22px rgba(31, 50, 36, 0.25);
+}
+.pix-box__aviso strong { color: var(--dourado-suave, #e8d49a); }
+.pix-box__aviso a {
+  color: #fff;
+  font-weight: 800;
+  text-decoration: underline;
+  text-underline-offset: 0.2em;
+}
+.pix-box__aviso a:hover { color: var(--dourado-suave, #e8d49a); }
+
+@media (max-width: 520px) {
+  .pix-box__qr img { width: 170px; height: 170px; }
+}
+
+/* =========================================================
+   Responsivo — telas pequenas (celular)
+   ========================================================= */
+@media (max-width: 760px) {
+  .app-page { padding-top: 1rem; }
+
+  /* Barra superior: cabe mais item por linha sem virar bagunca */
+  .app-nav {
+    gap: 0.25rem 0.35rem;
+    padding: 0.5rem 0.5rem;
+    font-size: 0.74rem;
+    letter-spacing: 0.04em;
+  }
+  .app-nav a,
+  .app-nav__logout button {
+    padding: 0.35rem 0.5rem;
+    border-radius: 6px;
+  }
+  .app-nav__user {
+    width: 100%;
+    text-align: center;
+    padding: 0.1rem 0;
+    font-size: 0.78rem;
+  }
+
+  /* Titulos e textos */
+  .app-heading {
+    font-size: clamp(1.35rem, 7vw, 1.9rem);
+    letter-spacing: 0.03em;
+  }
+  .app-heading--accent { margin-bottom: 1.1rem; padding-bottom: 0.55rem; }
+  .app-heading--accent::after { width: 72px; }
+  .app-lead { font-size: 0.9rem; max-width: 34ch; }
+
+  /* Pills do painel */
+  .app-admin-nav { gap: 0.4rem; margin-bottom: 1rem; }
+  .app-admin-nav a {
+    padding: 0.42rem 0.8rem;
+    font-size: 0.7rem;
+    letter-spacing: 0.07em;
+  }
+
+  /* Tabelas: fonte menor, mas com respiro entre colunas */
+  .app-table { font-size: 0.85rem; margin: 0.75rem 0; }
+  .app-table th,
+  .app-table td { padding: 0.6rem 0.85rem; }
+  .app-table th { font-size: 0.68rem; letter-spacing: 0.05em; }
+  .app-item-list { font-size: 0.8rem; padding-left: 0.9rem; }
+  .status-badge { font-size: 0.65rem; padding: 0.25rem 0.55rem; }
+  /* Dica de que da pra arrastar a tabela */
+  .app-table-scroll { padding-bottom: 0.35rem; }
+
+  /* Formularios ocupam a largura util */
+  .app-auth { max-width: 100%; }
+  .app-form { max-width: 100%; }
+  .app-form input,
+  .app-form select,
+  .app-form .app-select {
+    /* 16px evita o zoom automatico do iOS ao focar o campo */
+    font-size: 16px;
+  }
+  .app-form .btn-buy { width: 100%; min-width: 0; }
+
+  /* PIX empilhado e legivel */
+  .pix-box { padding: 1rem 0.9rem; border-radius: 12px; }
+  .pix-box__title { font-size: 1.15rem; }
+  .pix-box__grid { gap: 1rem; }
+  .pix-box__info { min-width: 0; flex-basis: 100%; }
+  .pix-box__copy { flex-wrap: wrap; }
+  .pix-box__copy input { flex: 1 1 100%; font-size: 0.72rem; }
+  .pix-box__copy-btn { width: 100%; }
+  .pix-box__aviso { font-size: 0.92rem; padding: 0.8rem 0.85rem; }
+
+  /* Modais nao encostam nas bordas */
+  .obs-modal__panel {
+    width: calc(100vw - 1.75rem);
+    max-height: 85vh;
+    overflow-y: auto;
+    padding: 1.1rem;
+  }
+  .obs-modal__actions { flex-wrap: wrap; gap: 0.6rem; }
+  .obs-modal__actions .btn-buy { width: 100%; }
+  .confirm-nome { font-size: 1.2rem; }
+}

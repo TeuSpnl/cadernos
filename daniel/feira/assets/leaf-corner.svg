@@ -1,0 +1,21 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="240" height="240" viewBox="0 0 240 240" fill="none" aria-hidden="true">
+  <!-- Canto floral: folhas verdes vibrantes para emoldurar a página -->
+  <g>
+    <!-- Folha larga principal -->
+    <path d="M18 12c48 8 88 42 102 92-34-8-72-32-92-78-4-8-8-12-10-14z" fill="#4A7A48"/>
+    <path d="M28 20c36 14 64 40 78 74-26-4-54-24-70-58-4-8-6-12-8-16z" fill="#6B9A5C" fill-opacity="0.85"/>
+    <path d="M36 28c4 28 22 52 48 68" stroke="#2F4632" stroke-width="1.6" stroke-linecap="round" opacity="0.45"/>
+
+    <!-- Folha secundária -->
+    <path d="M8 48c32 18 52 48 58 86-28-10-50-36-56-72-2-10-2-12-2-14z" fill="#3F5C42"/>
+    <path d="M16 58c4 24 16 46 36 62" stroke="#2F4632" stroke-width="1.4" stroke-linecap="round" opacity="0.4"/>
+
+    <!-- Folhíola pontiaguda -->
+    <path d="M72 8c22 28 28 58 22 90-4-30-18-54-40-74-6-6-8-10-10-14 10-2 20-2 28-2z" fill="#5C8F55"/>
+    <path d="M78 22c10 22 12 46 6 70" stroke="#2F4632" stroke-width="1.3" stroke-linecap="round" opacity="0.35"/>
+
+    <!-- Broto / detalhe -->
+    <ellipse cx="52" cy="96" rx="14" ry="22" transform="rotate(-28 52 96)" fill="#4A7A48" opacity="0.9"/>
+    <path d="M48 84c6 10 8 20 6 32" stroke="#2F4632" stroke-width="1.2" opacity="0.35"/>
+  </g>
+</svg>

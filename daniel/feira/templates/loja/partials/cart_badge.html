@@ -1,0 +1,4 @@
+{# Badge do carrinho - alvo HTMX (#cart-badge) #}
+<span id="cart-badge" class="cart-badge" aria-live="polite">
+  {% if carrinho_total_itens %}{{ carrinho_total_itens }}{% else %}0{% endif %}
+</span>

@@ -17,12 +17,12 @@ SECRET_KEY = os.getenv(
     "django-insecure-dev-only-troque-em-producao",
 )
 
-DEBUG = os.getenv("DJANGO_DEBUG", "True").lower() in ("1", "true", "yes")
-# DEBUG = False
+# DEBUG = os.getenv("DJANGO_DEBUG", "True").lower() in ("1", "true", "yes")
+DEBUG = False
 
-# ALLOWED_HOSTS = [
-#     'feiramissionaria.org', 'www.feiramissionaria.org', 'localhost', '127.0.0.1'
-# ]
+ALLOWED_HOSTS = [
+    'feiramissionaria.org', 'www.feiramissionaria.org', 'localhost', '127.0.0.1'
+]
 
 INSTALLED_APPS = [
     "django.contrib.admin",

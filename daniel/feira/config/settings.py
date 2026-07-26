@@ -17,12 +17,11 @@ SECRET_KEY = os.getenv(
     "django-insecure-dev-only-troque-em-producao",
 )
 
-DEBUG = os.getenv("DJANGO_DEBUG", "True").lower() in ("1", "true", "yes")
+# DEBUG = os.getenv("DJANGO_DEBUG", "True").lower() in ("1", "true", "yes")
+DEBUG = False
 
 ALLOWED_HOSTS = [
-    h.strip()
-    for h in os.getenv("DJANGO_ALLOWED_HOSTS", "localhost,127.0.0.1").split(",")
-    if h.strip()
+    'feiramissionaria.org', 'www.feiramissionaria.org', 'localhost', '127.0.0.1'
 ]
 
 INSTALLED_APPS = [
@@ -113,6 +112,9 @@ STATIC_ROOT = BASE_DIR / "staticfiles"
 LOGIN_URL = "loja:login"
 LOGIN_REDIRECT_URL = "loja:landing"
 LOGOUT_REDIRECT_URL = "loja:landing"
+
+MEDIA_URL = '/media/'
+MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
 
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 

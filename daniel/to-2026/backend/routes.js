@@ -3,11 +3,12 @@ const ExcelJS = require("exceljs");
 const db = require("./database");
 const { autenticar, anexarAdmin, encerrarSessao } = require("./auth");
 const { registrarAdminLog } = require("./logger");
+const { inscricoesEstaoAbertas, definirInscricoesAbertas } = require("./settings");
 
 const rotas = express.Router();
 
 // Validação básica dos campos obrigatórios
-function validarInscricao({ email, nome, empresa, whatsapp }) {
+function validarCadastro({ email, nome, empresa, whatsapp }) {
   const erros = [];
 
   if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) {
@@ -43,6 +44,24 @@ function comAuth(handler) {
     }
     return handler(req, res, next);
   };
+}
+
+async function exportarPlanilha({ linhas, aba, colunas, arquivo, res }) {
+  const workbook = new ExcelJS.Workbook();
+  workbook.creator = "Café com Empresários";
+  const sheet = workbook.addWorksheet(aba);
+  sheet.columns = colunas;
+  sheet.getRow(1).font = { bold: true };
+  for (const item of linhas) {
+    sheet.addRow(item);
+  }
+  const buffer = await workbook.xlsx.writeBuffer();
+  res.setHeader("Content-Disposition", `attachment; filename="${arquivo}"`);
+  res.setHeader(
+    "Content-Type",
+    "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+  );
+  return res.send(Buffer.from(buffer));
 }
 
 // Login do painel admin — resposta só com token; senha nunca é persistida nem logada
@@ -105,10 +124,49 @@ rotas.get(
   })
 );
 
-// Cria uma nova inscrição (público)
+// Status público: front usa para escolher o formulário (sem rebuild)
+rotas.get("/status", (_req, res) => {
+  return res.json({
+    sucesso: true,
+    inscricoesAbertas: inscricoesEstaoAbertas(),
+  });
+});
+
+// Admin: liga/desliga inscrição do evento (persiste no SQLite)
+rotas.put(
+  "/admin/inscricoes-status",
+  comAuth((req, res) => {
+    const aberto = Boolean(req.body?.abertas);
+    const atual = definirInscricoesAbertas(aberto);
+
+    registrarAdminLog(req, {
+      acao: atual ? "abrir_inscricoes" : "fechar_inscricoes",
+      detalhes: { inscricoesAbertas: atual },
+    });
+
+    return res.json({
+      sucesso: true,
+      inscricoesAbertas: atual,
+      mensagem: atual
+        ? "Inscrições do evento reabertas."
+        : "Inscrições do evento encerradas. O site mostra o formulário de interesse.",
+    });
+  })
+);
+
+// Inscrições do evento — só aceita se o status estiver aberto
 rotas.post("/inscricoes", (req, res) => {
+  if (!inscricoesEstaoAbertas()) {
+    return res.status(403).json({
+      sucesso: false,
+      erros: [
+        "As inscrições para esta edição estão encerradas. Use o formulário de interesse.",
+      ],
+    });
+  }
+
   const { email, nome, empresa, whatsapp } = req.body || {};
-  const erros = validarInscricao({ email, nome, empresa, whatsapp });
+  const erros = validarCadastro({ email, nome, empresa, whatsapp });
 
   if (erros.length > 0) {
     return res.status(400).json({ sucesso: false, erros });
@@ -140,7 +198,7 @@ rotas.post("/inscricoes", (req, res) => {
   }
 });
 
-// Lista todas as inscrições (protegido)
+// Lista inscritos do evento (protegido)
 rotas.get(
   "/inscricoes",
   comAuth((req, res) => {
@@ -169,7 +227,7 @@ rotas.get(
   })
 );
 
-// Exporta inscritos para Excel (.xlsx) — protegido
+// Exporta inscritos do evento para Excel
 rotas.get(
   "/inscricoes/export",
   comAuth(async (req, res) => {
@@ -182,44 +240,135 @@ rotas.get(
         )
         .all();
 
-      const workbook = new ExcelJS.Workbook();
-      workbook.creator = "Café com Empresários";
-      const sheet = workbook.addWorksheet("Inscritos");
-
-      sheet.columns = [
-        { header: "ID", key: "id", width: 8 },
-        { header: "Email", key: "email", width: 32 },
-        { header: "Nome", key: "nome", width: 28 },
-        { header: "Empresa", key: "empresa", width: 28 },
-        { header: "WhatsApp", key: "whatsapp", width: 18 },
-        { header: "Data da Inscrição", key: "data_inscricao", width: 22 },
-      ];
-
-      // Cabeçalho em destaque
-      sheet.getRow(1).font = { bold: true };
-
-      for (const item of inscritos) {
-        sheet.addRow(item);
-      }
-
-      const buffer = await workbook.xlsx.writeBuffer();
-
       registrarAdminLog(req, {
-        acao: "exportar_excel",
+        acao: "exportar_excel_inscritos",
         detalhes: { total: inscritos.length },
       });
 
-      res.setHeader(
-        "Content-Disposition",
-        'attachment; filename="inscritos-cafe-empresarios.xlsx"'
-      );
-      res.setHeader(
-        "Content-Type",
-        "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-      );
-      return res.send(Buffer.from(buffer));
+      return exportarPlanilha({
+        linhas: inscritos,
+        aba: "Inscritos",
+        arquivo: "inscritos-cafe-empresarios.xlsx",
+        res,
+        colunas: [
+          { header: "ID", key: "id", width: 8 },
+          { header: "Email", key: "email", width: 32 },
+          { header: "Nome", key: "nome", width: 28 },
+          { header: "Empresa", key: "empresa", width: 28 },
+          { header: "WhatsApp", key: "whatsapp", width: 18 },
+          { header: "Data da Inscrição", key: "data_inscricao", width: 22 },
+        ],
+      });
     } catch (erro) {
-      console.error("Erro ao exportar Excel:", erro);
+      console.error("Erro ao exportar Excel de inscritos:", erro);
+      return res.status(500).json({
+        sucesso: false,
+        erros: ["Erro interno ao exportar o Excel."],
+      });
+    }
+  })
+);
+
+// --- Prospecção (lista de interesse em futuros eventos) ---
+
+// Cria cadastro de prospecção (público)
+rotas.post("/prospeccao", (req, res) => {
+  const { email, nome, empresa, whatsapp } = req.body || {};
+  const erros = validarCadastro({ email, nome, empresa, whatsapp });
+
+  if (erros.length > 0) {
+    return res.status(400).json({ sucesso: false, erros });
+  }
+
+  try {
+    const stmt = db.prepare(`
+      INSERT INTO prospeccao (email, nome, empresa, whatsapp)
+      VALUES (?, ?, ?, ?)
+    `);
+    const result = stmt.run(
+      email.trim().toLowerCase(),
+      nome.trim(),
+      empresa.trim(),
+      whatsapp.trim()
+    );
+
+    return res.status(201).json({
+      sucesso: true,
+      id: result.lastInsertRowid,
+      mensagem: "Cadastro de interesse realizado com sucesso.",
+    });
+  } catch (erro) {
+    console.error("Erro ao salvar prospecção:", erro);
+    return res.status(500).json({
+      sucesso: false,
+      erros: ["Erro interno ao salvar o cadastro."],
+    });
+  }
+});
+
+// Lista cadastros de prospecção (protegido)
+rotas.get(
+  "/prospeccao",
+  comAuth((req, res) => {
+    try {
+      const leads = db
+        .prepare(
+          `SELECT id, email, nome, empresa, whatsapp, data_cadastro
+           FROM prospeccao
+           ORDER BY datetime(data_cadastro) DESC`
+        )
+        .all();
+
+      registrarAdminLog(req, {
+        acao: "listar_prospeccao",
+        detalhes: { total: leads.length },
+      });
+
+      return res.json({ sucesso: true, dados: leads });
+    } catch (erro) {
+      console.error("Erro ao listar prospecção:", erro);
+      return res.status(500).json({
+        sucesso: false,
+        erros: ["Erro interno ao listar a prospecção."],
+      });
+    }
+  })
+);
+
+// Exporta prospecção para Excel
+rotas.get(
+  "/prospeccao/export",
+  comAuth(async (req, res) => {
+    try {
+      const leads = db
+        .prepare(
+          `SELECT id, email, nome, empresa, whatsapp, data_cadastro
+           FROM prospeccao
+           ORDER BY datetime(data_cadastro) DESC`
+        )
+        .all();
+
+      registrarAdminLog(req, {
+        acao: "exportar_excel_prospeccao",
+        detalhes: { total: leads.length },
+      });
+
+      return exportarPlanilha({
+        linhas: leads,
+        aba: "Prospecção",
+        arquivo: "prospeccao-cafe-empresarios.xlsx",
+        res,
+        colunas: [
+          { header: "ID", key: "id", width: 8 },
+          { header: "Email", key: "email", width: 32 },
+          { header: "Nome", key: "nome", width: 28 },
+          { header: "Empresa", key: "empresa", width: 28 },
+          { header: "WhatsApp", key: "whatsapp", width: 18 },
+          { header: "Data do Cadastro", key: "data_cadastro", width: 22 },
+        ],
+      });
+    } catch (erro) {
+      console.error("Erro ao exportar Excel de prospecção:", erro);
       return res.status(500).json({
         sucesso: false,
         erros: ["Erro interno ao exportar o Excel."],

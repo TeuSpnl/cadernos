@@ -5,7 +5,7 @@ const path = require("path");
 const dbPath = path.join(__dirname, "database.sqlite");
 const db = new Database(dbPath);
 
-// Tabela de inscritos do evento
+// Tabela de inscritos do evento (Café com Empresários)
 db.exec(`
   CREATE TABLE IF NOT EXISTS inscricoes (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -14,6 +14,27 @@ db.exec(`
     empresa TEXT NOT NULL,
     whatsapp TEXT NOT NULL,
     data_inscricao TEXT NOT NULL DEFAULT (datetime('now', 'localtime'))
+  )
+`);
+
+// Tabela de prospecção — quem deixou dados para futuros eventos
+db.exec(`
+  CREATE TABLE IF NOT EXISTS prospeccao (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    email TEXT NOT NULL,
+    nome TEXT NOT NULL,
+    empresa TEXT NOT NULL,
+    whatsapp TEXT NOT NULL,
+    data_cadastro TEXT NOT NULL DEFAULT (datetime('now', 'localtime'))
+  )
+`);
+
+// Configurações persistentes (ex.: inscrição aberta/fechada)
+db.exec(`
+  CREATE TABLE IF NOT EXISTS configuracoes (
+    chave TEXT PRIMARY KEY,
+    valor TEXT NOT NULL,
+    atualizado_em TEXT NOT NULL DEFAULT (datetime('now', 'localtime'))
   )
 `);
 

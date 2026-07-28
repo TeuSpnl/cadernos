@@ -149,3 +149,76 @@
 .admin-login__back:hover {
   color: var(--accent);
 }
+
+
+.admin-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-bottom: 0.85rem;
+}
+
+.admin-tab {
+  appearance: none;
+  border: 1px solid var(--border);
+  background: transparent;
+  color: var(--text-muted);
+  border-radius: 6px;
+  padding: 0.65rem 1.1rem;
+  font-size: 0.95rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.2s ease, color 0.2s ease, border-color 0.2s ease;
+}
+
+.admin-tab:hover {
+  color: var(--text);
+  border-color: rgba(255, 255, 255, 0.28);
+}
+
+.admin-tab--active {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #000000;
+}
+
+.admin-tab-hint {
+  margin: 0 0 1.25rem;
+  color: var(--text-muted);
+  font-size: 0.95rem;
+}
+
+
+.admin-form-status {
+  margin: 0.65rem 0 0;
+  font-size: 0.95rem;
+  color: var(--text-muted);
+}
+
+.admin-badge {
+  display: inline-block;
+  padding: 0.15rem 0.55rem;
+  border-radius: 4px;
+  font-size: 0.85rem;
+  font-weight: 700;
+}
+
+.admin-badge--open {
+  background: rgba(109, 212, 138, 0.2);
+  color: var(--success);
+}
+
+.admin-badge--closed {
+  background: rgba(255, 107, 107, 0.18);
+  color: var(--error);
+}
+
+/* Botão de encerrar — destaque sem usar o amarelo de ação positiva */
+.btn--danger {
+  background: #c45c5c;
+  color: #ffffff;
+}
+
+.btn--danger:hover:not(:disabled) {
+  background: #b04e4e;
+}

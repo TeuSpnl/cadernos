@@ -473,10 +473,16 @@ foreach ($line in $result.Lines) { Write-Output $line.Text }
 '''
 
     def _texto_precisa_ocr(self, texto):
-        """Heurística: comprovante Inter sem valores extraíveis (só labels)."""
+        """Heurística: comprovante Inter sem valores extraíveis (só labels).
+
+        Cuidado: o pdfplumber lê 'Chave Pix' no nativo — isso NÃO significa que
+        o comprovante já tem texto útil. Exigir 'Pix enviado/recebido' ou 'R$'.
+        """
         if "Internet Banking Inter" in texto or "contadigital.inter.co" in texto:
-            # Se não tem "Pix" nem "R$", os valores estão como outline/curva
-            if "Pix" not in texto and "R$" not in texto:
+            tem_pix_real = ("Pix enviado" in texto or "Pix recebido" in texto)
+            tem_valor = "R$" in texto
+            # Sem título real nem valor → valores estão em curva/outline
+            if not tem_pix_real and not tem_valor:
                 return True
         return False
 
@@ -997,13 +1003,27 @@ foreach ($line in $result.Lines) { Write-Output $line.Text }
             dados["nome_recebedor"] = self._recebedor_inter(texto)
 
     def _data_transacao_inter(self, texto):
-        """Escolhe a data da transação, não a de impressão ('1 of 1 17/07/2026')."""
+        """Escolhe a data da transação, não a de impressão ('1 of 1 28/07/2026').
+
+        No OCR do Inter a data do pagamento vem seguida do horário estilo '21h53';
+        a de impressão vem no rodapé como '28/07/2026, 17:27' / '28/07/2026. 17:27'.
+        """
+        # 1) Padrão mais confiável: data + horário Inter (21h53)
+        m_h = re.search(r'(\d{2}/\d{2}/\d{4})\s*\n?\s*\d{1,2}h\d{2}', texto, re.IGNORECASE)
+        if m_h:
+            return self.formatar_data(m_h.group(1))
+
+        # 2) Após o rótulo, com janela maior (labels OCR intercalam bastante)
         m = re.search(
-            r'Data da transa[cç][aã]o.{0,80}?(\d{2}/\d{2}/\d{4})',
+            r'Data da transa[cç][aã]o.{0,400}?(\d{2}/\d{2}/\d{4})',
             texto, re.IGNORECASE | re.DOTALL
         )
         if m:
-            return self.formatar_data(m.group(1))
+            # Se a data achada parece de impressão (seguida de HH:MM), tenta outra
+            pos = m.end(1)
+            apos = texto[pos:pos + 20]
+            if not re.match(r'\s*[,.]?\s*\d{1,2}:\d{2}', apos):
+                return self.formatar_data(m.group(1))
 
         datas = list(re.finditer(r'(\d{2}/\d{2}/\d{4})', texto))
         if not datas:
@@ -1012,18 +1032,30 @@ foreach ($line in $result.Lines) { Write-Output $line.Text }
         n = len(texto)
         candidatas = []
         for m in datas:
-            # Descarta datas no último quinto do texto (rodapé de impressão)
+            # Descarta datas no último quinto (rodapé de impressão)
             if m.start() > n * 0.80:
                 continue
             ini = max(0, m.start() - 30)
-            ctx = texto[ini:m.end() + 20].lower()
+            ctx = texto[ini:m.end() + 25].lower()
             if "of 1" in ctx or "of1" in ctx.replace(" ", ""):
+                continue
+            # Descarta "DD/MM/YYYY, HH:MM" / "DD/MM/YYYY. HH:MM" (impressão)
+            apos = texto[m.end():m.end() + 15]
+            if re.match(r'\s*[,.]?\s*\d{1,2}:\d{2}', apos):
                 continue
             candidatas.append(m.group(1))
 
         if not candidatas:
-            # Se só sobrou a do rodapé, usa a primeira do documento mesmo
-            candidatas = [m.group(1) for m in datas]
+            # Último recurso: data NÃO colada em horário HH:MM
+            for m in datas:
+                apos = texto[m.end():m.end() + 15]
+                if re.match(r'\s*[,.]?\s*\d{1,2}:\d{2}', apos):
+                    continue
+                candidatas.append(m.group(1))
+                break
+
+        if not candidatas:
+            candidatas = [datas[0].group(1)]
 
         return self.formatar_data(candidatas[0])
 
@@ -1063,12 +1095,22 @@ foreach ($line in $result.Lines) { Write-Output $line.Text }
         n = self._texto_sem_acento(nome)
         # Só letras: Agˆncia → AGNCIA, Institui‡Æo → INSTITUAO / INSTITUI...
         letras = re.sub(r'[^A-Z]', '', n)
+
+        # Sidebar vertical "Deixe seu comentário" (pdfplumber lê invertido: exieD / ues / oirátnemoc)
+        # "ues" = "seu" invertido — já apareceu 3x no nome do arquivo como UES.
+        lixo_sidebar = {
+            "UES", "SEU", "EXIED", "DEXIE", "OIRATNEMOC", "COMENTARIO",
+            "DEIXE", "COMENTAR", "WINTER",
+        }
+        if letras in lixo_sidebar:
+            return True
+
         rotulos_exatos = {
             "NOME", "CONTA", "CHAVE", "TIPO", "CACC", "SVGS",
             "AGENCIA", "AGNCIA", "HORARIO", "DESCRICAO",
             "INSTITUICAO", "INSTITUIO", "INSTITUICAO", "INSTITUICA", "INSTITUAO",
             "CPFCNPJ", "CPFCNPO", "CPFCNP", "OUVIDORIA", "CAPITAIS", "WINTER",
-            "TRANSACAO", "BANCOINTER",
+            "TRANSACAO", "BANCOINTER", "SEM CATEGORIA", "SEMCATEGORIA",
         }
         if letras in rotulos_exatos:
             return True
@@ -1076,6 +1118,7 @@ foreach ($line in $result.Lines) { Write-Output $line.Text }
         if any(letras.startswith(p) for p in (
             "AGENCI", "AGNCI", "INSTITU", "DEFICI", "OUVIDOR", "CAPITA",
             "DEMAIS", "FALECOM", "CONTADIGITAL", "QUEMRECE", "QUEMPAG",
+            "OIRATNEMOC", "COMENTAR",
         )):
             return True
 
@@ -1085,7 +1128,7 @@ foreach ($line in $result.Lines) { Write-Output $line.Text }
             "FALE COM", "0800", "3003", "HTTPS", "CONTADIGITAL",
             "CPF/CNP", "CPF/CNPJ", "CPFCNP", "INSTITU", "AGENCIA", "AGNCIA",
             "QUEM RECEBEU", "QUEM PAGOU", "DESCRICAO", "BANCO INTER",
-            "1 OF 1", "WINTER", "HORARIO", "TRANSACAO",
+            "1 OF 1", "WINTER", "HORARIO", "TRANSACAO", "SEM CATEGORIA",
         ]
         if any(x in n or x in n_ascii for x in lixo_substrings):
             return True
@@ -1094,14 +1137,12 @@ foreach ($line in $result.Lines) { Write-Output $line.Text }
             return True
         if len(re.sub(r'[^A-Za-z]', '', nome)) < 3:
             return True
-        # Uma única palavra curta + sem sobrenome → quase sempre rótulo OCR
+        # Uma única palavra muito curta (3 letras) → quase sempre lixo (UES, SEU, …)
         palavras = [p for p in re.split(r'\s+', nome.strip()) if p]
+        if len(palavras) == 1 and len(letras) <= 3:
+            return True
         if len(palavras) == 1 and len(letras) <= 10 and not re.search(r'\d{5,}', nome):
-            # Ex.: "Agência", "Nome", "Conta" — nomes reais de pessoa costumam ter 2+ palavras
-            # Exceto "Comagro" (interno)
             if letras not in {"COMAGRO"}:
-                # Se parece 100% com rótulo conhecido por fuzzy já caiu acima;
-                # aqui bloqueia sobras curtas ambíguas do rodapé
                 if letras.endswith("CIA") or letras.endswith("CAO") or letras.endswith("RIO"):
                     return True
         return False
@@ -1190,21 +1231,29 @@ foreach ($line in $result.Lines) { Write-Output $line.Text }
             return "Comagro"
         return ""
 
-    def gerar_novo_nome(self, dados, original_filename):
-        # Se data não foi achada, usa a data de hoje como fallback (ruim, mas evita crash)
-        data = dados["data_pgto"] if dados["data_pgto"] else datetime.now().strftime("%d-%m-%y")
+    def gerar_novo_nome(self, dados, original_filename, caminho_arq=None):
+        # Data do PAGAMENTO. Nunca inventar "hoje" se der para pegar do PDF/caminho.
+        data = dados.get("data_pgto") or ""
+        if not data and caminho_arq:
+            data = self._data_do_caminho(caminho_arq) or ""
+        if not data:
+            # Fallback ruim — só para não quebrar o rename
+            data = datetime.now().strftime("%d-%m-%y")
 
         # Monta partes
         partes = [data, "PGTO"]
 
-        if dados["nome_recebedor"]:
+        if dados["nome_recebedor"] and not self._recebedor_parece_lixo(dados["nome_recebedor"]):
             # Pega só o primeiro e último nome ou as 3 primeiras palavras para não ficar gigante
             nome = self.limpar_texto(dados["nome_recebedor"]).replace(" ", "_").upper()
             partes.append(nome)
 
-        if dados["descricao"] and dados["descricao"] != "PGTO":
-            desc = self.limpar_texto(dados["descricao"]).replace(" ", "_").upper()
-            partes.append(desc)
+        desc_raw = dados.get("descricao") or ""
+        if desc_raw and desc_raw != "PGTO" and not self._recebedor_parece_lixo(desc_raw):
+            desc = self.limpar_texto(desc_raw).replace(" ", "_").upper()
+            # Bloqueia UES / SEU etc. que escaparam como "descrição"
+            if desc not in ("UES", "SEU", "EXIED", "WINTER"):
+                partes.append(desc)
 
         if dados["data_ref"]:
             partes.append(dados["data_ref"].replace("/", "-"))
@@ -1224,20 +1273,27 @@ foreach ($line in $result.Lines) { Write-Output $line.Text }
         """Extrai texto de todas as páginas; se for Inter 'oco', complementa com OCR."""
         with pdfplumber.open(caminho_arq) as pdf:
             num_paginas = len(pdf.pages)
-            texto_completo = ""
+            texto_nativo = ""
             for page in pdf.pages:
                 # Em PDFs imagem (Print To PDF), extract_text pode retornar None
                 page_text = page.extract_text() or ""
-                texto_completo += page_text + "\n"
+                texto_nativo += page_text + "\n"
 
-        if self._texto_precisa_ocr(texto_completo):
+        texto_completo = texto_nativo
+
+        if self._texto_precisa_ocr(texto_nativo):
             self.log(f"  OCR necessario: {os.path.basename(caminho_arq)} (Inter sem texto util)")
             ocr = self._ocr_primeira_pagina(caminho_arq)
             if ocr:
-                # OCR substitui o texto nativo: no Inter os valores vêm como curva/outline.
-                texto_completo = ocr
-                # Diagnóstico: o log do Séculos mostrou 669 chars mas desc=0712026.
-                # Mostra se os âncoras chegaram no OCR (ajuda se voltar a falhar).
+                # OCR traz valores (data, PGTO - …). O nativo às vezes já tem o nome
+                # do recebedor (ex: Luis Filipe / Viacao Novo Horizonte) — junta os dois.
+                # Remove o lixo vertical "Deixe seu comentário" (ues/exieD) do nativo.
+                nativo_limpo = re.sub(
+                    r'(?im)^(oirátnemoc|ues|exied|deixe|seu|coment[aá]rio)\s*$',
+                    '',
+                    texto_nativo,
+                )
+                texto_completo = ocr + "\n" + nativo_limpo
                 tu = ocr.upper()
                 self.log(
                     "  OCR anchors: "
@@ -1249,7 +1305,7 @@ foreach ($line in $result.Lines) { Write-Output $line.Text }
                 )
             else:
                 self.log(
-                    "  AVISO: OCR falhou — comprovante Inter vai sair como PGTO generico. "
+                    "  AVISO: OCR falhou — comprovante Inter pode sair sem data/descrição. "
                     "No Windows: pip install rapidocr-onnxruntime"
                 )
 
@@ -1285,7 +1341,9 @@ foreach ($line in $result.Lines) { Write-Output $line.Text }
                     novo_nome = nome_dda + ".pdf"
                 else:
                     dados = self.extrair_dados(texto_completo)
-                    novo_nome = self.gerar_novo_nome(dados, os.path.basename(caminho_arq))
+                    novo_nome = self.gerar_novo_nome(
+                        dados, os.path.basename(caminho_arq), caminho_arq
+                    )
                     # Log curto do que as regras/OCR enxergaram (ajuda a debugar PGTO generico)
                     self.log(
                         f"  dados: desc={dados.get('descricao')!r} "

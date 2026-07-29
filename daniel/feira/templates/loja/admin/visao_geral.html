@@ -5,15 +5,20 @@
 <div class="page app-page">
   {% include "loja/admin/_nav.html" %}
   <h1 class="app-heading app-heading--accent">Visao Geral</h1>
-  <p class="app-lead">Quantidade total pedida para cada tipo de camiseta.</p>
+  <p class="app-lead">Quantidade total pedida para cada tipo de camiseta, com detalhe por tamanho.</p>
+
+  <div class="app-export">
+    <a class="btn-buy" href="{% url 'loja:exportar_excel' %}">Baixar Excel</a>
+  </div>
 
   <div class="app-table-scroll">
-    {# --fill: no celular ocupa 100% e espalha as 2 colunas (sem vao a direita) #}
+    {# modelo | qtd total | quantidades por tamanho (chips) #}
     <table class="app-table app-table--fill">
       <thead>
         <tr>
-          <th>Camiseta</th>
-          <th>Total pedida</th>
+          <th>Modelo</th>
+          <th>Qtd total</th>
+          <th>Por tamanho</th>
         </tr>
       </thead>
       <tbody>
@@ -21,6 +26,17 @@
           <tr>
             <td>{{ row.nome }}</td>
             <td><strong>{{ row.total_pedida }}</strong></td>
+            <td>
+              {% if row.por_tamanho %}
+                <div class="size-breakdown">
+                  {% for t in row.por_tamanho %}
+                    <span class="size-chip">{{ t.qtd }}x {{ t.label }}</span>
+                  {% endfor %}
+                </div>
+              {% else %}
+                <span class="size-breakdown--empty">—</span>
+              {% endif %}
+            </td>
           </tr>
         {% endfor %}
       </tbody>

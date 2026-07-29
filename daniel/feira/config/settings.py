@@ -17,8 +17,8 @@ SECRET_KEY = os.getenv(
     "django-insecure-dev-only-troque-em-producao",
 )
 
-# DEBUG = os.getenv("DJANGO_DEBUG", "True").lower() in ("1", "true", "yes")
-DEBUG = False
+DEBUG = os.getenv("DJANGO_DEBUG", "True").lower() in ("1", "true", "yes")
+# DEBUG = False
 
 ALLOWED_HOSTS = [
     'feiramissionaria.org', 'www.feiramissionaria.org', 'localhost', '127.0.0.1'
@@ -113,8 +113,8 @@ LOGIN_URL = "loja:login"
 LOGIN_REDIRECT_URL = "loja:landing"
 LOGOUT_REDIRECT_URL = "loja:landing"
 
-MEDIA_URL = '/media/'
-MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
+# MEDIA_URL = '/media/'
+# MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
 
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 

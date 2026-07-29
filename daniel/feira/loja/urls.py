@@ -39,6 +39,7 @@ urlpatterns = [
     path("painel/clientes/", views.painel_por_cliente, name="painel_por_cliente"),
     path("painel/igrejas/", views.painel_por_igreja, name="painel_por_igreja"),
     path("painel/pedidos/", views.painel_pedidos, name="painel_pedidos"),
+    path("painel/exportar/", views.exportar_excel, name="exportar_excel"),
     path(
         "painel/pedidos/<int:pedido_id>/status/",
         views.atualizar_status_pedido,

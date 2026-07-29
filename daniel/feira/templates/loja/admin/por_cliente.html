@@ -7,6 +7,10 @@
   <h1 class="app-heading app-heading--accent">Visao por Cliente</h1>
   <p class="app-lead">Valor total gasto por cada cliente.</p>
 
+  <div class="app-export">
+    <a class="btn-buy" href="{% url 'loja:exportar_excel' %}">Baixar Excel</a>
+  </div>
+
   <div class="app-table-scroll">
   <table class="app-table">
     <thead>

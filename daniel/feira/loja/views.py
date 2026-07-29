@@ -16,6 +16,7 @@ from django.shortcuts import get_object_or_404, redirect, render
 from django.views.decorators.http import require_GET, require_http_methods, require_POST
 
 from .decorators import administrador_required, htmx_login_required
+from .exports import gerar_excel_painel, nome_arquivo_excel
 from .forms import AdicionarCarrinhoForm, AtualizarStatusForm, CadastroForm, LoginForm
 from .models import Camiseta, ItemCarrinho, ItemPedido, Pedido, Usuario
 from .services import (
@@ -302,15 +303,44 @@ def meus_pedidos(request: HttpRequest) -> HttpResponse:
 @administrador_required
 @require_GET
 def painel_visao_geral(request: HttpRequest) -> HttpResponse:
-    """Quantidade total pedida de cada tipo (ignora pedidos cancelados)."""
+    """Quantidade total pedida de cada tipo, com detalhe por tamanho."""
+    itens = ItemPedido.objects.exclude(
+        pedido__status_pagamento=Pedido.StatusPagamento.CANCELADO
+    )
+
+    # Totais por modelo (camiseta)
     por_tipo = (
-        ItemPedido.objects.exclude(
-            pedido__status_pagamento=Pedido.StatusPagamento.CANCELADO
-        )
-        .values("camiseta_id", "nome_camiseta")
+        itens.values("camiseta_id", "nome_camiseta")
         .annotate(total_pedida=Sum("quantidade"))
         .order_by("-total_pedida")
     )
+    # Quebra por tamanho dentro de cada modelo
+    por_tamanho = (
+        itens.values("camiseta_id", "tamanho")
+        .annotate(qtd=Sum("quantidade"))
+        .order_by("camiseta_id")
+    )
+
+    # Ordem estavel dos tamanhos (adulto + infantil)
+    ordem_tamanho = {
+        value: idx for idx, (value, _label) in enumerate(Camiseta.TAMANHOS_TODOS)
+    }
+    labels_tamanho = dict(Camiseta.TAMANHOS_TODOS)
+
+    tamanhos_por_camiseta: dict[int, list[dict]] = {}
+    for row in por_tamanho:
+        cid = row["camiseta_id"]
+        tamanho = row["tamanho"]
+        tamanhos_por_camiseta.setdefault(cid, []).append(
+            {
+                "tamanho": tamanho,
+                "label": labels_tamanho.get(tamanho, tamanho),
+                "qtd": row["qtd"] or 0,
+            }
+        )
+    for lista in tamanhos_por_camiseta.values():
+        lista.sort(key=lambda t: ordem_tamanho.get(t["tamanho"], 999))
+
     # Garante que camisetas sem pedido aparecam com 0 (adulto e infantil)
     camisetas = Camiseta.objects.filter(ativo=True).order_by(
         "categoria", "-destaque", "nome"
@@ -321,6 +351,7 @@ def painel_visao_geral(request: HttpRequest) -> HttpResponse:
             "nome": c.nome,
             "slug": c.slug,
             "total_pedida": mapa.get(c.id, 0),
+            "por_tamanho": tamanhos_por_camiseta.get(c.id, []),
         }
         for c in camisetas
     ]
@@ -363,11 +394,11 @@ def painel_por_igreja(request: HttpRequest) -> HttpResponse:
     totais = itens.values("pedido__cliente__igreja").annotate(
         total_camisetas=Sum("quantidade")
     )
-    # Detalhe: quantas de cada modelo dentro de cada igreja
+    # Detalhe: modelo + tamanho dentro de cada igreja
     detalhes = (
-        itens.values("pedido__cliente__igreja", "nome_camiseta")
+        itens.values("pedido__cliente__igreja", "nome_camiseta", "tamanho")
         .annotate(qtd=Sum("quantidade"))
-        .order_by("-qtd")
+        .order_by("nome_camiseta", "tamanho")
     )
     # Pedidos e valor arrecadado por igreja (agregado direto em Pedido
     # para nao duplicar valor_total em pedidos com varios itens)
@@ -376,6 +407,11 @@ def painel_por_igreja(request: HttpRequest) -> HttpResponse:
         .values("cliente__igreja")
         .annotate(qtd_pedidos=Count("id"), valor_total=Sum("valor_total"))
     )
+
+    labels_tamanho = dict(Camiseta.TAMANHOS_TODOS)
+    ordem_tamanho = {
+        value: idx for idx, (value, _label) in enumerate(Camiseta.TAMANHOS_TODOS)
+    }
 
     def _nome(valor: str | None) -> str:
         # Usuarios antigos podem nao ter igreja preenchida
@@ -408,9 +444,23 @@ def painel_por_igreja(request: HttpRequest) -> HttpResponse:
     for row in detalhes:
         igreja = _nome(row["pedido__cliente__igreja"])
         if igreja in mapa:
+            label = labels_tamanho.get(row["tamanho"], row["tamanho"])
             mapa[igreja]["modelos"].append(
-                f"{row['qtd']}x {row['nome_camiseta']}"
+                {
+                    "texto": f"{row['qtd']}x {row['nome_camiseta']} ({label})",
+                    "nome": row["nome_camiseta"],
+                    "tamanho": row["tamanho"],
+                    "qtd": row["qtd"],
+                }
             )
+
+    # Ordena linhas de modelo por nome e depois pela ordem de tamanho
+    for dados in mapa.values():
+        dados["modelos"].sort(
+            key=lambda m: (m["nome"], ordem_tamanho.get(m["tamanho"], 999))
+        )
+        # Template usa so o texto formatado
+        dados["modelos"] = [m["texto"] for m in dados["modelos"]]
 
     # Igrejas com mais camisetas primeiro
     igrejas = sorted(
@@ -472,3 +522,23 @@ def atualizar_status_pedido(request: HttpRequest, pedido_id: int) -> HttpRespons
             },
         )
     return redirect("loja:painel_pedidos")
+
+
+@administrador_required
+@require_GET
+def exportar_excel(request: HttpRequest) -> HttpResponse:
+    """
+    Baixa planilha Excel com producao, visao geral, igrejas, clientes e pedidos.
+    Pedidos cancelados nao entram nas abas de producao/resumo.
+    """
+    buffer = gerar_excel_painel()
+    response = HttpResponse(
+        buffer.getvalue(),
+        content_type=(
+            "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+        ),
+    )
+    response["Content-Disposition"] = (
+        f'attachment; filename="{nome_arquivo_excel()}"'
+    )
+    return response

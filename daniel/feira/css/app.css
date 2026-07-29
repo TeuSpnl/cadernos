@@ -167,16 +167,62 @@ select,
   width: max-content;
   min-width: 100%;
 }
-/* Visao Geral (poucas colunas): forca 100% e distribui o espaco */
+/* Visao Geral: ocupa a tela toda; colunas com papéis claros */
 .app-table-scroll .app-table--fill {
   width: 100%;
   min-width: 100%;
   table-layout: fixed;
 }
-.app-table--fill th:last-child,
-.app-table--fill td:last-child {
-  text-align: right;
-  width: 40%;
+.app-table--fill th:nth-child(1),
+.app-table--fill td:nth-child(1) {
+  width: 38%;
+}
+.app-table--fill th:nth-child(2),
+.app-table--fill td:nth-child(2) {
+  width: 18%;
+  text-align: center;
+}
+.app-table--fill th:nth-child(3),
+.app-table--fill td:nth-child(3) {
+  width: 44%;
+  text-align: left;
+}
+
+/* Chips de tamanho: compactos, quebram linha no celular */
+.size-breakdown {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem 0.4rem;
+  align-items: center;
+}
+.size-chip {
+  display: inline-block;
+  padding: 0.22rem 0.55rem;
+  border-radius: 999px;
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  white-space: nowrap;
+  background: color-mix(in srgb, var(--musgo, #2f4632) 10%, white);
+  border: 1px solid color-mix(in srgb, var(--musgo, #2f4632) 22%, transparent);
+  color: var(--musgo-profundo, #1f3224);
+}
+.size-breakdown--empty {
+  opacity: 0.55;
+  font-size: 0.9rem;
+}
+
+/* Botao de exportar Excel no painel */
+.app-export {
+  display: flex;
+  justify-content: center;
+  margin: 0 0 1.1rem;
+}
+.app-export .btn-buy {
+  width: auto;
+  min-width: 0;
+  padding: 0.65rem 1.25rem;
+  text-decoration: none;
 }
 .app-table th, .app-table td {
   padding: 0.7rem 0.75rem;
@@ -627,6 +673,22 @@ ul.errorlist {
   .app-table th { font-size: 0.68rem; letter-spacing: 0.05em; }
   .app-item-list { font-size: 0.8rem; padding-left: 0.9rem; }
   .status-badge { font-size: 0.65rem; padding: 0.25rem 0.55rem; }
+
+  /* Visao Geral no celular: chips menores, coluna de total mais estreita */
+  .app-table--fill th:nth-child(1),
+  .app-table--fill td:nth-child(1) { width: 34%; }
+  .app-table--fill th:nth-child(2),
+  .app-table--fill td:nth-child(2) { width: 16%; }
+  .app-table--fill th:nth-child(3),
+  .app-table--fill td:nth-child(3) { width: 50%; }
+  .size-chip {
+    font-size: 0.7rem;
+    padding: 0.18rem 0.45rem;
+  }
+  .app-export .btn-buy {
+    width: 100%;
+    max-width: 280px;
+  }
   /* Dica de que da pra arrastar a tabela */
   .app-table-scroll { padding-bottom: 0.35rem; }
 

@@ -196,22 +196,39 @@ class RenomeadorComprovantes:
         # 1) Tenta no nome do próprio arquivo (ex: PAGAMENTOS_DDA_ITAU_29-05-26.pdf)
         nome = os.path.basename(caminho_arq)
         match = re.search(r'(\d{2})[-_/](\d{2})[-_/](\d{2,4})', nome)
+        data_arq = None
         if match:
             dia, mes, ano = match.groups()
             if len(ano) == 4:
                 ano = ano[-2:]
-            return f"{dia}-{mes}-{ano}"
+            data_arq = f"{dia}-{mes}-{ano}"
 
         # 2) Tenta na pasta pai (ex: ".../05. MAIO/29-05-26/arquivo.pdf")
         pasta = os.path.basename(os.path.dirname(caminho_arq))
         match_p = re.match(r'^(\d{2})[-_](\d{2})[-_](\d{2,4})$', pasta)
+        data_pasta = None
         if match_p:
             dia, mes, ano = match_p.groups()
             if len(ano) == 4:
                 ano = ano[-2:]
-            return f"{dia}-{mes}-{ano}"
+            data_pasta = f"{dia}-{mes}-{ano}"
 
-        return None
+        # Pasta = dia do pagamento (organização Contas Pagas).
+        # Nome do arquivo muitas vezes tem a data de IMPRESSÃO de um rename anterior.
+        return data_pasta or data_arq
+
+    def _data_pasta_pai(self, caminho_arq):
+        """Só a data da pasta pai (dia do pagamento na árvore Contas Pagas)."""
+        if not caminho_arq:
+            return None
+        pasta = os.path.basename(os.path.dirname(caminho_arq))
+        match_p = re.match(r'^(\d{2})[-_](\d{2})[-_](\d{2,4})$', pasta)
+        if not match_p:
+            return None
+        dia, mes, ano = match_p.groups()
+        if len(ano) == 4:
+            ano = ano[-2:]
+        return f"{dia}-{mes}-{ano}"
 
     def _identificacao_boleto_itau(self, texto):
         """Extrai o campo 'Identificação no meu comprovante' do boleto Itaú.
@@ -942,8 +959,9 @@ foreach ($line in $result.Lines) { Write-Output $line.Text }
         if dados.get("descricao", "").upper() == "SECULOS":
             dados["nome_recebedor"] = ""
 
-        # Recebedor lixo do OCR (rodapé Deficiência/0800, CPF/CNPO, etc.)
-        if self._recebedor_parece_lixo(dados.get("nome_recebedor", "")):
+        # Recebedor lixo do OCR (rodapé Deficiência/0800, CPF/CNPO, ID de transação, etc.)
+        if (self._recebedor_parece_lixo(dados.get("nome_recebedor", ""))
+                or self._parece_id_transacao_inter(dados.get("nome_recebedor", ""))):
             dados["nome_recebedor"] = ""
             # Interno: padrão histórico do arquivo é COMAGRO_INTERNO_*
             desc_u = (dados.get("descricao") or "").upper()
@@ -1002,62 +1020,91 @@ foreach ($line in $result.Lines) { Write-Output $line.Text }
         if not dados["nome_recebedor"]:
             dados["nome_recebedor"] = self._recebedor_inter(texto)
 
+    def _parece_id_transacao_inter(self, texto):
+        """True se a string for ID de transação do Inter (não deve ir no nome do arquivo).
+
+        Exemplos:
+          E00416968202607232100CgKgg|CCYIG
+          00416968202607232100CGKGGLCCYLG
+        """
+        if not texto:
+            return False
+        t = re.sub(r'[^A-Za-z0-9]', '', str(texto))
+        if len(t) < 15:
+            return False
+        # Prefixo clássico E/D + muitos dígitos + sufixo alfanumérico
+        if re.match(r'^[EDed]?\d{10,}[A-Za-z0-9]{4,}$', t):
+            return True
+        # Código do Inter (00416968…) no começo — mesmo sem o E
+        if re.match(r'^00416968\d+[A-Za-z0-9]+$', t, re.I):
+            return True
+        # Muito longo, mistura dígitos+letras, sem espaços (não é nome de pessoa)
+        if len(t) >= 20 and re.search(r'\d{8,}', t) and re.search(r'[A-Za-z]{5,}', t):
+            if " " not in str(texto).strip():
+                return True
+        return False
+
     def _data_transacao_inter(self, texto):
-        """Escolhe a data da transação, não a de impressão ('1 of 1 28/07/2026').
+        """Escolhe a data da transação, não a de impressão ('1 of 1 06/08/2026').
 
         No OCR do Inter a data do pagamento vem seguida do horário estilo '21h53';
-        a de impressão vem no rodapé como '28/07/2026, 17:27' / '28/07/2026. 17:27'.
+        a de impressão vem no rodapé como '06/08/2026, 18:35' / '06/08/2026. 18:35'.
         """
-        # 1) Padrão mais confiável: data + horário Inter (21h53)
-        m_h = re.search(r'(\d{2}/\d{2}/\d{4})\s*\n?\s*\d{1,2}h\d{2}', texto, re.IGNORECASE)
-        if m_h:
+        def _eh_impressao(m):
+            ini = max(0, m.start() - 40)
+            ctx = texto[ini:m.end() + 20].lower()
+            if "of 1" in ctx or "of1" in ctx.replace(" ", ""):
+                return True
+            apos = texto[m.end():m.end() + 15]
+            # Horário de impressão do browser: HH:MM (não o '21h53' do Inter)
+            if re.match(r'\s*[,.]?\s*\d{1,2}:\d{2}', apos):
+                return True
+            return False
+
+        # 1) Padrão mais confiável: data + horário Inter (21h53 / 21H41)
+        m_h = re.search(
+            r'(\d{2}/\d{2}/\d{4})\s*[\n\r]+\s*\d{1,2}h\d{2}',
+            texto, re.IGNORECASE
+        )
+        if not m_h:
+            m_h = re.search(
+                r'(\d{2}/\d{2}/\d{4})\s+\d{1,2}h\d{2}',
+                texto, re.IGNORECASE
+            )
+        if m_h and not _eh_impressao(m_h):
             return self.formatar_data(m_h.group(1))
 
-        # 2) Após o rótulo, com janela maior (labels OCR intercalam bastante)
+        # 2) Data imediatamente antes do ID da transação (E004… / 00416968…)
+        m_id = re.search(
+            r'(\d{2}/\d{2}/\d{4})\s*[\n\r]+\s*\d{1,2}h\d{2}\s*[\n\r]+\s*[EDed0]',
+            texto
+        )
+        if m_id:
+            return self.formatar_data(m_id.group(1))
+
+        # 3) Após o rótulo, com janela maior — mas rejeita impressão
         m = re.search(
-            r'Data da transa[cç][aã]o.{0,400}?(\d{2}/\d{2}/\d{4})',
+            r'Data da transa[cç][aã]o.{0,500}?(\d{2}/\d{2}/\d{4})',
             texto, re.IGNORECASE | re.DOTALL
         )
-        if m:
-            # Se a data achada parece de impressão (seguida de HH:MM), tenta outra
-            pos = m.end(1)
-            apos = texto[pos:pos + 20]
-            if not re.match(r'\s*[,.]?\s*\d{1,2}:\d{2}', apos):
-                return self.formatar_data(m.group(1))
+        if m and not _eh_impressao(m):
+            return self.formatar_data(m.group(1))
 
         datas = list(re.finditer(r'(\d{2}/\d{2}/\d{4})', texto))
-        if not datas:
-            return ""
-
-        n = len(texto)
         candidatas = []
+        n = len(texto)
         for m in datas:
-            # Descarta datas no último quinto (rodapé de impressão)
-            if m.start() > n * 0.80:
+            if _eh_impressao(m):
                 continue
-            ini = max(0, m.start() - 30)
-            ctx = texto[ini:m.end() + 25].lower()
-            if "of 1" in ctx or "of1" in ctx.replace(" ", ""):
-                continue
-            # Descarta "DD/MM/YYYY, HH:MM" / "DD/MM/YYYY. HH:MM" (impressão)
-            apos = texto[m.end():m.end() + 15]
-            if re.match(r'\s*[,.]?\s*\d{1,2}:\d{2}', apos):
+            if m.start() > n * 0.85:
                 continue
             candidatas.append(m.group(1))
 
-        if not candidatas:
-            # Último recurso: data NÃO colada em horário HH:MM
-            for m in datas:
-                apos = texto[m.end():m.end() + 15]
-                if re.match(r'\s*[,.]?\s*\d{1,2}:\d{2}', apos):
-                    continue
-                candidatas.append(m.group(1))
-                break
+        if candidatas:
+            return self.formatar_data(candidatas[0])
 
-        if not candidatas:
-            candidatas = [datas[0].group(1)]
-
-        return self.formatar_data(candidatas[0])
+        # Não usar data de impressão como fallback — deixa a pasta/caminho resolver
+        return ""
 
     def _descricao_pgto_inter(self, texto):
         """Monta descrição a partir de 'PGTO - ...' (1–2 linhas no OCR Windows)."""
@@ -1189,7 +1236,9 @@ foreach ($line in $result.Lines) { Write-Output $line.Text }
                 continue
             if re.match(r'^\d{1,2}h\d{2}', lin, re.IGNORECASE):
                 continue
-            if re.match(r'^[ED]\d{10,}', lin):
+            if re.match(r'^[ED]\d{10,}', lin, re.I):
+                continue
+            if self._parece_id_transacao_inter(lin):
                 continue
             if lin_up.startswith("PGTO") or self._descricao_inutil(lin):
                 continue
@@ -1232,33 +1281,53 @@ foreach ($line in $result.Lines) { Write-Output $line.Text }
         return ""
 
     def gerar_novo_nome(self, dados, original_filename, caminho_arq=None):
-        # Data do PAGAMENTO. Nunca inventar "hoje" se der para pegar do PDF/caminho.
+        # Data do PAGAMENTO (nunca a de impressão do comprovante).
         data = dados.get("data_pgto") or ""
-        if not data and caminho_arq:
-            data = self._data_do_caminho(caminho_arq) or ""
+        data_pasta = self._data_pasta_pai(caminho_arq) if caminho_arq else None
+        data_arq = None
+        if caminho_arq:
+            m = re.search(r'(\d{2})[-_/](\d{2})[-_/](\d{2,4})', os.path.basename(caminho_arq))
+            if m:
+                dia, mes, ano = m.groups()
+                data_arq = f"{dia}-{mes}-{ano[-2:] if len(ano)==4 else ano}"
+
         if not data:
-            # Fallback ruim — só para não quebrar o rename
+            # Sem data no OCR: pasta (dia do pagamento) > nome do arquivo
+            data = data_pasta or data_arq or ""
+        elif data_pasta and data_arq and data == data_arq and data != data_pasta:
+            # Data bate com o nome (muitas vezes impressão de rename anterior)
+            # e a pasta indica outro dia → confiar na pasta
+            data = data_pasta
+        if not data:
             data = datetime.now().strftime("%d-%m-%y")
 
         # Monta partes
         partes = [data, "PGTO"]
 
-        if dados["nome_recebedor"] and not self._recebedor_parece_lixo(dados["nome_recebedor"]):
-            # Pega só o primeiro e último nome ou as 3 primeiras palavras para não ficar gigante
-            nome = self.limpar_texto(dados["nome_recebedor"]).replace(" ", "_").upper()
+        recebedor = dados.get("nome_recebedor") or ""
+        if (recebedor
+                and not self._recebedor_parece_lixo(recebedor)
+                and not self._parece_id_transacao_inter(recebedor)):
+            nome = self.limpar_texto(recebedor).replace(" ", "_").upper()
             partes.append(nome)
 
         desc_raw = dados.get("descricao") or ""
-        if desc_raw and desc_raw != "PGTO" and not self._recebedor_parece_lixo(desc_raw):
+        if (desc_raw and desc_raw != "PGTO"
+                and not self._recebedor_parece_lixo(desc_raw)
+                and not self._parece_id_transacao_inter(desc_raw)):
             desc = self.limpar_texto(desc_raw).replace(" ", "_").upper()
-            # Bloqueia UES / SEU etc. que escaparam como "descrição"
+            # Bloqueia UES / SEU / IDs que escaparam como "descrição"
             if desc not in ("UES", "SEU", "EXIED", "WINTER"):
-                partes.append(desc)
+                # Remove pedaços que são ID colado na descrição
+                partes_desc = [p for p in desc.split("_") if not self._parece_id_transacao_inter(p)]
+                desc = "_".join(partes_desc).strip("_")
+                if desc:
+                    partes.append(desc)
 
         if dados["data_ref"]:
             partes.append(dados["data_ref"].replace("/", "-"))
 
-        if dados["num_doc"]:
+        if dados["num_doc"] and not self._parece_id_transacao_inter(str(dados["num_doc"])):
             partes.append(dados["num_doc"])
 
         # Junta tudo
